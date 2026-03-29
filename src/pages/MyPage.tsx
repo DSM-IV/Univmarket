@@ -10,7 +10,7 @@ import "./MyPage.css";
 type Tab = "uploaded" | "purchased";
 
 export default function MyPage() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("uploaded");
   const [uploadedMaterials, setUploadedMaterials] = useState<Material[]>([]);
@@ -19,6 +19,7 @@ export default function MyPage() {
   const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!user) {
       navigate("/login");
       return;
@@ -72,7 +73,7 @@ export default function MyPage() {
     }
 
     fetchData();
-  }, [user, navigate]);
+  }, [user, authLoading, navigate]);
 
   const handleDownload = async (materialId: string) => {
     setDownloading(materialId);
@@ -91,6 +92,7 @@ export default function MyPage() {
     }
   };
 
+  if (authLoading) return <p className="mypage-loading">불러오는 중...</p>;
   if (!user) return null;
 
   const currentList = tab === "uploaded" ? uploadedMaterials : purchasedMaterials;
