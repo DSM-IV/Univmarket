@@ -94,6 +94,7 @@
   padding: 16px;
   background: var(--border-light);
   border-radius: var(--radius-sm);
+  margin-bottom: 24px;
 }
 
 .author-avatar {

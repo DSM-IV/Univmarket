@@ -51,6 +51,7 @@ export default function DetailPage() {
   const [editingReview, setEditingReview] = useState(false);
   const [reviewSort, setReviewSort] = useState<ReviewSort>("recent");
   const [downloading, setDownloading] = useState(false);
+  const [authorSalesCount, setAuthorSalesCount] = useState(0);
 
   useEffect(() => {
     async function fetchMaterial() {
@@ -58,11 +59,23 @@ export default function DetailPage() {
       try {
         const snap = await getDoc(doc(db, "materials", id));
         if (snap.exists()) {
-          setMaterial({
+          const mat = {
             id: snap.id,
             ...snap.data(),
             createdAt: snap.data().createdAt?.toDate?.()?.toISOString?.() || "",
-          } as Material);
+          } as Material;
+          setMaterial(mat);
+
+          // 판매자의 총 판매 수 조회
+          const authorMaterialsQuery = query(
+            collection(db, "materials"),
+            where("authorId", "==", snap.data().authorId)
+          );
+          const authorSnap = await getDocs(authorMaterialsQuery);
+          const totalSales = authorSnap.docs.reduce(
+            (sum, d) => sum + (d.data().salesCount || 0), 0
+          );
+          setAuthorSalesCount(totalSales);
         }
       } catch (err) {
         console.error("자료 불러오기 실패:", err);
@@ -305,7 +318,7 @@ export default function DetailPage() {
               <div>
                 <span className="author-name">{material.author}</span>
                 <span className="author-sales">
-                  판매 {material.salesCount}건
+                  총 판매 {authorSalesCount}건
                 </span>
               </div>
             </div>
