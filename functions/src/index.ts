@@ -10,7 +10,7 @@ const db = admin.firestore();
 
 const KAKAOPAY_CID = "TC0ONETIME"; // 테스트용 CID
 const KAKAOPAY_SECRET_KEY = process.env.KAKAOPAY_SECRET_KEY || "";
-const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY || "test_sk_test"; // 테스트용
+const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY || "";
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://localhost:5173";
 
 // Cloudflare R2 - secrets는 함수 내부에서 접근
@@ -176,7 +176,8 @@ export const kakaopayReady = onCall(async (request) => {
 });
 
 // 카카오페이 결제 승인
-const corsHandler = cors({ origin: true });
+const ALLOWED_ORIGINS = [FRONTEND_URL, "https://dsm-iv.github.io"];
+const corsHandler = cors({ origin: ALLOWED_ORIGINS });
 
 export const kakaopayApprove = onRequest(async (req, res) => {
   corsHandler(req, res, async () => {
@@ -196,6 +197,11 @@ export const kakaopayApprove = onRequest(async (req, res) => {
     }
 
     const session = sessionDoc.data()!;
+
+    if (session.status !== "ready") {
+      res.redirect(`${FRONTEND_URL}/charge?status=fail`);
+      return;
+    }
 
     try {
       await axios.post(
@@ -366,11 +372,22 @@ export const purchaseMaterial = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-  const { materialId, materialTitle, price, sellerId } = request.data;
+  const { materialId } = request.data;
 
-  if (!materialId || !price || !sellerId) {
-    throw new HttpsError("invalid-argument", "필수 정보가 누락되었습니다.");
+  if (!materialId) {
+    throw new HttpsError("invalid-argument", "자료 ID가 누락되었습니다.");
   }
+
+  // 서버에서 자료 정보를 직접 조회 (클라이언트 입력을 신뢰하지 않음)
+  const materialDoc = await db.collection("materials").doc(materialId).get();
+  if (!materialDoc.exists) {
+    throw new HttpsError("not-found", "자료를 찾을 수 없습니다.");
+  }
+
+  const material = materialDoc.data()!;
+  const price = material.price;
+  const sellerId = material.authorId;
+  const materialTitle = material.title;
 
   if (sellerId === uid) {
     throw new HttpsError("invalid-argument", "본인의 자료는 구매할 수 없습니다.");

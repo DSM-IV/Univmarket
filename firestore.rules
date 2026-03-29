@@ -5,6 +5,17 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == uid;
       allow write: if false; // only via Cloud Functions
     }
+    match /materials/{materialId} {
+      allow read: if true; // 누구나 자료 목록/상세 조회 가능
+      allow create: if request.auth != null
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.price is number
+        && request.resource.data.price >= 0
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200;
+      allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+    }
     match /transactions/{txId} {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow write: if false;

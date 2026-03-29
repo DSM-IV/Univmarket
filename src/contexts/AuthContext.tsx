@@ -9,7 +9,7 @@ import {
   signInWithPopup,
   type User,
 } from "firebase/auth";
-import { doc, onSnapshot, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { auth, db, functions } from "../firebase";
 import type { UserProfile } from "../types";
@@ -65,17 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (snap.exists()) {
         setUserProfile(snap.data() as UserProfile);
       } else {
-        // 문서가 없으면 기본값으로 생성
-        setDoc(doc(db, "users", user.uid), {
-          displayName: user.displayName || "",
-          email: user.email || "",
-          university: "",
-          points: 0,
-          totalEarned: 0,
-          totalSpent: 0,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+        // 문서가 없으면 Cloud Function으로 생성
+        ensureUserDoc(user);
       }
       setLoading(false);
     });
