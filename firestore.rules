@@ -24,6 +24,18 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.buyerId == request.auth.uid;
       allow write: if false;
     }
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.rating is number
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 1000;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
     match /kakaopay_sessions/{sessionId} {
       allow read, write: if false; // server only
     }

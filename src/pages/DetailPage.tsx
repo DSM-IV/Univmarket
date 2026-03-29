@@ -1,11 +1,24 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  doc, getDoc, collection, query, where, orderBy,
+  getDocs, addDoc, serverTimestamp, updateDoc, deleteDoc,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
 import type { Material } from "../types";
 import "./DetailPage.css";
+
+interface Review {
+  id: string;
+  userId: string;
+  userName: string;
+  materialId: string;
+  rating: number;
+  content: string;
+  createdAt: string;
+}
 
 export default function DetailPage() {
   const { id } = useParams();
@@ -18,6 +31,14 @@ export default function DetailPage() {
   const [showModal, setShowModal] = useState(false);
   const [buying, setBuying] = useState(false);
   const [error, setError] = useState("");
+
+  // 후기
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewContent, setReviewContent] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [myReview, setMyReview] = useState<Review | null>(null);
+  const [editingReview, setEditingReview] = useState(false);
 
   useEffect(() => {
     async function fetchMaterial() {
@@ -45,6 +66,94 @@ export default function DetailPage() {
       hasPurchased(user.uid, material.id).then(setOwned);
     }
   }, [user, material]);
+
+  // 후기 불러오기
+  useEffect(() => {
+    if (!id) return;
+    async function fetchReviews() {
+      const q = query(
+        collection(db, "reviews"),
+        where("materialId", "==", id),
+        orderBy("createdAt", "desc")
+      );
+      const snap = await getDocs(q);
+      const list = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
+      })) as Review[];
+      setReviews(list);
+
+      if (user) {
+        const mine = list.find((r) => r.userId === user.uid);
+        if (mine) setMyReview(mine);
+      }
+    }
+    fetchReviews();
+  }, [id, user]);
+
+  const handleSubmitReview = async () => {
+    if (!user || !id || !reviewContent.trim()) return;
+    setSubmittingReview(true);
+    try {
+      if (editingReview && myReview) {
+        await updateDoc(doc(db, "reviews", myReview.id), {
+          rating: reviewRating,
+          content: reviewContent.trim(),
+        });
+      } else {
+        await addDoc(collection(db, "reviews"), {
+          userId: user.uid,
+          userName: user.displayName || user.email || "익명",
+          materialId: id,
+          rating: reviewRating,
+          content: reviewContent.trim(),
+          createdAt: serverTimestamp(),
+        });
+      }
+      // 새로고침
+      const q = query(
+        collection(db, "reviews"),
+        where("materialId", "==", id),
+        orderBy("createdAt", "desc")
+      );
+      const snap = await getDocs(q);
+      const list = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
+      })) as Review[];
+      setReviews(list);
+      setMyReview(list.find((r) => r.userId === user.uid) || null);
+      setReviewContent("");
+      setEditingReview(false);
+    } catch (err) {
+      console.error("후기 등록 실패:", err);
+      alert("후기 등록에 실패했습니다.");
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async () => {
+    if (!myReview) return;
+    if (!confirm("후기를 삭제하시겠습니까?")) return;
+    try {
+      await deleteDoc(doc(db, "reviews", myReview.id));
+      setReviews(reviews.filter((r) => r.id !== myReview.id));
+      setMyReview(null);
+      setReviewContent("");
+    } catch (err) {
+      console.error("후기 삭제 실패:", err);
+    }
+  };
+
+  const handleEditReview = () => {
+    if (!myReview) return;
+    setReviewRating(myReview.rating);
+    setReviewContent(myReview.content);
+    setEditingReview(true);
+  };
 
   if (loading) {
     return <div className="detail-not-found"><p>불러오는 중...</p></div>;
@@ -88,6 +197,10 @@ export default function DetailPage() {
   };
 
   const points = userProfile?.points ?? 0;
+  const avgRating = reviews.length > 0
+    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+    : "0";
+  const canReview = owned && !myReview && !editingReview;
 
   return (
     <div className="detail">
@@ -112,7 +225,7 @@ export default function DetailPage() {
               <span>{material.subject}</span>
               <span>·</span>
               <span className="detail-rating">
-                ★ {material.rating} ({material.reviewCount}개 리뷰)
+                ★ {avgRating} ({reviews.length}개 리뷰)
               </span>
             </div>
 
@@ -150,6 +263,105 @@ export default function DetailPage() {
                 <span className="spec-label">판매 수</span>
                 <span className="spec-value">{material.salesCount}건</span>
               </div>
+            </div>
+
+            {/* 후기 섹션 */}
+            <div className="reviews-section">
+              <h3 className="reviews-title">후기 ({reviews.length})</h3>
+
+              {/* 후기 작성 폼 */}
+              {(canReview || editingReview) && (
+                <div className="review-form">
+                  <div className="review-rating-input">
+                    <span className="review-rating-label">평점</span>
+                    <div className="review-stars-input">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          className={`review-star-btn ${star <= reviewRating ? "active" : ""}`}
+                          onClick={() => setReviewRating(star)}
+                        >
+                          ★
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <textarea
+                    className="review-textarea"
+                    placeholder="후기를 작성해주세요..."
+                    value={reviewContent}
+                    onChange={(e) => setReviewContent(e.target.value)}
+                    maxLength={1000}
+                    rows={3}
+                  />
+                  <div className="review-form-actions">
+                    {editingReview && (
+                      <button
+                        className="btn-review-cancel"
+                        onClick={() => { setEditingReview(false); setReviewContent(""); }}
+                      >
+                        취소
+                      </button>
+                    )}
+                    <button
+                      className="btn-review-submit"
+                      onClick={handleSubmitReview}
+                      disabled={submittingReview || !reviewContent.trim()}
+                    >
+                      {submittingReview ? "등록 중..." : editingReview ? "수정하기" : "후기 등록"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 내 후기 */}
+              {myReview && !editingReview && (
+                <div className="review-item review-mine">
+                  <div className="review-item-header">
+                    <div className="review-item-user">
+                      <div className="review-avatar">{myReview.userName.charAt(0)}</div>
+                      <div>
+                        <span className="review-user-name">{myReview.userName}</span>
+                        <span className="review-stars">
+                          {"★".repeat(myReview.rating)}{"☆".repeat(5 - myReview.rating)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="review-item-actions">
+                      <button className="btn-review-edit" onClick={handleEditReview}>수정</button>
+                      <button className="btn-review-delete" onClick={handleDeleteReview}>삭제</button>
+                    </div>
+                  </div>
+                  <p className="review-content">{myReview.content}</p>
+                </div>
+              )}
+
+              {/* 다른 사람 후기 */}
+              {reviews.filter((r) => r.userId !== user?.uid).length > 0 ? (
+                <div className="review-list">
+                  {reviews
+                    .filter((r) => r.userId !== user?.uid)
+                    .map((review) => (
+                      <div key={review.id} className="review-item">
+                        <div className="review-item-header">
+                          <div className="review-item-user">
+                            <div className="review-avatar">{review.userName.charAt(0)}</div>
+                            <div>
+                              <span className="review-user-name">{review.userName}</span>
+                              <span className="review-stars">
+                                {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="review-content">{review.content}</p>
+                      </div>
+                    ))}
+                </div>
+              ) : !myReview ? (
+                <p className="reviews-empty">아직 후기가 없습니다.</p>
+              ) : null}
             </div>
           </div>
         </div>
