@@ -125,6 +125,7 @@
   background: var(--bg-white);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  margin-bottom: 24px;
 }
 
 .detail-description h3 {
