@@ -4,6 +4,7 @@ import { collection, getDocs, orderBy, query } from "firebase/firestore";
 import { db } from "../firebase";
 import MaterialCard from "../components/MaterialCard";
 import { categories } from "../data/mockData";
+import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import type { Material, Category } from "../types";
 import "./BrowsePage.css";
 
@@ -19,6 +20,7 @@ export default function BrowsePage() {
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [sortBy, setSortBy] = useState(initialSort);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [reviewStats, setReviewStats] = useState<ReviewStats>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,6 +34,9 @@ export default function BrowsePage() {
           createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
         })) as Material[];
         setMaterials(docs);
+
+        const stats = await fetchReviewStats(docs.map((d) => d.id));
+        setReviewStats(stats);
       } catch (err) {
         console.error("자료 불러오기 실패:", err);
       } finally {
@@ -71,11 +76,15 @@ export default function BrowsePage() {
     } else if (sortBy === "price-high") {
       result.sort((a, b) => b.price - a.price);
     } else if (sortBy === "rating") {
-      result.sort((a, b) => b.rating - a.rating);
+      result.sort((a, b) => {
+        const ra = reviewStats[a.id]?.avgRating || 0;
+        const rb = reviewStats[b.id]?.avgRating || 0;
+        return rb - ra;
+      });
     }
 
     return result;
-  }, [materials, selectedCategory, searchQuery, sortBy]);
+  }, [materials, reviewStats, selectedCategory, searchQuery, sortBy]);
 
   return (
     <div className="browse">
@@ -129,7 +138,12 @@ export default function BrowsePage() {
             {filtered.length > 0 ? (
               <div className="browse-grid">
                 {filtered.map((m) => (
-                  <MaterialCard key={m.id} material={m} />
+                  <MaterialCard
+                    key={m.id}
+                    material={m}
+                    rating={reviewStats[m.id]?.avgRating}
+                    reviewCount={reviewStats[m.id]?.reviewCount}
+                  />
                 ))}
               </div>
             ) : (

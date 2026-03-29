@@ -4,12 +4,14 @@ import { collection, getDocs, orderBy, query, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import MaterialCard from "../components/MaterialCard";
 import { categories } from "../data/mockData";
+import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import type { Material } from "../types";
 import "./HomePage.css";
 
 export default function HomePage() {
   const [popularMaterials, setPopularMaterials] = useState<Material[]>([]);
   const [recentMaterials, setRecentMaterials] = useState<Material[]>([]);
+  const [reviewStats, setReviewStats] = useState<ReviewStats>({});
 
   useEffect(() => {
     async function fetchMaterials() {
@@ -26,6 +28,9 @@ export default function HomePage() {
         setPopularMaterials(
           [...docs].sort((a, b) => b.salesCount - a.salesCount).slice(0, 4)
         );
+
+        const stats = await fetchReviewStats(docs.map((d) => d.id));
+        setReviewStats(stats);
       } catch (err) {
         console.error("자료 불러오기 실패:", err);
       }
@@ -96,7 +101,12 @@ export default function HomePage() {
             </div>
             <div className="material-grid">
               {popularMaterials.map((m) => (
-                <MaterialCard key={m.id} material={m} />
+                <MaterialCard
+                  key={m.id}
+                  material={m}
+                  rating={reviewStats[m.id]?.avgRating}
+                  reviewCount={reviewStats[m.id]?.reviewCount}
+                />
               ))}
             </div>
           </div>
@@ -113,7 +123,12 @@ export default function HomePage() {
             </div>
             <div className="material-grid">
               {recentMaterials.map((m) => (
-                <MaterialCard key={m.id} material={m} />
+                <MaterialCard
+                  key={m.id}
+                  material={m}
+                  rating={reviewStats[m.id]?.avgRating}
+                  reviewCount={reviewStats[m.id]?.reviewCount}
+                />
               ))}
             </div>
           </div>

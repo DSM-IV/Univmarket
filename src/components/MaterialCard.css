@@ -86,29 +86,31 @@
   color: var(--text-secondary);
 }
 
-.card-footer {
+.card-stats {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: auto;
-  padding-top: 8px;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
-.card-rating {
+.card-stat {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
-  color: var(--text-secondary);
 }
 
 .star {
   color: #FBBF24;
 }
 
-.review-count {
-  color: var(--text-light);
-  font-size: 12px;
+.card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
 }
 
 .card-price {
