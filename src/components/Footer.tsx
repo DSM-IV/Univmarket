@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="footer-inner">
         <div className="footer-brand">
           <span className="footer-logo">U</span>
-          <span className="footer-name">UniVmarket</span>
+          <span className="footer-name">Univmarket</span>
           <p className="footer-desc">대학생을 위한 공부자료 마켓플레이스</p>
         </div>
         <div className="footer-links">
@@ -30,7 +30,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="footer-bottom">
-          <p>&copy; 2026 UniVmarket. All rights reserved.</p>
+          <p>&copy; 2026 Univmarket. All rights reserved.</p>
         </div>
       </div>
     </footer>

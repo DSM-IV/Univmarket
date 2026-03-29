@@ -25,7 +25,7 @@ export default function Navbar() {
       <div className="navbar-inner">
         <Link to="/" className="logo">
           <span className="logo-icon">U</span>
-          <span className="logo-text">UniVmarket</span>
+          <span className="logo-text">Univmarket</span>
         </Link>
 
         <form className="search-bar" onSubmit={handleSearch}>

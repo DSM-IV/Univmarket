@@ -58,13 +58,13 @@ export default function LoginPage() {
       <div className="login-card">
         <Link to="/" className="login-logo">
           <span className="login-logo-icon">U</span>
-          <span>UniVmarket</span>
+          <span>Univmarket</span>
         </Link>
 
         <h1>{isSignUp ? "회원가입" : "로그인"}</h1>
         <p className="login-subtitle">
           {isSignUp
-            ? "UniVmarket에 가입하고 자료를 거래하세요"
+            ? "Univmarket에 가입하고 자료를 거래하세요"
             : "계정에 로그인하세요"}
         </p>
 

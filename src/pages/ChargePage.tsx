@@ -95,7 +95,7 @@ export default function ChargePage() {
           method: "CARD",
           amount: { currency: "KRW", value: amount },
           orderId,
-          orderName: `UniVmarket 포인트 ${amount.toLocaleString()}P`,
+          orderName: `Univmarket 포인트 ${amount.toLocaleString()}P`,
           successUrl: `${window.location.origin}/charge?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
           failUrl: `${window.location.origin}/charge?status=fail`,
         });

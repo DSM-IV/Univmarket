@@ -145,7 +145,7 @@ export const kakaopayReady = onCall(async (request) => {
       cid: KAKAOPAY_CID,
       partner_order_id: sessionId,
       partner_user_id: uid,
-      item_name: `UniVmarket 포인트 ${amount.toLocaleString()}P`,
+      item_name: `Univmarket 포인트 ${amount.toLocaleString()}P`,
       quantity: 1,
       total_amount: amount,
       tax_free_amount: 0,
