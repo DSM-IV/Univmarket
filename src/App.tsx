@@ -9,6 +9,7 @@ import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/LoginPage";
 import ChargePage from "./pages/ChargePage";
 import ChargeSuccessPage from "./pages/ChargeSuccessPage";
+import MyPage from "./pages/MyPage";
 import "./App.css";
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/charge" element={<ChargePage />} />
             <Route path="/charge/success" element={<ChargeSuccessPage />} />
+            <Route path="/mypage" element={<MyPage />} />
           </Routes>
           <Footer />
         </div>

@@ -49,7 +49,7 @@ export default function Navbar() {
               <Link to="/charge" className="nav-points">
                 {(userProfile?.points ?? 0).toLocaleString()}P
               </Link>
-              <span className="nav-user-name">{user.displayName || user.email}</span>
+              <Link to="/mypage" className="nav-user-name">{user.displayName || user.email}</Link>
               <button onClick={handleLogout} className="nav-link nav-link-login">로그아웃</button>
             </>
           ) : (
