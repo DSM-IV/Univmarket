@@ -258,6 +258,28 @@
   cursor: default !important;
 }
 
+.btn-download-main {
+  background: #059669 !important;
+  cursor: pointer !important;
+}
+
+.btn-download-main:hover {
+  background: #047857 !important;
+}
+
+.btn-download-main:disabled {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+}
+
+.sidebar-owned-label {
+  text-align: center;
+  font-size: 13px;
+  color: #059669;
+  font-weight: 500;
+  margin-bottom: 10px;
+}
+
 /* Modal */
 .modal-overlay {
   position: fixed;

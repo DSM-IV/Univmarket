@@ -4,7 +4,8 @@ import {
   doc, getDoc, collection, query, where, orderBy,
   getDocs, addDoc, serverTimestamp, updateDoc, deleteDoc,
 } from "firebase/firestore";
-import { db } from "../firebase";
+import { httpsCallable } from "firebase/functions";
+import { db, functions } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
 import type { Material } from "../types";
@@ -39,6 +40,7 @@ export default function DetailPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [myReview, setMyReview] = useState<Review | null>(null);
   const [editingReview, setEditingReview] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     async function fetchMaterial() {
@@ -153,6 +155,24 @@ export default function DetailPage() {
     setReviewRating(myReview.rating);
     setReviewContent(myReview.content);
     setEditingReview(true);
+  };
+
+  const handleDownload = async () => {
+    if (!material) return;
+    setDownloading(true);
+    try {
+      const getDownloadUrl = httpsCallable<
+        { materialId: string },
+        { downloadUrl: string }
+      >(functions, "getDownloadUrl");
+      const { data } = await getDownloadUrl({ materialId: material.id });
+      window.open(data.downloadUrl, "_blank");
+    } catch (err) {
+      alert("다운로드에 실패했습니다. 다시 시도해주세요.");
+      console.error("다운로드 실패:", err);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   if (loading) {
@@ -378,16 +398,23 @@ export default function DetailPage() {
               </div>
             )}
             {owned ? (
-              <button className="btn-buy btn-owned" disabled>
-                구매 완료
-              </button>
+              <>
+                <button
+                  className="btn-buy btn-download-main"
+                  onClick={handleDownload}
+                  disabled={downloading}
+                >
+                  {downloading ? "준비 중..." : "다운로드"}
+                </button>
+                <p className="sidebar-owned-label">구매 완료된 자료입니다</p>
+              </>
             ) : (
               <button className="btn-buy" onClick={handleBuyClick}>
                 구매하기
               </button>
             )}
             <div className="sidebar-info">
-              <p>구매 후 즉시 다운로드 가능</p>
+              <p>{owned ? "파일을 다운로드할 수 있습니다" : "구매 후 즉시 다운로드 가능"}</p>
               <p>포인트로 결제됩니다</p>
             </div>
           </div>
