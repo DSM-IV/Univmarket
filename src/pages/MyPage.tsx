@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
-import { db } from "../firebase";
+import { Link, useNavigate } from "react-router-dom";
+import { collection, query, where, orderBy, getDocs, doc, getDoc } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { db, functions } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
-import MaterialCard from "../components/MaterialCard";
 import type { Material } from "../types";
 import "./MyPage.css";
 
@@ -16,6 +16,7 @@ export default function MyPage() {
   const [uploadedMaterials, setUploadedMaterials] = useState<Material[]>([]);
   const [purchasedMaterials, setPurchasedMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -34,18 +35,17 @@ export default function MyPage() {
         );
         const uploadedSnap = await getDocs(uploadedQuery);
         setUploadedMaterials(
-          uploadedSnap.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
+          uploadedSnap.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+            createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
           })) as Material[]
         );
 
         // 내가 구매한 자료
         const purchasesQuery = query(
           collection(db, "purchases"),
-          where("buyerId", "==", user!.uid),
-          orderBy("createdAt", "desc")
+          where("buyerId", "==", user!.uid)
         );
         const purchasesSnap = await getDocs(purchasesQuery);
         const materialIds = purchasesSnap.docs.map((d) => d.data().materialId);
@@ -53,8 +53,7 @@ export default function MyPage() {
         if (materialIds.length > 0) {
           const materialsData: Material[] = [];
           for (const mid of materialIds) {
-            const { getDoc, doc: docRef } = await import("firebase/firestore");
-            const snap = await getDoc(docRef(db, "materials", mid));
+            const snap = await getDoc(doc(db, "materials", mid));
             if (snap.exists()) {
               materialsData.push({
                 id: snap.id,
@@ -74,6 +73,23 @@ export default function MyPage() {
 
     fetchData();
   }, [user, navigate]);
+
+  const handleDownload = async (materialId: string) => {
+    setDownloading(materialId);
+    try {
+      const getDownloadUrl = httpsCallable<
+        { materialId: string },
+        { downloadUrl: string }
+      >(functions, "getDownloadUrl");
+      const { data } = await getDownloadUrl({ materialId });
+      window.open(data.downloadUrl, "_blank");
+    } catch (err) {
+      alert("다운로드에 실패했습니다. 다시 시도해주세요.");
+      console.error("다운로드 실패:", err);
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   if (!user) return null;
 
@@ -124,9 +140,37 @@ export default function MyPage() {
         {loading ? (
           <p className="mypage-loading">불러오는 중...</p>
         ) : currentList.length > 0 ? (
-          <div className="mypage-grid">
+          <div className="mypage-list">
             {currentList.map((m) => (
-              <MaterialCard key={m.id} material={m} />
+              <div key={m.id} className="mypage-item">
+                <Link to={`/material/${m.id}`} className="mypage-item-info">
+                  <div className="mypage-item-icon">
+                    <span>{m.fileType}</span>
+                  </div>
+                  <div className="mypage-item-detail">
+                    <h3 className="mypage-item-title">{m.title}</h3>
+                    <p className="mypage-item-meta">
+                      {m.university} · {m.subject} · {m.price.toLocaleString()}P
+                    </p>
+                  </div>
+                </Link>
+                <div className="mypage-item-actions">
+                  {tab === "purchased" && (
+                    <button
+                      className="btn-download"
+                      onClick={() => handleDownload(m.id)}
+                      disabled={downloading === m.id}
+                    >
+                      {downloading === m.id ? "준비 중..." : "다운로드"}
+                    </button>
+                  )}
+                  {tab === "uploaded" && (
+                    <span className="mypage-item-sales">
+                      판매 {m.salesCount || 0}건
+                    </span>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         ) : (

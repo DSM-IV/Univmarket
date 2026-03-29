@@ -101,10 +101,106 @@
   border-bottom-color: var(--primary);
 }
 
-.mypage-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+.mypage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mypage-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: all 0.2s;
+}
+
+.mypage-item:hover {
+  border-color: var(--primary-light);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.08);
+}
+
+.mypage-item-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  text-decoration: none;
+  color: inherit;
+  flex: 1;
+  min-width: 0;
+}
+
+.mypage-item-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mypage-item-detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.mypage-item-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mypage-item-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.mypage-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.btn-download {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-download:hover {
+  background: var(--primary-dark, #4338ca);
+}
+
+.btn-download:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mypage-item-sales {
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
 }
 
 .mypage-empty {
@@ -121,10 +217,6 @@
 }
 
 @media (max-width: 1024px) {
-  .mypage-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
   .mypage-header {
     flex-wrap: wrap;
   }
@@ -138,10 +230,6 @@
 }
 
 @media (max-width: 640px) {
-  .mypage-grid {
-    grid-template-columns: 1fr;
-  }
-
   .mypage-header {
     flex-direction: column;
     text-align: center;
@@ -150,5 +238,20 @@
   .mypage-tab {
     flex: 1;
     text-align: center;
+  }
+
+  .mypage-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .mypage-item-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .btn-download {
+    width: 100%;
   }
 }
