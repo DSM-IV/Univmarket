@@ -421,6 +421,12 @@ export const purchaseMaterial = onCall(async (request) => {
 
     const buyerNewPoints = buyerPoints - price;
 
+    // 자료 판매 수 증가
+    const materialRef = db.collection("materials").doc(materialId);
+    tx.update(materialRef, {
+      salesCount: admin.firestore.FieldValue.increment(1),
+    });
+
     // 구매자 포인트 차감
     tx.update(buyerRef, {
       points: buyerNewPoints,
