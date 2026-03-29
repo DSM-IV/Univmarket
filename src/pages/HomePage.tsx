@@ -1,16 +1,37 @@
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { collection, getDocs, orderBy, query, limit } from "firebase/firestore";
+import { db } from "../firebase";
 import MaterialCard from "../components/MaterialCard";
-import { materials, categories } from "../data/mockData";
+import { categories } from "../data/mockData";
+import type { Material } from "../types";
 import "./HomePage.css";
 
 export default function HomePage() {
-  const popularMaterials = [...materials]
-    .sort((a, b) => b.salesCount - a.salesCount)
-    .slice(0, 4);
+  const [popularMaterials, setPopularMaterials] = useState<Material[]>([]);
+  const [recentMaterials, setRecentMaterials] = useState<Material[]>([]);
 
-  const recentMaterials = [...materials]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 4);
+  useEffect(() => {
+    async function fetchMaterials() {
+      try {
+        const q = query(collection(db, "materials"), orderBy("createdAt", "desc"), limit(8));
+        const snapshot = await getDocs(q);
+        const docs = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
+        })) as Material[];
+
+        setRecentMaterials(docs.slice(0, 4));
+        setPopularMaterials(
+          [...docs].sort((a, b) => b.salesCount - a.salesCount).slice(0, 4)
+        );
+      } catch (err) {
+        console.error("자료 불러오기 실패:", err);
+      }
+    }
+    fetchMaterials();
+  }, []);
 
   return (
     <div className="home">
@@ -66,34 +87,38 @@ export default function HomePage() {
       </section>
 
       {/* Popular */}
-      <section className="section">
-        <div className="section-inner">
-          <div className="section-header">
-            <h2 className="section-title">인기 자료</h2>
-            <Link to="/browse?sort=popular" className="section-link">전체보기 &rarr;</Link>
+      {popularMaterials.length > 0 && (
+        <section className="section">
+          <div className="section-inner">
+            <div className="section-header">
+              <h2 className="section-title">인기 자료</h2>
+              <Link to="/browse?sort=popular" className="section-link">전체보기 &rarr;</Link>
+            </div>
+            <div className="material-grid">
+              {popularMaterials.map((m) => (
+                <MaterialCard key={m.id} material={m} />
+              ))}
+            </div>
           </div>
-          <div className="material-grid">
-            {popularMaterials.map((m) => (
-              <MaterialCard key={m.id} material={m} />
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Recent */}
-      <section className="section">
-        <div className="section-inner">
-          <div className="section-header">
-            <h2 className="section-title">최신 자료</h2>
-            <Link to="/browse?sort=recent" className="section-link">전체보기 &rarr;</Link>
+      {recentMaterials.length > 0 && (
+        <section className="section">
+          <div className="section-inner">
+            <div className="section-header">
+              <h2 className="section-title">최신 자료</h2>
+              <Link to="/browse?sort=recent" className="section-link">전체보기 &rarr;</Link>
+            </div>
+            <div className="material-grid">
+              {recentMaterials.map((m) => (
+                <MaterialCard key={m.id} material={m} />
+              ))}
+            </div>
           </div>
-          <div className="material-grid">
-            {recentMaterials.map((m) => (
-              <MaterialCard key={m.id} material={m} />
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* CTA */}
       <section className="cta-section">

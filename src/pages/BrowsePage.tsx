@@ -1,8 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { db } from "../firebase";
 import MaterialCard from "../components/MaterialCard";
-import { materials, categories } from "../data/mockData";
-import type { Category } from "../types";
+import { categories } from "../data/mockData";
+import type { Material, Category } from "../types";
 import "./BrowsePage.css";
 
 export default function BrowsePage() {
@@ -16,6 +18,28 @@ export default function BrowsePage() {
   );
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [sortBy, setSortBy] = useState(initialSort);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchMaterials() {
+      try {
+        const q = query(collection(db, "materials"), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
+        const docs = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
+        })) as Material[];
+        setMaterials(docs);
+      } catch (err) {
+        console.error("자료 불러오기 실패:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchMaterials();
+  }, []);
 
   const filtered = useMemo(() => {
     let result = [...materials];
@@ -51,7 +75,7 @@ export default function BrowsePage() {
     }
 
     return result;
-  }, [selectedCategory, searchQuery, sortBy]);
+  }, [materials, selectedCategory, searchQuery, sortBy]);
 
   return (
     <div className="browse">
@@ -97,18 +121,24 @@ export default function BrowsePage() {
         </div>
 
         {/* Results */}
-        <p className="browse-count">총 {filtered.length}개의 자료</p>
-        {filtered.length > 0 ? (
-          <div className="browse-grid">
-            {filtered.map((m) => (
-              <MaterialCard key={m.id} material={m} />
-            ))}
-          </div>
+        {loading ? (
+          <p className="browse-count">불러오는 중...</p>
         ) : (
-          <div className="browse-empty">
-            <p>검색 결과가 없습니다.</p>
-            <p>다른 키워드로 검색해 보세요.</p>
-          </div>
+          <>
+            <p className="browse-count">총 {filtered.length}개의 자료</p>
+            {filtered.length > 0 ? (
+              <div className="browse-grid">
+                {filtered.map((m) => (
+                  <MaterialCard key={m.id} material={m} />
+                ))}
+              </div>
+            ) : (
+              <div className="browse-empty">
+                <p>검색 결과가 없습니다.</p>
+                <p>다른 키워드로 검색해 보세요.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

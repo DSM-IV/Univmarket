@@ -40,13 +40,10 @@ export async function chargeWithTossApprove(
 }
 
 export async function purchaseMaterial(
-  materialId: string,
-  materialTitle: string,
-  price: number,
-  sellerId: string
+  materialId: string
 ): Promise<void> {
   const fn = httpsCallable(functions, "purchaseMaterial");
-  await fn({ materialId, materialTitle, price, sellerId });
+  await fn({ materialId });
 }
 
 export async function getTransactions(

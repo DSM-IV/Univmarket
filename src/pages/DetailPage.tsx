@@ -1,26 +1,54 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { materials } from "../data/mockData";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
+import type { Material } from "../types";
 import "./DetailPage.css";
 
 export default function DetailPage() {
   const { id } = useParams();
   const { user, userProfile } = useAuth();
   const navigate = useNavigate();
-  const material = materials.find((m) => m.id === id);
 
+  const [material, setMaterial] = useState<Material | null>(null);
+  const [loading, setLoading] = useState(true);
   const [owned, setOwned] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [buying, setBuying] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    async function fetchMaterial() {
+      if (!id) return;
+      try {
+        const snap = await getDoc(doc(db, "materials", id));
+        if (snap.exists()) {
+          setMaterial({
+            id: snap.id,
+            ...snap.data(),
+            createdAt: snap.data().createdAt?.toDate?.()?.toISOString?.() || "",
+          } as Material);
+        }
+      } catch (err) {
+        console.error("자료 불러오기 실패:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchMaterial();
+  }, [id]);
+
+  useEffect(() => {
     if (user && material) {
       hasPurchased(user.uid, material.id).then(setOwned);
     }
   }, [user, material]);
+
+  if (loading) {
+    return <div className="detail-not-found"><p>불러오는 중...</p></div>;
+  }
 
   if (!material) {
     return (
@@ -44,12 +72,7 @@ export default function DetailPage() {
     setBuying(true);
     setError("");
     try {
-      await purchaseMaterial(
-        material.id,
-        material.title,
-        material.price,
-        material.authorId
-      );
+      await purchaseMaterial(material.id);
       setOwned(true);
       setShowModal(false);
     } catch (err) {
