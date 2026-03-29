@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   doc, getDoc, collection, query, where, orderBy,
@@ -21,6 +21,8 @@ interface Review {
   createdAt: string;
 }
 
+type ReviewSort = "recent" | "rating-high";
+
 export default function DetailPage() {
   const { id } = useParams();
   const { user, userProfile } = useAuth();
@@ -40,6 +42,7 @@ export default function DetailPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [myReview, setMyReview] = useState<Review | null>(null);
   const [editingReview, setEditingReview] = useState(false);
+  const [reviewSort, setReviewSort] = useState<ReviewSort>("recent");
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
@@ -96,6 +99,9 @@ export default function DetailPage() {
 
   const handleSubmitReview = async () => {
     if (!user || !id || !reviewContent.trim()) return;
+    // 중복 등록 방지
+    if (myReview && !editingReview) return;
+
     setSubmittingReview(true);
     try {
       if (editingReview && myReview) {
@@ -104,6 +110,24 @@ export default function DetailPage() {
           content: reviewContent.trim(),
         });
       } else {
+        // 서버에서 한번 더 중복 확인
+        const existingQuery = query(
+          collection(db, "reviews"),
+          where("materialId", "==", id),
+          where("userId", "==", user.uid)
+        );
+        const existingSnap = await getDocs(existingQuery);
+        if (!existingSnap.empty) {
+          alert("이미 후기를 작성하셨습니다.");
+          setMyReview({
+            id: existingSnap.docs[0].id,
+            ...existingSnap.docs[0].data(),
+            createdAt: existingSnap.docs[0].data().createdAt?.toDate?.()?.toISOString?.() || "",
+          } as Review);
+          setSubmittingReview(false);
+          return;
+        }
+
         await addDoc(collection(db, "reviews"), {
           userId: user.uid,
           userName: user.displayName || user.email || "익명",
@@ -175,6 +199,27 @@ export default function DetailPage() {
     }
   };
 
+  // 별점 통계
+  const ratingStats = useMemo(() => {
+    const counts = [0, 0, 0, 0, 0]; // 1~5점
+    reviews.forEach((r) => { counts[r.rating - 1]++; });
+    const total = reviews.length;
+    const avg = total > 0
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / total).toFixed(1)
+      : "0.0";
+    return { counts, total, avg };
+  }, [reviews]);
+
+  // 정렬된 다른 사람 후기
+  const sortedOtherReviews = useMemo(() => {
+    const others = reviews.filter((r) => r.userId !== user?.uid);
+    if (reviewSort === "rating-high") {
+      return [...others].sort((a, b) => b.rating - a.rating);
+    }
+    // recent: createdAt 기준 (이미 desc로 불러왔으므로 그대로)
+    return others;
+  }, [reviews, user?.uid, reviewSort]);
+
   if (loading) {
     return <div className="detail-not-found"><p>불러오는 중...</p></div>;
   }
@@ -217,9 +262,6 @@ export default function DetailPage() {
   };
 
   const points = userProfile?.points ?? 0;
-  const avgRating = reviews.length > 0
-    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-    : "0";
   const canReview = owned && !myReview && !editingReview;
 
   return (
@@ -245,7 +287,7 @@ export default function DetailPage() {
               <span>{material.subject}</span>
               <span>·</span>
               <span className="detail-rating">
-                ★ {avgRating} ({reviews.length}개 리뷰)
+                ★ {ratingStats.avg} ({ratingStats.total}개 리뷰)
               </span>
             </div>
 
@@ -287,9 +329,38 @@ export default function DetailPage() {
 
             {/* 후기 섹션 */}
             <div className="reviews-section">
-              <h3 className="reviews-title">후기 ({reviews.length})</h3>
+              <h3 className="reviews-title">후기 ({ratingStats.total})</h3>
 
-              {/* 후기 작성 폼 */}
+              {/* 별점 분포 그래프 */}
+              {ratingStats.total > 0 && (
+                <div className="rating-summary">
+                  <div className="rating-summary-left">
+                    <span className="rating-big">{ratingStats.avg}</span>
+                    <span className="rating-big-stars">
+                      {"★".repeat(Math.round(Number(ratingStats.avg)))}
+                      {"☆".repeat(5 - Math.round(Number(ratingStats.avg)))}
+                    </span>
+                    <span className="rating-total">{ratingStats.total}개 리뷰</span>
+                  </div>
+                  <div className="rating-bars">
+                    {[5, 4, 3, 2, 1].map((star) => {
+                      const count = ratingStats.counts[star - 1];
+                      const pct = ratingStats.total > 0 ? (count / ratingStats.total) * 100 : 0;
+                      return (
+                        <div key={star} className="rating-bar-row">
+                          <span className="rating-bar-label">{star}점</span>
+                          <div className="rating-bar-track">
+                            <div className="rating-bar-fill" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="rating-bar-count">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 후기 작성 폼 (구매자 + 아직 후기 안 쓴 경우만) */}
               {(canReview || editingReview) && (
                 <div className="review-form">
                   <div className="review-rating-input">
@@ -335,14 +406,17 @@ export default function DetailPage() {
                 </div>
               )}
 
-              {/* 내 후기 */}
+              {/* 내 후기 (항상 최상단) */}
               {myReview && !editingReview && (
                 <div className="review-item review-mine">
                   <div className="review-item-header">
                     <div className="review-item-user">
                       <div className="review-avatar">{myReview.userName.charAt(0)}</div>
                       <div>
-                        <span className="review-user-name">{myReview.userName}</span>
+                        <span className="review-user-name">
+                          {myReview.userName}
+                          <span className="review-mine-badge">내 후기</span>
+                        </span>
                         <span className="review-stars">
                           {"★".repeat(myReview.rating)}{"☆".repeat(5 - myReview.rating)}
                         </span>
@@ -357,12 +431,25 @@ export default function DetailPage() {
                 </div>
               )}
 
-              {/* 다른 사람 후기 */}
-              {reviews.filter((r) => r.userId !== user?.uid).length > 0 ? (
-                <div className="review-list">
-                  {reviews
-                    .filter((r) => r.userId !== user?.uid)
-                    .map((review) => (
+              {/* 정렬 옵션 + 다른 사람 후기 */}
+              {sortedOtherReviews.length > 0 && (
+                <>
+                  <div className="review-sort-bar">
+                    <button
+                      className={`review-sort-btn ${reviewSort === "recent" ? "active" : ""}`}
+                      onClick={() => setReviewSort("recent")}
+                    >
+                      최신순
+                    </button>
+                    <button
+                      className={`review-sort-btn ${reviewSort === "rating-high" ? "active" : ""}`}
+                      onClick={() => setReviewSort("rating-high")}
+                    >
+                      평점 높은순
+                    </button>
+                  </div>
+                  <div className="review-list">
+                    {sortedOtherReviews.map((review) => (
                       <div key={review.id} className="review-item">
                         <div className="review-item-header">
                           <div className="review-item-user">
@@ -378,10 +465,13 @@ export default function DetailPage() {
                         <p className="review-content">{review.content}</p>
                       </div>
                     ))}
-                </div>
-              ) : !myReview ? (
+                  </div>
+                </>
+              )}
+
+              {ratingStats.total === 0 && (
                 <p className="reviews-empty">아직 후기가 없습니다.</p>
-              ) : null}
+              )}
             </div>
           </div>
         </div>

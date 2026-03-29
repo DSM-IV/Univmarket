@@ -596,6 +596,127 @@
   margin: 0;
 }
 
+/* Rating Summary */
+.rating-summary {
+  display: flex;
+  gap: 32px;
+  padding: 20px;
+  background: var(--border-light);
+  border-radius: var(--radius-sm);
+  margin-bottom: 24px;
+}
+
+.rating-summary-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 100px;
+}
+
+.rating-big {
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+
+.rating-big-stars {
+  font-size: 16px;
+  color: #FBBF24;
+  margin: 6px 0;
+  letter-spacing: 2px;
+}
+
+.rating-total {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.rating-bars {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+}
+
+.rating-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rating-bar-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  width: 28px;
+  text-align: right;
+}
+
+.rating-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.rating-bar-fill {
+  height: 100%;
+  background: #FBBF24;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.rating-bar-count {
+  font-size: 13px;
+  color: var(--text-secondary);
+  width: 24px;
+}
+
+/* Review Sort */
+.review-sort-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.review-sort-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.review-sort-btn.active {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: rgba(79, 70, 229, 0.05);
+}
+
+.review-sort-btn:hover {
+  border-color: var(--primary-light);
+}
+
+/* My Review Badge */
+.review-mine-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--primary);
+  background: rgba(79, 70, 229, 0.1);
+  border-radius: 10px;
+  vertical-align: middle;
+}
+
 .reviews-empty {
   text-align: center;
   padding: 24px;
