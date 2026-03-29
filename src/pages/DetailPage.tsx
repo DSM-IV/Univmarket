@@ -23,6 +23,13 @@ interface Review {
 
 type ReviewSort = "recent" | "rating-high";
 
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function DetailPage() {
   const { id } = useParams();
   const { user, userProfile } = useAuth();
@@ -319,7 +326,7 @@ export default function DetailPage() {
               </div>
               <div className="spec">
                 <span className="spec-label">등록일</span>
-                <span className="spec-value">{material.createdAt}</span>
+                <span className="spec-value">{formatDate(material.createdAt)}</span>
               </div>
               <div className="spec">
                 <span className="spec-label">판매 수</span>

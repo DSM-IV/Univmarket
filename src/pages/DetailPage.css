@@ -401,6 +401,7 @@
   background: var(--bg-white);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  margin-top: 24px;
 }
 
 .reviews-title {
