@@ -1,9 +1,11 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "../contexts/AuthContext";
 import "./Navbar.css";
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { user, userProfile, logOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -11,6 +13,11 @@ export default function Navbar() {
     if (searchQuery.trim()) {
       navigate(`/browse?q=${encodeURIComponent(searchQuery.trim())}`);
     }
+  };
+
+  const handleLogout = async () => {
+    await logOut();
+    navigate("/");
   };
 
   return (
@@ -37,7 +44,17 @@ export default function Navbar() {
         <div className="nav-links">
           <Link to="/browse" className="nav-link">둘러보기</Link>
           <Link to="/upload" className="nav-link nav-link-sell">자료 판매</Link>
-          <Link to="/login" className="nav-link nav-link-login">로그인</Link>
+          {user ? (
+            <>
+              <Link to="/charge" className="nav-points">
+                {(userProfile?.points ?? 0).toLocaleString()}P
+              </Link>
+              <span className="nav-user-name">{user.displayName || user.email}</span>
+              <button onClick={handleLogout} className="nav-link nav-link-login">로그아웃</button>
+            </>
+          ) : (
+            <Link to="/login" className="nav-link nav-link-login">로그인</Link>
+          )}
         </div>
       </div>
     </nav>

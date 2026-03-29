@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false; // only via Cloud Functions
+    }
+    match /transactions/{txId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
+    match /purchases/{purchaseId} {
+      allow read: if request.auth != null && resource.data.buyerId == request.auth.uid;
+      allow write: if false;
+    }
+    match /kakaopay_sessions/{sessionId} {
+      allow read, write: if false; // server only
+    }
+    match /toss_sessions/{sessionId} {
+      allow read, write: if false; // server only
+    }
+  }
+}

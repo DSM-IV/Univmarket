@@ -113,6 +113,31 @@
   background: var(--primary-dark) !important;
 }
 
+.nav-points {
+  padding: 6px 14px;
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--primary);
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: background 0.2s;
+}
+
+.nav-points:hover {
+  background: rgba(79, 70, 229, 0.15);
+}
+
+.nav-user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  padding: 8px 4px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .navbar-inner {
     padding: 0 16px;

@@ -33,3 +33,24 @@ export type Category =
   | "발표자료"
   | "요약본"
   | "기타";
+
+export interface UserProfile {
+  displayName: string;
+  email: string;
+  university: string;
+  points: number;
+  totalEarned: number;
+  totalSpent: number;
+}
+
+export interface Transaction {
+  id: string;
+  userId: string;
+  type: "charge" | "purchase" | "sale" | "refund";
+  amount: number;
+  balanceAfter: number;
+  description: string;
+  relatedMaterialId?: string;
+  status: "pending" | "completed" | "failed";
+  createdAt: string;
+}
