@@ -75,7 +75,7 @@ export default function Navbar() {
               {userProfile?.role === "admin" && (
                 <Link to="/admin" className="nav-link nav-link-admin">관리자</Link>
               )}
-              <Link to="/mypage" className="nav-user-name">{user.displayName || user.email}</Link>
+              <Link to="/mypage" className="nav-user-name">{userProfile?.nickname || user.displayName || user.email}</Link>
               <button onClick={handleLogout} className="nav-link nav-link-login">로그아웃</button>
             </>
           ) : (

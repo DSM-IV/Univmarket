@@ -18,6 +18,7 @@ export default function LoginPage() {
     email: "",
     password: "",
     name: "",
+    nickname: "",
   });
   const [selectedCampus, setSelectedCampus] = useState(0);
   const [error, setError] = useState("");
@@ -84,7 +85,7 @@ export default function LoginPage() {
           setLoading(false);
           return;
         }
-        await signUp(fullEmail, formData.password, formData.name, CAMPUSES[selectedCampus].label);
+        await signUp(fullEmail, formData.password, formData.name, formData.nickname, CAMPUSES[selectedCampus].label);
         setSignUpSuccess(true);
         setLoading(false);
         return;
@@ -221,8 +222,20 @@ export default function LoginPage() {
                       type="text"
                       id="name"
                       name="name"
-                      placeholder="이름을 입력하세요"
+                      placeholder="실명을 입력하세요"
                       value={formData.name}
+                      onChange={handleChange}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="nickname">닉네임</label>
+                    <input
+                      type="text"
+                      id="nickname"
+                      name="nickname"
+                      placeholder="다른 사용자에게 표시될 닉네임"
+                      value={formData.nickname}
                       onChange={handleChange}
                       required
                     />

@@ -40,7 +40,7 @@ interface PreviewImage {
 }
 
 export default function UploadPage() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewInputRef = useRef<HTMLInputElement>(null);
@@ -216,7 +216,7 @@ export default function UploadPage() {
         fileSize: file.size,
         thumbnail: uploadedPreviewUrls[0] || "",
         previewImages: uploadedPreviewUrls,
-        author: user.displayName || user.email || "",
+        author: userProfile?.nickname || user.displayName || user.email || "",
         authorId: user.uid,
         rating: 0,
         reviewCount: 0,

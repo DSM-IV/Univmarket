@@ -35,6 +35,7 @@ export type Category =
 
 export interface UserProfile {
   displayName: string;
+  nickname: string;
   email: string;
   university: string;
   points: number;

@@ -32,7 +32,7 @@ export const createUserProfile = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-  const { displayName, email, university } = request.data;
+  const { displayName, nickname, email, university } = request.data;
 
   const userRef = db.collection("users").doc(uid);
   const existing = await userRef.get();
@@ -40,6 +40,7 @@ export const createUserProfile = onCall(async (request) => {
 
   await userRef.set({
     displayName: displayName || "",
+    nickname: nickname || displayName || "",
     email: email || "",
     university: university || "",
     points: 0,

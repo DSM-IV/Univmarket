@@ -23,7 +23,7 @@ interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string, university: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, nickname: string, university: string) => Promise<void>;
   logIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
@@ -39,10 +39,11 @@ export function useAuth() {
   return ctx;
 }
 
-async function ensureUserDoc(user: User, university?: string) {
+async function ensureUserDoc(user: User, university?: string, nickname?: string) {
   const createUserProfile = httpsCallable(functions, "createUserProfile");
   await createUserProfile({
     displayName: user.displayName || "",
+    nickname: nickname || user.displayName || "",
     email: user.email || "",
     university: university || "",
   });
@@ -88,10 +89,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, [user]);
 
-  async function signUp(email: string, password: string, name: string, university: string) {
+  async function signUp(email: string, password: string, name: string, nickname: string, university: string) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
-    await ensureUserDoc(cred.user, university);
+    await ensureUserDoc(cred.user, university, nickname);
     await sendEmailVerification(cred.user);
     await signOut(auth);
   }
