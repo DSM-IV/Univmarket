@@ -514,6 +514,7 @@ export default function DetailPage() {
                         </span>
                         <span className="review-stars">
                           {"★".repeat(myReview.rating)}{"☆".repeat(5 - myReview.rating)}
+                          <span className="review-date">{formatDate(myReview.createdAt)}</span>
                         </span>
                       </div>
                     </div>
@@ -553,6 +554,7 @@ export default function DetailPage() {
                               <span className="review-user-name">{review.userName}</span>
                               <span className="review-stars">
                                 {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                                <span className="review-date">{formatDate(review.createdAt)}</span>
                               </span>
                             </div>
                           </div>
@@ -582,7 +584,18 @@ export default function DetailPage() {
                 보유 포인트: {points.toLocaleString()}P
               </div>
             )}
-            {owned ? (
+            {material.authorId === user?.uid ? (
+              <>
+                <p className="sidebar-owned-label">내가 등록한 자료입니다</p>
+                <button
+                  className="btn-buy btn-download-main"
+                  onClick={handleDownload}
+                  disabled={downloading}
+                >
+                  {downloading ? "준비 중..." : "다운로드"}
+                </button>
+              </>
+            ) : owned ? (
               <>
                 <button
                   className="btn-buy btn-download-main"
