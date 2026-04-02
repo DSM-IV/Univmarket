@@ -49,7 +49,7 @@ async function generatePdfThumbnail(file: File): Promise<Blob | null> {
     canvas.height = viewport.height;
     const ctx = canvas.getContext("2d")!;
 
-    await page.render({ canvasContext: ctx, viewport }).promise;
+    await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
 
     return new Promise((resolve) => {
       canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.85);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getCartItems, removeFromCart, type CartItem } from "../services/cartService";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
@@ -7,7 +7,6 @@ import "./CartPage.css";
 
 export default function CartPage() {
   const { user, userProfile } = useAuth();
-  const navigate = useNavigate();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());

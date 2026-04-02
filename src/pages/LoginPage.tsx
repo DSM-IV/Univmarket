@@ -32,7 +32,7 @@ export default function LoginPage() {
   const [lockoutRemaining, setLockoutRemaining] = useState(0);
 
   const failCountRef = useRef(0);
-  const lockoutTimerRef = useRef<ReturnType<typeof setInterval>>();
+  const lockoutTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
   const { logIn, signUp, resetPassword } = useAuth();
   const navigate = useNavigate();
