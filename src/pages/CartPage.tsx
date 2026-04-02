@@ -208,7 +208,7 @@ export default function CartPage() {
 
                 {points < totalPrice && !error && selectedItems.length > 0 && (
                   <div className="cart-insufficient">
-                    <p>포인트가 {(totalPrice - points).toLocaleString()}P 부족합니다.</p>
+                    <p>{(totalPrice - points).toLocaleString()}P가 부족합니다.</p>
                     <Link to="/charge" className="btn-cart-charge">충전하러 가기</Link>
                   </div>
                 )}
