@@ -36,8 +36,8 @@ export default function HomePage() {
           createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
         })) as Material[];
 
-        setRecentMaterials(recentDocs);
-        setPopularMaterials(popularDocs);
+        setRecentMaterials(recentDocs.filter((m) => !(m as any).hidden));
+        setPopularMaterials(popularDocs.filter((m) => !(m as any).hidden));
 
         const allIds = [...new Set([...recentDocs, ...popularDocs].map((d) => d.id))];
         const stats = await fetchReviewStats(allIds);

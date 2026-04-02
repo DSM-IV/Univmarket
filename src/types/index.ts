@@ -16,6 +16,7 @@ export interface Material {
   createdAt: string;
   pages: number;
   fileType: string;
+  previewImages?: string[];
 }
 
 export interface User {

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { categories } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 import { httpsCallable } from "firebase/functions";
@@ -40,7 +40,7 @@ interface PreviewImage {
 }
 
 export default function UploadPage() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewInputRef = useRef<HTMLInputElement>(null);
@@ -231,6 +231,20 @@ export default function UploadPage() {
       setUploading(false);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="upload">
+        <div className="upload-inner">
+          <p>로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="upload">

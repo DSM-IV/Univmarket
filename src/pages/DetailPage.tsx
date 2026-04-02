@@ -57,6 +57,16 @@ export default function DetailPage() {
   const [inCart, setInCart] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
 
+  // 자료 수정/삭제
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editPrice, setEditPrice] = useState(0);
+  const [editSubject, setEditSubject] = useState("");
+  const [editProfessor, setEditProfessor] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     async function fetchMaterial() {
       if (!id) return;
@@ -264,6 +274,62 @@ export default function DetailPage() {
     );
   }
 
+  const handleStartEdit = () => {
+    if (!material) return;
+    setEditTitle(material.title);
+    setEditDescription(material.description);
+    setEditPrice(material.price);
+    setEditSubject(material.subject);
+    setEditProfessor(material.professor || "");
+    setEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!material || !id) return;
+    setSaving(true);
+    try {
+      await updateDoc(doc(db, "materials", id), {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        price: editPrice,
+        subject: editSubject.trim(),
+        professor: editProfessor.trim(),
+      });
+      const snap = await getDoc(doc(db, "materials", id));
+      if (snap.exists()) {
+        setMaterial({
+          id: snap.id,
+          ...snap.data(),
+          createdAt: snap.data().createdAt?.toDate?.()?.toISOString?.() || "",
+        } as Material);
+      }
+      setEditing(false);
+    } catch (err) {
+      console.error("자료 수정 실패:", err);
+      alert("자료 수정에 실패했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteMaterial = async () => {
+    if (!material || !id) return;
+    if (!confirm("정말 이 자료를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+    setDeleting(true);
+    try {
+      await deleteDoc(doc(db, "materials", id));
+      navigate("/mypage");
+    } catch (err) {
+      console.error("자료 삭제 실패:", err);
+      alert("자료 삭제에 실패했습니다.");
+      setDeleting(false);
+    }
+  };
+
   const handleAddToCart = async () => {
     if (!user) {
       navigate("/login");
@@ -317,6 +383,7 @@ export default function DetailPage() {
 
   const points = userProfile?.points ?? 0;
   const canReview = owned && !myReview && !editingReview;
+  const previewImages = material.previewImages ?? [];
 
   return (
     <div className="detail">
@@ -324,14 +391,14 @@ export default function DetailPage() {
         <div className="detail-main">
           <div className="detail-preview">
             <h3 className="preview-heading">미리보기</h3>
-            {(material as any).previewImages?.length > 0 ? (
+            {previewImages?.length > 0 ? (
               <div className="preview-page">
                 <img
-                  src={(material as any).previewImages[previewIndex]}
+                  src={previewImages[previewIndex]}
                   alt={`미리보기 ${previewIndex + 1}`}
                   className="preview-image"
                 />
-                {(material as any).previewImages.length > 1 && (
+                {previewImages.length > 1 && (
                   <div className="preview-nav">
                     <button
                       className="preview-nav-btn"
@@ -341,12 +408,12 @@ export default function DetailPage() {
                       ‹
                     </button>
                     <span className="preview-nav-label">
-                      {previewIndex + 1} / {(material as any).previewImages.length}
+                      {previewIndex + 1} / {previewImages.length}
                     </span>
                     <button
                       className="preview-nav-btn"
-                      onClick={() => setPreviewIndex((i) => Math.min((material as any).previewImages.length - 1, i + 1))}
-                      disabled={previewIndex === (material as any).previewImages.length - 1}
+                      onClick={() => setPreviewIndex((i) => Math.min(previewImages.length - 1, i + 1))}
+                      disabled={previewIndex === previewImages.length - 1}
                     >
                       ›
                     </button>
@@ -367,41 +434,111 @@ export default function DetailPage() {
           </div>
 
           <div className="detail-info">
-            <div className="detail-badges">
-              <span className="badge badge-category">{material.category}</span>
-              <span className="badge badge-filetype">{material.fileType}</span>
-            </div>
-            <h1 className="detail-title">{material.title}</h1>
-            <div className="detail-meta">
-              <span>{material.subject}</span>
-              {material.professor && (
-                <>
+            {editing ? (
+              <div className="edit-form">
+                <h3 className="edit-form-title">자료 수정</h3>
+                <div className="edit-form-field">
+                  <label className="edit-form-label">제목</label>
+                  <input
+                    type="text"
+                    className="edit-form-input"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                  />
+                </div>
+                <div className="edit-form-field">
+                  <label className="edit-form-label">과목</label>
+                  <input
+                    type="text"
+                    className="edit-form-input"
+                    value={editSubject}
+                    onChange={(e) => setEditSubject(e.target.value)}
+                  />
+                </div>
+                <div className="edit-form-field">
+                  <label className="edit-form-label">교수</label>
+                  <input
+                    type="text"
+                    className="edit-form-input"
+                    value={editProfessor}
+                    onChange={(e) => setEditProfessor(e.target.value)}
+                  />
+                </div>
+                <div className="edit-form-field">
+                  <label className="edit-form-label">가격 (P)</label>
+                  <input
+                    type="number"
+                    className="edit-form-input"
+                    value={editPrice}
+                    onChange={(e) => setEditPrice(Number(e.target.value))}
+                    min={0}
+                  />
+                </div>
+                <div className="edit-form-field">
+                  <label className="edit-form-label">설명</label>
+                  <textarea
+                    className="edit-form-textarea"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={5}
+                  />
+                </div>
+                <div className="edit-form-actions">
+                  <button
+                    className="btn-edit-cancel"
+                    onClick={handleCancelEdit}
+                    disabled={saving}
+                  >
+                    취소
+                  </button>
+                  <button
+                    className="btn-edit-save"
+                    onClick={handleSaveEdit}
+                    disabled={saving || !editTitle.trim() || !editSubject.trim()}
+                  >
+                    {saving ? "저장 중..." : "저장"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="detail-badges">
+                  <span className="badge badge-category">{material.category}</span>
+                  <span className="badge badge-filetype">{material.fileType}</span>
+                </div>
+                <h1 className="detail-title">{material.title}</h1>
+                <div className="detail-meta">
+                  <span>{material.subject}</span>
+                  {material.professor && (
+                    <>
+                      <span>·</span>
+                      <span>{material.professor} 교수</span>
+                    </>
+                  )}
                   <span>·</span>
-                  <span>{material.professor} 교수</span>
-                </>
-              )}
-              <span>·</span>
-              <span className="detail-rating">
-                ★ {ratingStats.avg} ({ratingStats.total}개 리뷰)
-              </span>
-            </div>
+                  <span className="detail-rating">
+                    ★ {ratingStats.avg} ({ratingStats.total}개 리뷰)
+                  </span>
+                </div>
 
-            <div className="detail-author">
-              <div className="author-avatar">
-                {material.author.charAt(0)}
-              </div>
-              <div>
-                <span className="author-name">{material.author}</span>
-                <span className="author-sales">
-                  총 판매 {authorSalesCount}건
-                </span>
-              </div>
-            </div>
+                <div className="detail-author">
+                  <div className="author-avatar">
+                    {material.author.charAt(0)}
+                  </div>
+                  <div>
+                    <span className="author-name">{material.author}</span>
+                    <span className="author-sales">
+                      총 판매 {authorSalesCount}건
+                    </span>
+                  </div>
+                </div>
 
-            <div className="detail-description">
-              <h3>자료 설명</h3>
-              <p>{material.description}</p>
-            </div>
+                <div className="detail-description">
+                  <h3>자료 설명</h3>
+                  <p>{material.description}</p>
+                </div>
+              </>
+            )}
 
             <div className="detail-specs">
               <div className="spec">
@@ -594,6 +731,22 @@ export default function DetailPage() {
                 >
                   {downloading ? "준비 중..." : "다운로드"}
                 </button>
+                <div className="sidebar-author-actions">
+                  <button
+                    className="btn-edit-material"
+                    onClick={handleStartEdit}
+                    disabled={editing}
+                  >
+                    수정
+                  </button>
+                  <button
+                    className="btn-delete-material"
+                    onClick={handleDeleteMaterial}
+                    disabled={deleting}
+                  >
+                    {deleting ? "삭제 중..." : "삭제"}
+                  </button>
+                </div>
               </>
             ) : owned ? (
               <>

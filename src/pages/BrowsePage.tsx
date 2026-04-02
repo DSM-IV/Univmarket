@@ -55,7 +55,7 @@ export default function BrowsePage() {
   }, []);
 
   const filtered = useMemo(() => {
-    let result = [...materials];
+    let result = materials.filter((m) => !(m as any).hidden);
 
     if (selectedCategory !== "전체") {
       result = result.filter((m) => m.category === selectedCategory);

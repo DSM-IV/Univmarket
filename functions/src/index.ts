@@ -398,12 +398,14 @@ export const purchaseMaterial = onCall(async (request) => {
     const buyerRef = db.collection("users").doc(uid);
     const sellerRef = db.collection("users").doc(sellerId);
     const buyerDoc = await tx.get(buyerRef);
+    const sellerDoc = await tx.get(sellerRef);
 
     if (!buyerDoc.exists) {
       throw new HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
     }
 
     const buyerPoints = buyerDoc.data()!.points || 0;
+    const sellerCurrentPoints = sellerDoc.exists ? (sellerDoc.data()!.points || 0) : 0;
     if (buyerPoints < price) {
       throw new HttpsError("failed-precondition", "포인트가 부족합니다.");
     }
@@ -464,7 +466,7 @@ export const purchaseMaterial = onCall(async (request) => {
       userId: sellerId,
       type: "sale",
       amount: price,
-      balanceAfter: -1, // 판매자 잔액은 별도 조회 필요
+      balanceAfter: sellerCurrentPoints + price,
       description: `"${materialTitle}" 판매`,
       relatedMaterialId: materialId,
       relatedUserId: uid,
