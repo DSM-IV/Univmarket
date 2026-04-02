@@ -223,6 +223,75 @@
   color: var(--primary);
 }
 
+/* Preview Image Upload */
+.preview-upload-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.preview-upload-area {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  overflow: hidden;
+}
+
+.preview-upload-area:hover {
+  border-color: var(--primary-light);
+  background: rgba(79, 70, 229, 0.02);
+}
+
+.preview-upload-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 28px 20px;
+  color: var(--text-light);
+  font-size: 14px;
+}
+
+.preview-upload-sub {
+  font-size: 12px;
+  color: var(--text-light);
+}
+
+.preview-upload-selected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  gap: 10px;
+}
+
+.preview-upload-img {
+  max-width: 240px;
+  max-height: 300px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  object-fit: contain;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preview-upload-change {
+  padding: 6px 16px;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preview-upload-change:hover {
+  border-color: var(--primary-light);
+  color: var(--primary);
+}
+
 .copyright-banner {
   display: flex;
   gap: 12px;
