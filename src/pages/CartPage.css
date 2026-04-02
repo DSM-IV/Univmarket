@@ -238,11 +238,27 @@
   text-align: center;
 }
 
+.cart-insufficient {
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-top: 12px;
+  text-align: center;
+}
+
+.cart-insufficient p {
+  font-size: 14px;
+  color: #92400E;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
 .btn-cart-charge {
   display: block;
   text-align: center;
   padding: 8px;
-  margin-top: 8px;
+  margin-top: 4px;
   font-size: 13px;
   color: var(--primary);
   font-weight: 600;

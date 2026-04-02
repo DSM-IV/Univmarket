@@ -206,10 +206,17 @@ export default function CartPage() {
                   <Link to="/charge" className="btn-cart-charge">포인트 충전하기</Link>
                 )}
 
+                {points < totalPrice && !error && selectedItems.length > 0 && (
+                  <div className="cart-insufficient">
+                    <p>포인트가 {(totalPrice - points).toLocaleString()}P 부족합니다.</p>
+                    <Link to="/charge" className="btn-cart-charge">충전하러 가기</Link>
+                  </div>
+                )}
+
                 <button
                   className="btn-cart-buy"
                   onClick={handleBuySelected}
-                  disabled={buying || selectedItems.length === 0 || points < totalPrice}
+                  disabled={buying || selectedItems.length === 0}
                 >
                   {buying ? "구매 중..." : `${selectedItems.length}건 구매하기`}
                 </button>
