@@ -61,7 +61,7 @@ export async function addToCart(
     price: material.price,
     author: material.author,
     category: material.category,
-    thumbnail: material.thumbnail,
+    thumbnail: material.thumbnail || "",
     addedAt: serverTimestamp(),
   });
 }
