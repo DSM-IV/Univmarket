@@ -622,3 +622,74 @@ export const adminBanUser = onCall(async (request) => {
 
   return { success: true, hiddenMaterials: materials.size };
 });
+
+// 판매자 정지 (관리자)
+export const adminSuspendUser = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  await verifyAdmin(uid);
+
+  const { targetUserId, reason, days } = request.data;
+  if (!targetUserId) {
+    throw new HttpsError("invalid-argument", "대상 사용자 ID가 필요합니다.");
+  }
+
+  const suspendUntil = new Date();
+  suspendUntil.setDate(suspendUntil.getDate() + (days || 7));
+
+  await db.collection("users").doc(targetUserId).update({
+    suspended: true,
+    suspendedAt: admin.firestore.FieldValue.serverTimestamp(),
+    suspendedUntil: suspendUntil,
+    suspendedBy: uid,
+    suspendReason: reason || "",
+  });
+
+  // 정지 기간 동안 자료 비공개
+  const materials = await db
+    .collection("materials")
+    .where("authorId", "==", targetUserId)
+    .get();
+
+  const batch = db.batch();
+  materials.docs.forEach((d) => {
+    batch.update(d.ref, { hidden: true });
+  });
+  await batch.commit();
+
+  return { success: true, hiddenMaterials: materials.size, suspendedUntil: suspendUntil.toISOString() };
+});
+
+// 판매자 정지 해제 (관리자)
+export const adminUnsuspendUser = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  await verifyAdmin(uid);
+
+  const { targetUserId } = request.data;
+  if (!targetUserId) {
+    throw new HttpsError("invalid-argument", "대상 사용자 ID가 필요합니다.");
+  }
+
+  await db.collection("users").doc(targetUserId).update({
+    suspended: false,
+    suspendedAt: admin.firestore.FieldValue.delete(),
+    suspendedUntil: admin.firestore.FieldValue.delete(),
+    suspendedBy: admin.firestore.FieldValue.delete(),
+    suspendReason: admin.firestore.FieldValue.delete(),
+  });
+
+  // 자료 다시 공개
+  const materials = await db
+    .collection("materials")
+    .where("authorId", "==", targetUserId)
+    .get();
+
+  const batch = db.batch();
+  materials.docs.forEach((d) => {
+    batch.update(d.ref, { hidden: false });
+  });
+  await batch.commit();
+
+  return { success: true };
+});

@@ -39,6 +39,9 @@ export default function AdminPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [banModal, setBanModal] = useState<{ reporterId: string; reporterName: string } | null>(null);
   const [banReason, setBanReason] = useState("");
+  const [suspendModal, setSuspendModal] = useState<{ reporterId: string; reporterName: string } | null>(null);
+  const [suspendReason, setSuspendReason] = useState("");
+  const [suspendDays, setSuspendDays] = useState(7);
 
   useEffect(() => {
     if (authLoading) return;
@@ -125,6 +128,33 @@ export default function AdminPage() {
       setBanReason("");
     } catch {
       alert("탈퇴 처리에 실패했습니다.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSuspendUser = async () => {
+    if (!suspendModal) return;
+    if (!confirm(`"${suspendModal.reporterName}" 판매자를 ${suspendDays}일간 정지하시겠습니까?`)) return;
+
+    setActionLoading("suspend");
+    try {
+      const fn = httpsCallable<
+        { targetUserId: string; reason: string; days: number },
+        { success: boolean; hiddenMaterials: number; suspendedUntil: string }
+      >(functions, "adminSuspendUser");
+      const { data } = await fn({
+        targetUserId: suspendModal.reporterId,
+        reason: suspendReason,
+        days: suspendDays,
+      });
+      const until = new Date(data.suspendedUntil).toLocaleDateString("ko-KR");
+      alert(`정지 처리 완료. ${until}까지 정지되며 ${data.hiddenMaterials}개 자료가 비공개 되었습니다.`);
+      setSuspendModal(null);
+      setSuspendReason("");
+      setSuspendDays(7);
+    } catch {
+      alert("정지 처리에 실패했습니다.");
     } finally {
       setActionLoading(null);
     }
@@ -245,6 +275,18 @@ export default function AdminPage() {
                       {actionLoading === report.id ? "처리 중..." : "자료 삭제"}
                     </button>
                     <button
+                      className="btn-admin-suspend"
+                      onClick={() =>
+                        setSuspendModal({
+                          reporterId: report.reporterId || "",
+                          reporterName: report.reporterName,
+                        })
+                      }
+                      disabled={!report.reporterId}
+                    >
+                      판매자 정지
+                    </button>
+                    <button
                       className="btn-admin-ban"
                       onClick={() =>
                         setBanModal({
@@ -298,6 +340,54 @@ export default function AdminPage() {
                 disabled={actionLoading === "ban"}
               >
                 {actionLoading === "ban" ? "처리 중..." : "탈퇴 처리"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {suspendModal && (
+        <div className="modal-overlay" onClick={() => setSuspendModal(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <h2>판매자 정지 처리</h2>
+            <p className="ban-modal-desc">
+              <strong>{suspendModal.reporterName}</strong>의 활동을 일시 정지하고 모든 자료를 비공개 처리합니다.
+            </p>
+            <div className="form-group">
+              <label htmlFor="suspendDays">정지 기간</label>
+              <div className="suspend-days-row">
+                {[3, 7, 14, 30].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    className={`suspend-day-btn ${suspendDays === d ? "active" : ""}`}
+                    onClick={() => setSuspendDays(d)}
+                  >
+                    {d}일
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="form-group">
+              <label htmlFor="suspendReason">정지 사유</label>
+              <textarea
+                id="suspendReason"
+                placeholder="정지 사유를 입력하세요"
+                rows={3}
+                value={suspendReason}
+                onChange={(e) => setSuspendReason(e.target.value)}
+              />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-modal-cancel" onClick={() => setSuspendModal(null)}>
+                취소
+              </button>
+              <button
+                className="btn-admin-suspend-confirm"
+                onClick={handleSuspendUser}
+                disabled={actionLoading === "suspend"}
+              >
+                {actionLoading === "suspend" ? "처리 중..." : `${suspendDays}일 정지`}
               </button>
             </div>
           </div>
