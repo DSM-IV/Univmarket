@@ -4,7 +4,6 @@ import axios from "axios";
 import cors from "cors";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import Anthropic from "@anthropic-ai/sdk";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -484,52 +483,6 @@ export const purchaseMaterial = onCall(async (request) => {
 
   return { success: true };
 });
-
-// AI 자료 설명 생성
-export const generateDescription = onCall(
-  { secrets: ["ANTHROPIC_API_KEY"] },
-  async (request) => {
-    const uid = request.auth?.uid;
-    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
-
-    const { title, category, subject, professor } = request.data;
-    if (!title || !subject) {
-      throw new HttpsError("invalid-argument", "제목과 과목명은 필수입니다.");
-    }
-
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-    const prompt = [
-      `대학교 자료 마켓플레이스에 올릴 자료의 판매 설명을 작성해줘.`,
-      `- 제목: ${title}`,
-      `- 카테고리: ${category || "미정"}`,
-      `- 과목명: ${subject}`,
-      professor ? `- 교수명: ${professor}` : "",
-      ``,
-      `조건:`,
-      `- 구매자가 이 자료를 사고 싶게 만드는 매력적인 설명을 3~5문장으로 작성`,
-      `- 자료의 내용, 특징, 활용 방법을 구체적으로 언급`,
-      `- 자연스러운 한국어로 작성하고, 설명만 출력 (제목이나 부가 텍스트 없이)`,
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    try {
-      const message = await client.messages.create({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 300,
-        messages: [{ role: "user", content: prompt }],
-      });
-
-      const text =
-        message.content[0].type === "text" ? message.content[0].text : "";
-      return { description: text.trim() };
-    } catch (err) {
-      console.error("AI 설명 생성 실패:", err);
-      throw new HttpsError("internal", "설명 생성에 실패했습니다.");
-    }
-  }
-);
 
 // --- 관리자 기능 ---
 

@@ -67,7 +67,6 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -144,32 +143,6 @@ export default function UploadPage() {
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       handleFile(e.target.files[0]);
-    }
-  };
-
-  const handleGenerateDescription = async () => {
-    if (!formData.title || !formData.subject) {
-      setError("AI 설명 생성을 위해 제목과 과목명을 먼저 입력해주세요.");
-      return;
-    }
-    setGenerating(true);
-    setError("");
-    try {
-      const fn = httpsCallable<
-        { title: string; category: string; subject: string; professor: string },
-        { description: string }
-      >(functions, "generateDescription");
-      const { data } = await fn({
-        title: formData.title,
-        category: formData.category,
-        subject: formData.subject,
-        professor: formData.professor,
-      });
-      setFormData((prev) => ({ ...prev, description: data.description }));
-    } catch {
-      setError("AI 설명 생성에 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setGenerating(false);
     }
   };
 
@@ -282,26 +255,7 @@ export default function UploadPage() {
               />
             </div>
             <div className="form-group">
-              <div className="label-row">
-                <label htmlFor="description">자료 설명 *</label>
-                <button
-                  type="button"
-                  className="btn-ai-generate"
-                  onClick={handleGenerateDescription}
-                  disabled={generating}
-                >
-                  {generating ? (
-                    <>생성 중...</>
-                  ) : (
-                    <>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" />
-                      </svg>
-                      AI 설명 생성
-                    </>
-                  )}
-                </button>
-              </div>
+              <label htmlFor="description">자료 설명 *</label>
               <textarea
                 id="description"
                 name="description"
