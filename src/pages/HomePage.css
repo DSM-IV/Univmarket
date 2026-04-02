@@ -167,6 +167,13 @@
   color: var(--text);
 }
 
+.category-examples {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.4;
+}
+
 .material-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

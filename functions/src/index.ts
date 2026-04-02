@@ -4,6 +4,7 @@ import axios from "axios";
 import cors from "cors";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import Anthropic from "@anthropic-ai/sdk";
 
 admin.initializeApp();
 const db = admin.firestore();
@@ -145,7 +146,7 @@ export const kakaopayReady = onCall(async (request) => {
       cid: KAKAOPAY_CID,
       partner_order_id: sessionId,
       partner_user_id: uid,
-      item_name: `Univmarket 포인트 ${amount.toLocaleString()}P`,
+      item_name: `KU market 포인트 ${amount.toLocaleString()}P`,
       quantity: 1,
       total_amount: amount,
       tax_free_amount: 0,
@@ -273,7 +274,7 @@ export const tossReady = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "최소 충전 금액은 1,000원입니다.");
   }
 
-  const orderId = `univmarket_${uid}_${Date.now()}`;
+  const orderId = `kumarket_${uid}_${Date.now()}`;
 
   // 토스 결제 세션 저장
   await db.collection("toss_sessions").doc(orderId).set({
@@ -482,4 +483,189 @@ export const purchaseMaterial = onCall(async (request) => {
   });
 
   return { success: true };
+});
+
+// AI 자료 설명 생성
+export const generateDescription = onCall(
+  { secrets: ["ANTHROPIC_API_KEY"] },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+    const { title, category, subject, professor } = request.data;
+    if (!title || !subject) {
+      throw new HttpsError("invalid-argument", "제목과 과목명은 필수입니다.");
+    }
+
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+    const prompt = [
+      `대학교 자료 마켓플레이스에 올릴 자료의 판매 설명을 작성해줘.`,
+      `- 제목: ${title}`,
+      `- 카테고리: ${category || "미정"}`,
+      `- 과목명: ${subject}`,
+      professor ? `- 교수명: ${professor}` : "",
+      ``,
+      `조건:`,
+      `- 구매자가 이 자료를 사고 싶게 만드는 매력적인 설명을 3~5문장으로 작성`,
+      `- 자료의 내용, 특징, 활용 방법을 구체적으로 언급`,
+      `- 자연스러운 한국어로 작성하고, 설명만 출력 (제목이나 부가 텍스트 없이)`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    try {
+      const message = await client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 300,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const text =
+        message.content[0].type === "text" ? message.content[0].text : "";
+      return { description: text.trim() };
+    } catch (err) {
+      console.error("AI 설명 생성 실패:", err);
+      throw new HttpsError("internal", "설명 생성에 실패했습니다.");
+    }
+  }
+);
+
+// --- 관리자 기능 ---
+
+async function verifyAdmin(uid: string) {
+  const userDoc = await db.collection("users").doc(uid).get();
+  if (!userDoc.exists || userDoc.data()!.role !== "admin") {
+    throw new HttpsError("permission-denied", "관리자 권한이 필요합니다.");
+  }
+}
+
+// 신고 목록 조회
+export const getReports = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  await verifyAdmin(uid);
+
+  const snap = await db
+    .collection("reports")
+    .orderBy("createdAt", "desc")
+    .limit(100)
+    .get();
+
+  return {
+    reports: snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+      createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
+    })),
+  };
+});
+
+// 신고 상태 변경
+export const updateReportStatus = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  await verifyAdmin(uid);
+
+  const { reportId, status } = request.data;
+  if (!reportId || !status) {
+    throw new HttpsError("invalid-argument", "신고 ID와 상태가 필요합니다.");
+  }
+
+  await db.collection("reports").doc(reportId).update({
+    status,
+    resolvedBy: uid,
+    resolvedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { success: true };
+});
+
+// 자료 삭제 (관리자)
+export const adminDeleteMaterial = onCall(
+  { secrets: R2_SECRETS },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    await verifyAdmin(uid);
+
+    const { materialId, reportId } = request.data;
+    if (!materialId) {
+      throw new HttpsError("invalid-argument", "자료 ID가 필요합니다.");
+    }
+
+    const materialDoc = await db.collection("materials").doc(materialId).get();
+    if (!materialDoc.exists) {
+      throw new HttpsError("not-found", "자료를 찾을 수 없습니다.");
+    }
+
+    // R2에서 파일 삭제
+    const { fileKey } = materialDoc.data()!;
+    if (fileKey) {
+      try {
+        const r2 = getR2Client();
+        const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+        await r2.send(
+          new DeleteObjectCommand({
+            Bucket: process.env.R2_BUCKET_NAME!,
+            Key: fileKey,
+          })
+        );
+      } catch (err) {
+        console.error("R2 파일 삭제 실패:", err);
+      }
+    }
+
+    // Firestore에서 자료 삭제
+    await db.collection("materials").doc(materialId).delete();
+
+    // 관련 신고 상태 업데이트
+    if (reportId) {
+      await db.collection("reports").doc(reportId).update({
+        status: "resolved",
+        resolution: "material_deleted",
+        resolvedBy: uid,
+        resolvedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    return { success: true };
+  }
+);
+
+// 판매자 탈퇴 (관리자)
+export const adminBanUser = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  await verifyAdmin(uid);
+
+  const { targetUserId, reason } = request.data;
+  if (!targetUserId) {
+    throw new HttpsError("invalid-argument", "대상 사용자 ID가 필요합니다.");
+  }
+
+  // Firebase Auth에서 계정 비활성화
+  await admin.auth().updateUser(targetUserId, { disabled: true });
+
+  // Firestore에 탈퇴 기록
+  await db.collection("users").doc(targetUserId).update({
+    banned: true,
+    bannedAt: admin.firestore.FieldValue.serverTimestamp(),
+    bannedBy: uid,
+    banReason: reason || "",
+  });
+
+  // 해당 판매자의 모든 자료 비공개 처리
+  const materials = await db
+    .collection("materials")
+    .where("authorId", "==", targetUserId)
+    .get();
+
+  const batch = db.batch();
+  materials.docs.forEach((d) => {
+    batch.update(d.ref, { hidden: true });
+  });
+  await batch.commit();
+
+  return { success: true, hiddenMaterials: materials.size };
 });

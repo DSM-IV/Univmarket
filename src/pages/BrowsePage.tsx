@@ -59,7 +59,7 @@ export default function BrowsePage() {
         (m) =>
           m.title.toLowerCase().includes(q) ||
           m.subject.toLowerCase().includes(q) ||
-          m.university.toLowerCase().includes(q) ||
+          (m.professor || "").toLowerCase().includes(q) ||
           m.description.toLowerCase().includes(q)
       );
     }

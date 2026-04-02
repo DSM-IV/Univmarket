@@ -42,5 +42,9 @@ service cloud.firestore {
     match /toss_sessions/{sessionId} {
       allow read, write: if false; // server only
     }
+    match /reports/{reportId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false; // admin via Cloud Functions only
+    }
   }
 }

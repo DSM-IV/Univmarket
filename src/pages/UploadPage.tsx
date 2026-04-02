@@ -1,11 +1,14 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { categories } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 import { httpsCallable } from "firebase/functions";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db, functions } from "../firebase";
+import * as pdfjsLib from "pdfjs-dist";
 import "./UploadPage.css";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 const ALLOWED_TYPES = [
   "application/pdf",
@@ -33,6 +36,30 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
+async function generatePdfThumbnail(file: File): Promise<Blob | null> {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const page = await pdf.getPage(1);
+
+    const scale = 1.5;
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext("2d")!;
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.85);
+    });
+  } catch (err) {
+    console.error("썸네일 생성 실패:", err);
+    return null;
+  }
+}
+
 export default function UploadPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -40,13 +67,15 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     category: "",
-    university: "",
     subject: "",
+    professor: "",
     price: "",
     pages: "",
   });
@@ -67,7 +96,7 @@ export default function UploadPage() {
     return null;
   };
 
-  const handleFile = (f: File) => {
+  const handleFile = async (f: File) => {
     const err = validateFile(f);
     if (err) {
       setError(err);
@@ -75,7 +104,24 @@ export default function UploadPage() {
     }
     setError("");
     setFile(f);
+
+    // PDF인 경우 썸네일 미리보기 생성
+    if (f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")) {
+      const blob = await generatePdfThumbnail(f);
+      if (blob) {
+        setThumbnailPreview(URL.createObjectURL(blob));
+      }
+    } else {
+      setThumbnailPreview(null);
+    }
   };
+
+  // 미리보기 URL 정리
+  useEffect(() => {
+    return () => {
+      if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
+    };
+  }, [thumbnailPreview]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -98,6 +144,32 @@ export default function UploadPage() {
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       handleFile(e.target.files[0]);
+    }
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!formData.title || !formData.subject) {
+      setError("AI 설명 생성을 위해 제목과 과목명을 먼저 입력해주세요.");
+      return;
+    }
+    setGenerating(true);
+    setError("");
+    try {
+      const fn = httpsCallable<
+        { title: string; category: string; subject: string; professor: string },
+        { description: string }
+      >(functions, "generateDescription");
+      const { data } = await fn({
+        title: formData.title,
+        category: formData.category,
+        subject: formData.subject,
+        professor: formData.professor,
+      });
+      setFormData((prev) => ({ ...prev, description: data.description }));
+    } catch {
+      setError("AI 설명 생성에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -136,13 +208,32 @@ export default function UploadPage() {
         body: file,
       });
 
+      // PDF 썸네일 업로드
+      let thumbnailUrl = "";
+      if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+        const thumbBlob = await generatePdfThumbnail(file);
+        if (thumbBlob) {
+          const thumbFileName = `thumb_${Date.now()}.jpg`;
+          const { data: thumbData } = await getUploadUrl({
+            fileName: thumbFileName,
+            contentType: "image/jpeg",
+          });
+          await fetch(thumbData.uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": "image/jpeg" },
+            body: thumbBlob,
+          });
+          thumbnailUrl = thumbData.fileUrl;
+        }
+      }
+
       // Firestore에 자료 정보 저장
       await addDoc(collection(db, "materials"), {
         title: formData.title,
         description: formData.description,
         category: formData.category,
-        university: formData.university,
         subject: formData.subject,
+        professor: formData.professor,
         price: parseInt(formData.price),
         fileType: getFileTypeLabel(file),
         pages: formData.pages ? parseInt(formData.pages) : 0,
@@ -150,6 +241,7 @@ export default function UploadPage() {
         fileKey: data.key,
         fileName: file.name,
         fileSize: file.size,
+        thumbnail: thumbnailUrl,
         author: user.displayName || user.email || "",
         authorId: user.uid,
         rating: 0,
@@ -190,7 +282,26 @@ export default function UploadPage() {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="description">자료 설명 *</label>
+              <div className="label-row">
+                <label htmlFor="description">자료 설명 *</label>
+                <button
+                  type="button"
+                  className="btn-ai-generate"
+                  onClick={handleGenerateDescription}
+                  disabled={generating}
+                >
+                  {generating ? (
+                    <>생성 중...</>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2z" />
+                      </svg>
+                      AI 설명 생성
+                    </>
+                  )}
+                </button>
+              </div>
               <textarea
                 id="description"
                 name="description"
@@ -231,30 +342,29 @@ export default function UploadPage() {
           </div>
 
           <div className="form-section">
-            <h2>학교 / 과목 정보</h2>
+            <h2>과목 정보</h2>
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="university">대학교 *</label>
+                <label htmlFor="subject">과목명 *</label>
                 <input
                   type="text"
-                  id="university"
-                  name="university"
-                  placeholder="예: 서울대학교"
-                  value={formData.university}
+                  id="subject"
+                  name="subject"
+                  placeholder="예: 운영체제"
+                  value={formData.subject}
                   onChange={handleChange}
                   required
                 />
               </div>
               <div className="form-group">
-                <label htmlFor="subject">과목 분야 *</label>
+                <label htmlFor="professor">교수명</label>
                 <input
                   type="text"
-                  id="subject"
-                  name="subject"
-                  placeholder="예: 컴퓨터공학"
-                  value={formData.subject}
+                  id="professor"
+                  name="professor"
+                  placeholder="예: 홍길동"
+                  value={formData.professor}
                   onChange={handleChange}
-                  required
                 />
               </div>
             </div>
@@ -307,7 +417,11 @@ export default function UploadPage() {
                 />
                 {file ? (
                   <div className="file-selected">
-                    <span className="file-selected-icon">✓</span>
+                    {thumbnailPreview ? (
+                      <img src={thumbnailPreview} alt="미리보기" className="file-thumbnail-preview" />
+                    ) : (
+                      <span className="file-selected-icon">✓</span>
+                    )}
                     <p className="file-selected-name">{file.name}</p>
                     <p className="file-selected-info">
                       {getFileTypeLabel(file)} · {formatFileSize(file.size)}
@@ -318,6 +432,7 @@ export default function UploadPage() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setFile(null);
+                        setThumbnailPreview(null);
                         if (fileInputRef.current) fileInputRef.current.value = "";
                       }}
                     >
@@ -338,6 +453,24 @@ export default function UploadPage() {
                   </>
                 )}
               </div>
+            </div>
+          </div>
+
+          <div className="copyright-banner">
+            <div className="copyright-banner-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
+            <div className="copyright-banner-content">
+              <strong>저작권 관련 주의사항</strong>
+              <ul>
+                <li>타인의 저작물(교재, 논문, 강의자료 등)을 무단으로 복제하여 업로드하지 마세요.</li>
+                <li>본인이 직접 작성한 자료만 판매할 수 있습니다.</li>
+                <li>저작권 침해 자료는 사전 통보 없이 삭제될 수 있으며, 법적 책임은 업로더에게 있습니다.</li>
+              </ul>
             </div>
           </div>
 

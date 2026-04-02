@@ -8,6 +8,7 @@ import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
+import { addToCart, isInCart } from "../services/cartService";
 import type { Material } from "../types";
 import "./DetailPage.css";
 
@@ -52,6 +53,8 @@ export default function DetailPage() {
   const [reviewSort, setReviewSort] = useState<ReviewSort>("recent");
   const [downloading, setDownloading] = useState(false);
   const [authorSalesCount, setAuthorSalesCount] = useState(0);
+  const [inCart, setInCart] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   useEffect(() => {
     async function fetchMaterial() {
@@ -89,6 +92,7 @@ export default function DetailPage() {
   useEffect(() => {
     if (user && material) {
       hasPurchased(user.uid, material.id).then(setOwned);
+      isInCart(user.uid, material.id).then(setInCart);
     }
   }, [user, material]);
 
@@ -210,7 +214,13 @@ export default function DetailPage() {
         { downloadUrl: string }
       >(functions, "getDownloadUrl");
       const { data } = await getDownloadUrl({ materialId: material.id });
-      window.open(data.downloadUrl, "_blank");
+      const a = document.createElement("a");
+      a.href = data.downloadUrl;
+      a.download = "";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (err) {
       alert("다운로드에 실패했습니다. 다시 시도해주세요.");
       console.error("다운로드 실패:", err);
@@ -253,6 +263,29 @@ export default function DetailPage() {
     );
   }
 
+  const handleAddToCart = async () => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    setAddingToCart(true);
+    try {
+      await addToCart(user.uid, {
+        id: material.id,
+        title: material.title,
+        price: material.price,
+        author: material.author,
+        category: material.category,
+        thumbnail: material.thumbnail,
+      });
+      setInCart(true);
+    } catch (err) {
+      console.error("장바구니 추가 실패:", err);
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
   const handleBuyClick = () => {
     if (!user) {
       navigate("/login");
@@ -289,10 +322,19 @@ export default function DetailPage() {
       <div className="detail-inner">
         <div className="detail-main">
           <div className="detail-preview">
-            <div className="preview-placeholder">
-              <span className="preview-filetype">{material.fileType}</span>
-              <span className="preview-pages">{material.pages}페이지</span>
-            </div>
+            <h3 className="preview-heading">첫 페이지 미리보기</h3>
+            {material.thumbnail ? (
+              <div className="preview-page">
+                <img src={material.thumbnail} alt="첫 페이지 미리보기" className="preview-image" />
+                <div className="preview-page-label">1 / {material.pages || "?"}페이지</div>
+              </div>
+            ) : (
+              <div className="preview-placeholder">
+                <span className="preview-filetype">{material.fileType}</span>
+                <span className="preview-pages">{material.pages}페이지</span>
+                <span className="preview-no-thumb">미리보기를 지원하지 않는 파일 형식입니다</span>
+              </div>
+            )}
           </div>
 
           <div className="detail-info">
@@ -302,9 +344,13 @@ export default function DetailPage() {
             </div>
             <h1 className="detail-title">{material.title}</h1>
             <div className="detail-meta">
-              <span>{material.university}</span>
-              <span>·</span>
               <span>{material.subject}</span>
+              {material.professor && (
+                <>
+                  <span>·</span>
+                  <span>{material.professor} 교수</span>
+                </>
+              )}
               <span>·</span>
               <span className="detail-rating">
                 ★ {ratingStats.avg} ({ratingStats.total}개 리뷰)
@@ -519,14 +565,29 @@ export default function DetailPage() {
                 <p className="sidebar-owned-label">구매 완료된 자료입니다</p>
               </>
             ) : (
-              <button className="btn-buy" onClick={handleBuyClick}>
-                구매하기
-              </button>
+              <>
+                <button className="btn-buy" onClick={handleBuyClick}>
+                  구매하기
+                </button>
+                <button
+                  className="btn-cart"
+                  onClick={inCart ? () => navigate("/cart") : handleAddToCart}
+                  disabled={addingToCart}
+                >
+                  {addingToCart ? "추가 중..." : inCart ? "장바구니 보기" : "장바구니에 담기"}
+                </button>
+              </>
             )}
             <div className="sidebar-info">
               <p>{owned ? "파일을 다운로드할 수 있습니다" : "구매 후 즉시 다운로드 가능"}</p>
               <p>포인트로 결제됩니다</p>
             </div>
+            <Link
+              to={`/report?materialId=${material.id}&title=${encodeURIComponent(material.title)}`}
+              className="btn-report-copyright"
+            >
+              저작권 침해 신고
+            </Link>
           </div>
         </aside>
       </div>

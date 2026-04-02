@@ -83,7 +83,13 @@ export default function MyPage() {
         { downloadUrl: string }
       >(functions, "getDownloadUrl");
       const { data } = await getDownloadUrl({ materialId });
-      window.open(data.downloadUrl, "_blank");
+      const a = document.createElement("a");
+      a.href = data.downloadUrl;
+      a.download = "";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch (err) {
       alert("다운로드에 실패했습니다. 다시 시도해주세요.");
       console.error("다운로드 실패:", err);
@@ -152,7 +158,7 @@ export default function MyPage() {
                   <div className="mypage-item-detail">
                     <h3 className="mypage-item-title">{m.title}</h3>
                     <p className="mypage-item-meta">
-                      {m.university} · {m.subject} · {m.price.toLocaleString()}P
+                      {m.subject}{m.professor ? ` · ${m.professor} 교수` : ""} · {m.price.toLocaleString()}P
                     </p>
                   </div>
                 </Link>

@@ -15,13 +15,16 @@ export default function MaterialCard({ material, rating, reviewCount }: Props) {
   return (
     <Link to={`/material/${material.id}`} className="material-card">
       <div className="card-thumbnail">
+        {material.thumbnail && (
+          <img src={material.thumbnail} alt="" className="card-thumbnail-img" />
+        )}
         <span className="card-category">{material.category}</span>
         <span className="card-filetype">{material.fileType}</span>
       </div>
       <div className="card-body">
         <h3 className="card-title">{material.title}</h3>
         <p className="card-meta">
-          {material.university} · {material.subject}
+          {material.subject}{material.professor ? ` · ${material.professor} 교수` : ""}
         </p>
         <div className="card-stats">
           <span className="card-stat">

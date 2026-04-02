@@ -55,20 +55,6 @@ export default function HomePage() {
             <Link to="/browse" className="btn btn-primary btn-lg">자료 둘러보기</Link>
             <Link to="/upload" className="btn btn-outline btn-lg">자료 판매하기</Link>
           </div>
-          <div className="hero-stats">
-            <div className="stat">
-              <span className="stat-value">12,400+</span>
-              <span className="stat-label">등록된 자료</span>
-            </div>
-            <div className="stat">
-              <span className="stat-value">8,200+</span>
-              <span className="stat-label">판매자</span>
-            </div>
-            <div className="stat">
-              <span className="stat-value">150+</span>
-              <span className="stat-label">대학교</span>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -85,6 +71,7 @@ export default function HomePage() {
               >
                 <span className="category-icon">{cat.icon}</span>
                 <span className="category-name">{cat.name}</span>
+                <span className="category-examples">{cat.examples}</span>
               </Link>
             ))}
           </div>

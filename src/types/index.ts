@@ -4,8 +4,9 @@ export interface Material {
   description: string;
   price: number;
   category: Category;
-  university: string;
+  university?: string;
   subject: string;
+  professor?: string;
   author: string;
   authorId: string;
   thumbnail: string;
@@ -27,12 +28,10 @@ export interface User {
 }
 
 export type Category =
-  | "노트정리"
-  | "시험족보"
-  | "과제/레포트"
-  | "발표자료"
-  | "요약본"
-  | "기타";
+  | "수업"
+  | "이중전공 & 전과"
+  | "교환학생"
+  | "장학금";
 
 export interface UserProfile {
   displayName: string;
@@ -41,6 +40,7 @@ export interface UserProfile {
   points: number;
   totalEarned: number;
   totalSpent: number;
+  role?: string;
 }
 
 export interface Transaction {
