@@ -1,12 +1,14 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { collection, getDocs, orderBy, query } from "firebase/firestore";
+import { collection, getDocs, orderBy, query, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import MaterialCard from "../components/MaterialCard";
 import { categories } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import type { Material, Category } from "../types";
 import "./BrowsePage.css";
+
+const ITEMS_PER_PAGE = 12;
 
 export default function BrowsePage() {
   const [searchParams] = useSearchParams();
@@ -22,11 +24,17 @@ export default function BrowsePage() {
   const [materials, setMaterials] = useState<Material[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStats>({});
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery, sortBy]);
 
   useEffect(() => {
     async function fetchMaterials() {
       try {
-        const q = query(collection(db, "materials"), orderBy("createdAt", "desc"));
+        const q = query(collection(db, "materials"), orderBy("createdAt", "desc"), limit(50));
         const snapshot = await getDocs(q);
         const docs = snapshot.docs.map((doc) => ({
           id: doc.id,
@@ -86,6 +94,28 @@ export default function BrowsePage() {
     return result;
   }, [materials, reviewStats, selectedCategory, searchQuery, sortBy]);
 
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginatedItems = filtered.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const getPageNumbers = () => {
+    const pages: (number | "...")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push("...");
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (currentPage < totalPages - 2) pages.push("...");
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
   return (
     <div className="browse">
       <div className="browse-inner">
@@ -96,7 +126,7 @@ export default function BrowsePage() {
           <div className="filter-search">
             <input
               type="text"
-              placeholder="검색어 입력..."
+              placeholder="과목명, 교수명, 키워드로 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -134,18 +164,53 @@ export default function BrowsePage() {
           <p className="browse-count">불러오는 중...</p>
         ) : (
           <>
-            <p className="browse-count">총 {filtered.length}개의 자료</p>
+            <p className="browse-count">{filtered.length}개의 자료</p>
             {filtered.length > 0 ? (
-              <div className="browse-grid">
-                {filtered.map((m) => (
-                  <MaterialCard
-                    key={m.id}
-                    material={m}
-                    rating={reviewStats[m.id]?.avgRating}
-                    reviewCount={reviewStats[m.id]?.reviewCount}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="browse-grid">
+                  {paginatedItems.map((m) => (
+                    <MaterialCard
+                      key={m.id}
+                      material={m}
+                      rating={reviewStats[m.id]?.avgRating}
+                      reviewCount={reviewStats[m.id]?.reviewCount}
+                    />
+                  ))}
+                </div>
+                {totalPages > 1 && (
+                  <nav className="pagination">
+                    <button
+                      className="pagination-btn"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage((p) => p - 1)}
+                    >
+                      이전
+                    </button>
+                    {getPageNumbers().map((page, idx) =>
+                      page === "..." ? (
+                        <span key={`ellipsis-${idx}`} className="pagination-ellipsis">
+                          ...
+                        </span>
+                      ) : (
+                        <button
+                          key={page}
+                          className={`pagination-btn ${currentPage === page ? "active" : ""}`}
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </button>
+                      )
+                    )}
+                    <button
+                      className="pagination-btn"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage((p) => p + 1)}
+                    >
+                      다음
+                    </button>
+                  </nav>
+                )}
+              </>
             ) : (
               <div className="browse-empty">
                 <p>검색 결과가 없습니다.</p>

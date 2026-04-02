@@ -16,20 +16,31 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchMaterials() {
       try {
-        const q = query(collection(db, "materials"), orderBy("createdAt", "desc"), limit(8));
-        const snapshot = await getDocs(q);
-        const docs = snapshot.docs.map((doc) => ({
+        const recentQuery = query(collection(db, "materials"), orderBy("createdAt", "desc"), limit(4));
+        const popularQuery = query(collection(db, "materials"), orderBy("salesCount", "desc"), limit(4));
+
+        const [recentSnap, popularSnap] = await Promise.all([
+          getDocs(recentQuery),
+          getDocs(popularQuery),
+        ]);
+
+        const recentDocs = recentSnap.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
           createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
         })) as Material[];
 
-        setRecentMaterials(docs.slice(0, 4));
-        setPopularMaterials(
-          [...docs].sort((a, b) => b.salesCount - a.salesCount).slice(0, 4)
-        );
+        const popularDocs = popularSnap.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
+        })) as Material[];
 
-        const stats = await fetchReviewStats(docs.map((d) => d.id));
+        setRecentMaterials(recentDocs);
+        setPopularMaterials(popularDocs);
+
+        const allIds = [...new Set([...recentDocs, ...popularDocs].map((d) => d.id))];
+        const stats = await fetchReviewStats(allIds);
         setReviewStats(stats);
       } catch (err) {
         console.error("자료 불러오기 실패:", err);

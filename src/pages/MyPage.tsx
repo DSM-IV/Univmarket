@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { collection, query, where, orderBy, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, orderBy, getDocs, documentId } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
@@ -53,9 +53,15 @@ export default function MyPage() {
 
         if (materialIds.length > 0) {
           const materialsData: Material[] = [];
-          for (const mid of materialIds) {
-            const snap = await getDoc(doc(db, "materials", mid));
-            if (snap.exists()) {
+          // Firestore "in" queries support max 30 items, so batch the IDs
+          for (let i = 0; i < materialIds.length; i += 30) {
+            const batch = materialIds.slice(i, i + 30);
+            const batchQuery = query(
+              collection(db, "materials"),
+              where(documentId(), "in", batch)
+            );
+            const batchSnap = await getDocs(batchQuery);
+            for (const snap of batchSnap.docs) {
               materialsData.push({
                 id: snap.id,
                 ...snap.data(),
@@ -115,10 +121,10 @@ export default function MyPage() {
             <p className="mypage-university">{userProfile?.university || ""}</p>
           </div>
           <div className="mypage-stats">
-            <div className="mypage-stat">
+            <Link to="/transactions" className="mypage-stat" style={{ textDecoration: "none" }}>
               <span className="mypage-stat-value">{userProfile?.points?.toLocaleString() || 0}P</span>
               <span className="mypage-stat-label">보유 포인트</span>
-            </div>
+            </Link>
             <div className="mypage-stat">
               <span className="mypage-stat-value">{uploadedMaterials.length}</span>
               <span className="mypage-stat-label">등록 자료</span>

@@ -125,6 +125,10 @@ export default function ChargePage() {
           </span>
         </div>
 
+        <Link to="/transactions" className="charge-tx-link">
+          거래 내역 보기
+        </Link>
+
         <div className="charge-amounts">
           <h3>충전 금액 선택</h3>
           <div className="amount-grid">

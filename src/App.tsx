@@ -14,6 +14,7 @@ import MyPage from "./pages/MyPage";
 import ReportPage from "./pages/ReportPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
+import TransactionPage from "./pages/TransactionPage";
 import AdminPage from "./pages/AdminPage";
 import "./App.css";
 
@@ -36,6 +37,7 @@ function App() {
             <Route path="/report" element={<ReportPage />} />
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/transactions" element={<TransactionPage />} />
             <Route path="/admin" element={<AdminPage />} />
           </Routes>
           <Footer />

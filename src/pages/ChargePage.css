@@ -38,7 +38,23 @@
   padding: 16px 20px;
   background: var(--border-light);
   border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+}
+
+.charge-tx-link {
+  display: block;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
   margin-bottom: 28px;
+  transition: opacity 0.2s;
+}
+
+.charge-tx-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
 }
 
 .balance-label {
