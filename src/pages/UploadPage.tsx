@@ -179,6 +179,11 @@ export default function UploadPage() {
       return;
     }
 
+    if (!isPdf && !customPreview) {
+      setError("미리보기 이미지를 첨부해주세요.");
+      return;
+    }
+
     setUploading(true);
     setError("");
 
@@ -439,9 +444,9 @@ export default function UploadPage() {
 
             {file && !isPdf && (
               <div className="form-group">
-                <label>미리보기 이미지 (선택)</label>
+                <label>미리보기 이미지 *</label>
                 <p className="preview-upload-hint">
-                  PDF가 아닌 파일은 미리보기가 자동 생성되지 않습니다. 첫 페이지 캡처를 첨부하면 구매자에게 미리보기가 제공됩니다.
+                  PDF가 아닌 파일은 미리보기가 자동 생성되지 않습니다. 첫 페이지 캡처를 첨부해주세요.
                 </p>
                 <div
                   className="preview-upload-area"
