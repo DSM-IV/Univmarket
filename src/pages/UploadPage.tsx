@@ -1,15 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { categories } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 import { httpsCallable } from "firebase/functions";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db, functions } from "../firebase";
-import * as pdfjsLib from "pdfjs-dist";
-import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import "./UploadPage.css";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 const ALLOWED_TYPES = [
   "application/pdf",
@@ -21,6 +17,7 @@ const ALLOWED_TYPES = [
   "application/haansofthwp",
 ];
 const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_PREVIEWS = 5;
 
 function getFileTypeLabel(file: File): string {
   const ext = file.name.split(".").pop()?.toUpperCase() || "";
@@ -37,28 +34,9 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
-async function generatePdfThumbnail(file: File): Promise<Blob | null> {
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const page = await pdf.getPage(1);
-
-    const scale = 1.5;
-    const viewport = page.getViewport({ scale });
-    const canvas = document.createElement("canvas");
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
-    const ctx = canvas.getContext("2d")!;
-
-    await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
-
-    return new Promise((resolve) => {
-      canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.85);
-    });
-  } catch (err) {
-    console.error("썸네일 생성 실패:", err);
-    return null;
-  }
+interface PreviewImage {
+  file: File;
+  url: string;
 }
 
 export default function UploadPage() {
@@ -70,9 +48,7 @@ export default function UploadPage() {
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
-  const [customPreview, setCustomPreview] = useState<File | null>(null);
-  const isPdf = file?.type === "application/pdf" || file?.name.toLowerCase().endsWith(".pdf");
+  const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -107,24 +83,7 @@ export default function UploadPage() {
     }
     setError("");
     setFile(f);
-
-    // PDF인 경우 썸네일 미리보기 생성
-    if (f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")) {
-      const blob = await generatePdfThumbnail(f);
-      if (blob) {
-        setThumbnailPreview(URL.createObjectURL(blob));
-      }
-    } else {
-      setThumbnailPreview(null);
-    }
   };
-
-  // 미리보기 URL 정리
-  useEffect(() => {
-    return () => {
-      if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
-    };
-  }, [thumbnailPreview]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -150,20 +109,39 @@ export default function UploadPage() {
     }
   };
 
-  const handlePreviewImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    if (!f.type.startsWith("image/")) {
-      setError("이미지 파일만 업로드 가능합니다.");
+  const handlePreviewImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const remaining = MAX_PREVIEWS - previewImages.length;
+    if (remaining <= 0) {
+      setError(`미리보기 이미지는 최대 ${MAX_PREVIEWS}장까지 첨부 가능합니다.`);
       return;
     }
-    if (f.size > 5 * 1024 * 1024) {
-      setError("미리보기 이미지는 5MB를 초과할 수 없습니다.");
+
+    const newImages: PreviewImage[] = [];
+    for (let i = 0; i < Math.min(files.length, remaining); i++) {
+      const f = files[i];
+      if (!f.type.startsWith("image/")) continue;
+      if (f.size > 5 * 1024 * 1024) continue;
+      newImages.push({ file: f, url: URL.createObjectURL(f) });
+    }
+
+    if (newImages.length === 0) {
+      setError("이미지 파일만 업로드 가능합니다. (최대 5MB)");
       return;
     }
-    setCustomPreview(f);
-    setThumbnailPreview(URL.createObjectURL(f));
+
+    setPreviewImages((prev) => [...prev, ...newImages]);
     setError("");
+    if (previewInputRef.current) previewInputRef.current.value = "";
+  };
+
+  const removePreviewImage = (index: number) => {
+    setPreviewImages((prev) => {
+      URL.revokeObjectURL(prev[index].url);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -179,8 +157,8 @@ export default function UploadPage() {
       return;
     }
 
-    if (!isPdf && !customPreview) {
-      setError("미리보기 이미지를 첨부해주세요.");
+    if (previewImages.length === 0) {
+      setError("미리보기 이미지를 최소 1장 첨부해주세요.");
       return;
     }
 
@@ -188,47 +166,38 @@ export default function UploadPage() {
     setError("");
 
     try {
-      // R2 presigned URL 발급
       const getUploadUrl = httpsCallable<
         { fileName: string; contentType: string },
         { uploadUrl: string; fileUrl: string; key: string }
       >(functions, "getUploadUrl");
 
+      // 자료 파일 업로드
       const { data } = await getUploadUrl({
         fileName: file.name,
         contentType: file.type || "application/octet-stream",
       });
 
-      // R2에 파일 직접 업로드
       await fetch(data.uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": file.type || "application/octet-stream" },
         body: file,
       });
 
-      // 썸네일 업로드 (PDF 자동 생성 또는 사용자 첨부)
-      let thumbnailUrl = "";
-      let thumbBlob: Blob | null = null;
-
-      if (customPreview) {
-        thumbBlob = customPreview;
-      } else if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
-        thumbBlob = await generatePdfThumbnail(file);
-      }
-
-      if (thumbBlob) {
-        const thumbFileName = `thumb_${Date.now()}.jpg`;
-        const thumbContentType = customPreview ? customPreview.type : "image/jpeg";
-        const { data: thumbData } = await getUploadUrl({
-          fileName: thumbFileName,
-          contentType: thumbContentType,
+      // 미리보기 이미지들 업로드
+      const uploadedPreviewUrls: string[] = [];
+      for (let i = 0; i < previewImages.length; i++) {
+        const img = previewImages[i].file;
+        const imgName = `preview_${Date.now()}_${i}.${img.name.split(".").pop()}`;
+        const { data: imgData } = await getUploadUrl({
+          fileName: imgName,
+          contentType: img.type,
         });
-        await fetch(thumbData.uploadUrl, {
+        await fetch(imgData.uploadUrl, {
           method: "PUT",
-          headers: { "Content-Type": thumbContentType },
-          body: thumbBlob,
+          headers: { "Content-Type": img.type },
+          body: img,
         });
-        thumbnailUrl = thumbData.fileUrl;
+        uploadedPreviewUrls.push(imgData.fileUrl);
       }
 
       // Firestore에 자료 정보 저장
@@ -245,7 +214,8 @@ export default function UploadPage() {
         fileKey: data.key,
         fileName: file.name,
         fileSize: file.size,
-        thumbnail: thumbnailUrl,
+        thumbnail: uploadedPreviewUrls[0] || "",
+        previewImages: uploadedPreviewUrls,
         author: user.displayName || user.email || "",
         authorId: user.uid,
         rating: 0,
@@ -402,11 +372,7 @@ export default function UploadPage() {
                 />
                 {file ? (
                   <div className="file-selected">
-                    {thumbnailPreview ? (
-                      <img src={thumbnailPreview} alt="미리보기" className="file-thumbnail-preview" />
-                    ) : (
-                      <span className="file-selected-icon">✓</span>
-                    )}
+                    <span className="file-selected-icon">✓</span>
                     <p className="file-selected-name">{file.name}</p>
                     <p className="file-selected-info">
                       {getFileTypeLabel(file)} · {formatFileSize(file.size)}
@@ -417,10 +383,7 @@ export default function UploadPage() {
                       onClick={(e) => {
                         e.stopPropagation();
                         setFile(null);
-                        setThumbnailPreview(null);
-                        setCustomPreview(null);
                         if (fileInputRef.current) fileInputRef.current.value = "";
-                        if (previewInputRef.current) previewInputRef.current.value = "";
                       }}
                     >
                       파일 변경
@@ -442,12 +405,34 @@ export default function UploadPage() {
               </div>
             </div>
 
-            {file && !isPdf && (
-              <div className="form-group">
-                <label>미리보기 이미지 *</label>
-                <p className="preview-upload-hint">
-                  PDF가 아닌 파일은 미리보기가 자동 생성되지 않습니다. 첫 페이지 캡처를 첨부해주세요.
-                </p>
+            <div className="form-group">
+              <label>미리보기 이미지 * ({previewImages.length}/{MAX_PREVIEWS})</label>
+              <p className="preview-upload-hint">
+                자료의 내용을 확인할 수 있는 이미지를 첨부해주세요. 첫 번째 이미지가 대표 미리보기로 사용됩니다.
+              </p>
+
+              {previewImages.length > 0 && (
+                <div className="preview-image-list">
+                  {previewImages.map((img, idx) => (
+                    <div key={idx} className="preview-image-item">
+                      <img src={img.url} alt={`미리보기 ${idx + 1}`} />
+                      {idx === 0 && <span className="preview-image-badge">대표</span>}
+                      <button
+                        type="button"
+                        className="preview-image-remove"
+                        onClick={() => removePreviewImage(idx)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {previewImages.length < MAX_PREVIEWS && (
                 <div
                   className="preview-upload-area"
                   onClick={() => previewInputRef.current?.click()}
@@ -456,39 +441,22 @@ export default function UploadPage() {
                     ref={previewInputRef}
                     type="file"
                     accept="image/*"
-                    onChange={handlePreviewImage}
+                    multiple
+                    onChange={handlePreviewImages}
                     hidden
                   />
-                  {thumbnailPreview ? (
-                    <div className="preview-upload-selected">
-                      <img src={thumbnailPreview} alt="미리보기" className="preview-upload-img" />
-                      <button
-                        type="button"
-                        className="preview-upload-change"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCustomPreview(null);
-                          setThumbnailPreview(null);
-                          if (previewInputRef.current) previewInputRef.current.value = "";
-                        }}
-                      >
-                        이미지 변경
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="preview-upload-empty">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                        <circle cx="8.5" cy="8.5" r="1.5" />
-                        <polyline points="21 15 16 10 5 21" />
-                      </svg>
-                      <span>클릭하여 미리보기 이미지 첨부</span>
-                      <span className="preview-upload-sub">JPG, PNG (최대 5MB)</span>
-                    </div>
-                  )}
+                  <div className="preview-upload-empty">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                    <span>클릭하여 미리보기 이미지 첨부</span>
+                    <span className="preview-upload-sub">JPG, PNG (최대 5MB, {MAX_PREVIEWS}장까지)</span>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           <div className="copyright-banner">

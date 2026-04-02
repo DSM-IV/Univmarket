@@ -223,6 +223,63 @@
   color: var(--primary);
 }
 
+/* Preview Image List */
+.preview-image-list {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.preview-image-item {
+  position: relative;
+  width: 120px;
+  height: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.preview-image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-image-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+.preview-image-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.preview-image-remove:hover {
+  background: rgba(220, 38, 38, 0.9);
+}
+
 /* Preview Image Upload */
 .preview-upload-hint {
   font-size: 13px;

@@ -39,6 +39,7 @@ export default function DetailPage() {
   const [material, setMaterial] = useState<Material | null>(null);
   const [loading, setLoading] = useState(true);
   const [owned, setOwned] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [buying, setBuying] = useState(false);
   const [error, setError] = useState("");
@@ -322,17 +323,45 @@ export default function DetailPage() {
       <div className="detail-inner">
         <div className="detail-main">
           <div className="detail-preview">
-            <h3 className="preview-heading">첫 페이지 미리보기</h3>
-            {material.thumbnail ? (
+            <h3 className="preview-heading">미리보기</h3>
+            {(material as any).previewImages?.length > 0 ? (
               <div className="preview-page">
-                <img src={material.thumbnail} alt="첫 페이지 미리보기" className="preview-image" />
-                <div className="preview-page-label">1 / {material.pages || "?"}페이지</div>
+                <img
+                  src={(material as any).previewImages[previewIndex]}
+                  alt={`미리보기 ${previewIndex + 1}`}
+                  className="preview-image"
+                />
+                {(material as any).previewImages.length > 1 && (
+                  <div className="preview-nav">
+                    <button
+                      className="preview-nav-btn"
+                      onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
+                      disabled={previewIndex === 0}
+                    >
+                      ‹
+                    </button>
+                    <span className="preview-nav-label">
+                      {previewIndex + 1} / {(material as any).previewImages.length}
+                    </span>
+                    <button
+                      className="preview-nav-btn"
+                      onClick={() => setPreviewIndex((i) => Math.min((material as any).previewImages.length - 1, i + 1))}
+                      disabled={previewIndex === (material as any).previewImages.length - 1}
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : material.thumbnail ? (
+              <div className="preview-page">
+                <img src={material.thumbnail} alt="미리보기" className="preview-image" />
               </div>
             ) : (
               <div className="preview-placeholder">
                 <span className="preview-filetype">{material.fileType}</span>
                 <span className="preview-pages">{material.pages}페이지</span>
-                <span className="preview-no-thumb">미리보기를 지원하지 않는 파일 형식입니다</span>
+                <span className="preview-no-thumb">미리보기가 없습니다</span>
               </div>
             )}
           </div>
