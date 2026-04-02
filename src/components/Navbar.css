@@ -123,6 +123,7 @@
 }
 
 .nav-cart {
+  position: relative;
   display: flex;
   align-items: center;
   padding: 8px;
@@ -134,6 +135,22 @@
 .nav-cart:hover {
   color: var(--primary);
   background: rgba(79, 70, 229, 0.08);
+}
+
+.cart-badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  color: white;
+  background: var(--danger);
+  border-radius: 8px;
 }
 
 .nav-points {

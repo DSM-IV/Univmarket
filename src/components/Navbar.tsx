@@ -1,12 +1,27 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import "./Navbar.css";
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [cartCount, setCartCount] = useState(0);
   const { user, userProfile, logOut } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!user) {
+      setCartCount(0);
+      return;
+    }
+    const q = query(collection(db, "carts"), where("userId", "==", user.uid));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      setCartCount(snap.size);
+    }, () => setCartCount(0));
+    return unsubscribe;
+  }, [user]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +67,7 @@ export default function Navbar() {
                   <circle cx="20" cy="21" r="1" />
                   <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
                 </svg>
+                {cartCount > 0 && <span className="cart-badge">{cartCount}</span>}
               </Link>
               <Link to="/charge" className="nav-points">
                 {(userProfile?.points ?? 0).toLocaleString()}P
