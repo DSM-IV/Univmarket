@@ -6,9 +6,10 @@ import { httpsCallable } from "firebase/functions";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db, functions } from "../firebase";
 import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import "./UploadPage.css";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 const ALLOWED_TYPES = [
   "application/pdf",
