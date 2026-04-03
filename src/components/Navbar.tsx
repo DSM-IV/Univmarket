@@ -72,7 +72,7 @@ export default function Navbar() {
               </Link>
               <div className="flex items-center gap-0.5">
                 <Link
-                  to="/mypage"
+                  to="/charge"
                   className="px-3 py-1 bg-primary/5 text-primary rounded-l-full text-[13px] font-bold hover:bg-primary/10 transition-colors"
                 >
                   {(userProfile?.points ?? 0).toLocaleString()}P
