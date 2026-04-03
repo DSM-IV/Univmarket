@@ -72,7 +72,7 @@ export default function Navbar() {
               </Link>
               <Link
                 to="/charge"
-                className="px-3 py-1.5 bg-[#DC143C] text-white rounded-full text-[13px] font-bold hover:bg-[#B01030] transition-colors"
+                className="hidden md:inline-flex px-3.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               >
                 {(userProfile?.points ?? 0).toLocaleString()}P
               </Link>
