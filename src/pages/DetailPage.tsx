@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChevronLeft, ChevronRight, Download, ShoppingCart, AlertTriangle, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, ShoppingCart } from "lucide-react";
 
 interface Review {
   id: string;

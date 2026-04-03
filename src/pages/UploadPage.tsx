@@ -7,9 +7,8 @@ import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db, functions } from "../firebase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Upload, X, CheckCircle, Image, AlertTriangle } from "lucide-react";
 
