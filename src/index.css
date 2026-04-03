@@ -1,37 +1,104 @@
-:root {
-  --primary: #4F46E5;
-  --primary-light: #818CF8;
-  --primary-dark: #3730A3;
-  --bg: #F9FAFB;
-  --bg-white: #FFFFFF;
-  --text: #111827;
-  --text-secondary: #6B7280;
-  --text-light: #9CA3AF;
-  --border: #E5E7EB;
-  --border-light: #F3F4F6;
-  --success: #059669;
-  --warning: #D97706;
-  --danger: #DC2626;
-  --radius: 12px;
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap');
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-background: #FFFFFF;
+  --color-foreground: #191F28;
+
+  --color-primary: #862633;
+  --color-primary-light: #A83344;
+  --color-primary-dark: #6B1E29;
+  --color-primary-foreground: #FFFFFF;
+
+  --color-secondary: #F2F4F6;
+  --color-secondary-foreground: #191F28;
+
+  --color-muted: #F7F8FA;
+  --color-muted-foreground: #8B95A1;
+
+  --color-accent: #F2F4F6;
+  --color-accent-foreground: #191F28;
+
+  --color-destructive: #F04452;
+  --color-destructive-foreground: #FFFFFF;
+
+  --color-success: #00C471;
+  --color-warning: #FF9900;
+
+  --color-border: #E5E8EB;
+  --color-input: #E5E8EB;
+  --color-ring: #862633;
+
+  --color-card: #FFFFFF;
+  --color-card-foreground: #191F28;
+
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #191F28;
+
   --radius-sm: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
-  --max-width: 1200px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  --font-sans: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border);
+  }
+
+  /* Restore styles that Tailwind preflight resets - needed for legacy CSS pages */
+  button, [type="button"], [type="reset"], [type="submit"] {
+    cursor: pointer;
+    background-color: transparent;
+  }
+
+  input, select, textarea {
+    font-family: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+  }
+
+  select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%238B95A1' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 8px center;
+    background-repeat: no-repeat;
+    background-size: 16px;
+    padding-right: 28px;
+    appearance: none;
+  }
+
+  img, svg {
+    display: inline;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
-  background: var(--bg);
-  color: var(--text);
+  font-family: var(--font-sans);
+  background: var(--color-background);
+  color: var(--color-foreground);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.02em;
 }
 
 a {
@@ -39,12 +106,38 @@ a {
   color: inherit;
 }
 
-button {
-  cursor: pointer;
-  border: none;
-  font-family: inherit;
+::selection {
+  background: rgba(134, 38, 51, 0.15);
+  color: var(--color-foreground);
 }
 
-input, select, textarea {
-  font-family: inherit;
+/* Legacy CSS variable compat for pages not yet migrated */
+:root {
+  --primary: #862633;
+  --primary-light: #A83344;
+  --primary-dark: #6B1E29;
+  --primary-bg: rgba(134, 38, 51, 0.06);
+  --bg: #FFFFFF;
+  --bg-secondary: #F2F4F6;
+  --bg-tertiary: #F7F8FA;
+  --bg-white: #FFFFFF;
+  --text: #191F28;
+  --text-secondary: #8B95A1;
+  --text-tertiary: #B0B8C1;
+  --text-light: #D1D6DB;
+  --border: #E5E8EB;
+  --border-light: #F2F4F6;
+  --success: #00C471;
+  --warning: #FF9900;
+  --danger: #F04452;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-xs: 8px;
+  --radius-full: 9999px;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1);
+  --max-width: 1140px;
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }

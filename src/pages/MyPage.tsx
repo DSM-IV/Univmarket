@@ -5,7 +5,12 @@ import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import type { Material } from "../types";
-import "./MyPage.css";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { Download, FileText, Upload, ShoppingBag } from "lucide-react";
 
 type Tab = "uploaded" | "purchased";
 
@@ -104,91 +109,131 @@ export default function MyPage() {
     }
   };
 
-  if (authLoading) return <p className="mypage-loading">불러오는 중...</p>;
+  if (authLoading) return <p className="py-20 text-center text-gray-500">불러오는 중...</p>;
   if (!user) return null;
 
   const currentList = tab === "uploaded" ? uploadedMaterials : purchasedMaterials;
 
   return (
-    <div className="mypage">
-      <div className="mypage-inner">
-        <div className="mypage-header">
-          <div className="mypage-avatar">
-            {(user.displayName || user.email || "U").charAt(0).toUpperCase()}
-          </div>
-          <div className="mypage-user-info">
-            <h1 className="mypage-name">{user.displayName || user.email}</h1>
-            <p className="mypage-university">{userProfile?.university || ""}</p>
-          </div>
-          <div className="mypage-stats">
-            <Link to="/transactions" className="mypage-stat" style={{ textDecoration: "none" }}>
-              <span className="mypage-stat-value">{userProfile?.points?.toLocaleString() || 0}P</span>
-              <span className="mypage-stat-label">보유 포인트</span>
-            </Link>
-            <div className="mypage-stat">
-              <span className="mypage-stat-value">{uploadedMaterials.length}</span>
-              <span className="mypage-stat-label">등록 자료</span>
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="mx-auto max-w-3xl px-4">
+        {/* Profile Header */}
+        <Card className="mb-6">
+          <CardContent className="flex flex-col items-center gap-5 p-6 max-sm:p-4 sm:flex-row sm:items-start">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#862633] text-2xl font-bold text-white">
+              {(user.displayName || user.email || "U").charAt(0).toUpperCase()}
             </div>
-            <div className="mypage-stat">
-              <span className="mypage-stat-value">{purchasedMaterials.length}</span>
-              <span className="mypage-stat-label">구매 자료</span>
+            <div className="flex-1 text-center sm:text-left">
+              <h1 className="text-xl font-bold text-gray-900">
+                {user.displayName || user.email}
+              </h1>
+              <p className="mt-0.5 text-sm text-gray-500">
+                {userProfile?.university || ""}
+              </p>
             </div>
-          </div>
-        </div>
+            <div className="flex gap-6 max-sm:gap-3 text-center">
+              <Link to="/transactions" className="group no-underline">
+                <span className="block text-lg font-bold text-[#862633] group-hover:underline">
+                  {userProfile?.points?.toLocaleString() || 0}P
+                </span>
+                <span className="text-xs text-gray-500">보유 포인트</span>
+              </Link>
+              <div>
+                <span className="block text-lg font-bold text-gray-900">
+                  {uploadedMaterials.length}
+                </span>
+                <span className="text-xs text-gray-500">등록 자료</span>
+              </div>
+              <div>
+                <span className="block text-lg font-bold text-gray-900">
+                  {purchasedMaterials.length}
+                </span>
+                <span className="text-xs text-gray-500">구매 자료</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="mypage-tabs">
+        {/* Tabs */}
+        <div className="mb-4 flex border-b border-gray-200">
           <button
-            className={`mypage-tab ${tab === "uploaded" ? "active" : ""}`}
+            className={cn(
+              "flex-1 py-3 text-center text-sm font-medium transition-colors",
+              tab === "uploaded"
+                ? "border-b-2 border-[#862633] text-[#862633]"
+                : "text-gray-500 hover:text-gray-700"
+            )}
             onClick={() => setTab("uploaded")}
           >
+            <Upload className="mr-1.5 inline-block h-4 w-4" />
             내가 올린 자료
           </button>
           <button
-            className={`mypage-tab ${tab === "purchased" ? "active" : ""}`}
+            className={cn(
+              "flex-1 py-3 text-center text-sm font-medium transition-colors",
+              tab === "purchased"
+                ? "border-b-2 border-[#862633] text-[#862633]"
+                : "text-gray-500 hover:text-gray-700"
+            )}
             onClick={() => setTab("purchased")}
           >
+            <ShoppingBag className="mr-1.5 inline-block h-4 w-4" />
             구매한 자료
           </button>
         </div>
 
+        {/* Content */}
         {loading ? (
-          <p className="mypage-loading">불러오는 중...</p>
+          <p className="py-16 text-center text-gray-500">불러오는 중...</p>
         ) : currentList.length > 0 ? (
-          <div className="mypage-list">
+          <div className="space-y-3">
             {currentList.map((m) => (
-              <div key={m.id} className="mypage-item">
-                <Link to={`/material/${m.id}`} className="mypage-item-info">
-                  <div className="mypage-item-icon">
-                    <span>{m.fileType}</span>
+              <Card key={m.id} className="transition-shadow hover:shadow-md">
+                <CardContent className="flex items-center gap-4 p-4">
+                  <Link
+                    to={`/material/${m.id}`}
+                    className="flex min-w-0 flex-1 items-center gap-3 no-underline"
+                  >
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                      <Badge variant="outline" className="text-xs">
+                        {m.fileType}
+                      </Badge>
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-semibold text-gray-900">
+                        {m.title}
+                      </h3>
+                      <p className="mt-0.5 truncate text-xs text-gray-500">
+                        {m.subject}
+                        {m.professor ? ` · ${m.professor} 교수` : ""} ·{" "}
+                        {m.price.toLocaleString()}P
+                      </p>
+                    </div>
+                  </Link>
+                  <div className="shrink-0">
+                    {tab === "purchased" && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleDownload(m.id)}
+                        disabled={downloading === m.id}
+                      >
+                        <Download className="mr-1.5 h-3.5 w-3.5" />
+                        {downloading === m.id ? "준비 중..." : "다운로드"}
+                      </Button>
+                    )}
+                    {tab === "uploaded" && (
+                      <span className="text-xs text-gray-500">
+                        판매 {m.salesCount || 0}건
+                      </span>
+                    )}
                   </div>
-                  <div className="mypage-item-detail">
-                    <h3 className="mypage-item-title">{m.title}</h3>
-                    <p className="mypage-item-meta">
-                      {m.subject}{m.professor ? ` · ${m.professor} 교수` : ""} · {m.price.toLocaleString()}P
-                    </p>
-                  </div>
-                </Link>
-                <div className="mypage-item-actions">
-                  {tab === "purchased" && (
-                    <button
-                      className="btn-download"
-                      onClick={() => handleDownload(m.id)}
-                      disabled={downloading === m.id}
-                    >
-                      {downloading === m.id ? "준비 중..." : "다운로드"}
-                    </button>
-                  )}
-                  {tab === "uploaded" && (
-                    <span className="mypage-item-sales">
-                      판매 {m.salesCount || 0}건
-                    </span>
-                  )}
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : (
-          <div className="mypage-empty">
+          <div className="py-16 text-center text-gray-400">
+            <FileText className="mx-auto mb-3 h-10 w-10" />
             <p>{tab === "uploaded" ? "등록한 자료가 없습니다." : "구매한 자료가 없습니다."}</p>
           </div>
         )}

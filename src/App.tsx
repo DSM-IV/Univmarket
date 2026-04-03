@@ -16,14 +16,14 @@ import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TransactionPage from "./pages/TransactionPage";
 import AdminPage from "./pages/AdminPage";
+import WithdrawPage from "./pages/WithdrawPage";
 import NotFoundPage from "./pages/NotFoundPage";
-import "./App.css";
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <div className="app">
+        <div className="min-h-screen flex flex-col">
           <Navbar />
           <Routes>
             <Route path="/" element={<HomePage />} />
@@ -39,6 +39,7 @@ function App() {
             <Route path="/terms" element={<TermsPage />} />
             <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="/transactions" element={<TransactionPage />} />
+            <Route path="/withdraw" element={<WithdrawPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

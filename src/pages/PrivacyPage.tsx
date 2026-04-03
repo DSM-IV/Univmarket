@@ -1,29 +1,32 @@
 import { Link } from "react-router-dom";
-import "./LegalPage.css";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 export default function PrivacyPage() {
   return (
-    <div className="legal-page">
-      <div className="legal-inner">
-        <h1 className="legal-title">개인정보처리방침</h1>
-        <p className="legal-updated">시행일: 2026년 4월 1일 | 버전: v1.0</p>
+    <div className="min-h-screen bg-white py-8">
+      <div className="mx-auto max-w-3xl px-4">
+        <h1 className="text-2xl font-bold text-gray-900">개인정보처리방침</h1>
+        <p className="mt-1 text-sm text-gray-400">시행일: 2026년 4월 1일 | 버전: v1.0</p>
 
-        <div className="legal-content">
-          <section className="legal-chapter">
-            <p className="legal-intro">
+        <Separator className="my-6" />
+
+        <div className="prose prose-sm prose-gray max-w-none [&_article]:mb-6 [&_h2]:mb-4 [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-gray-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-gray-800 [&_li]:mb-1 [&_ol]:ml-5 [&_ol]:list-decimal [&_ol]:space-y-1 [&_p]:mb-3 [&_p]:leading-relaxed [&_p]:text-gray-600 [&_section]:mb-8 [&_ul]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1">
+          <section>
+            <p>
               KU market(이하 "회사")은 귀하의 개인정보보호를 매우 중요시하며,
               「개인정보보호법」, 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」,
               「통신비밀보호법」, 「전기통신사업법」 등 정보통신서비스제공자가 준수하여야 할
               관련 법령상의 개인정보보호 규정을 준수하고 있습니다.
             </p>
-            <p className="legal-intro">
+            <p>
               회사는 본 개인정보처리방침을 통하여 귀하께서 제공하시는 개인정보가 어떠한
               용도와 방식으로 이용되고 있으며, 개인정보보호를 위해 어떠한 조치가 취해지고
               있는지 알려 드립니다.
             </p>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 1 조 (개인정보의 수집범위)</h2>
             <p>
               회사는 회원에게 맞춤형 서비스를 제공하기 위하여 회원서비스(유료 정보 등의 이용,
@@ -63,7 +66,7 @@ export default function PrivacyPage() {
             </article>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 2 조 (개인정보 수집에 대한 동의)</h2>
             <p>
               회사는 귀하께서 회사의 개인정보처리방침 또는 이용약관의 내용에 대해 「동의한다」
@@ -72,18 +75,18 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 3 조 (개인정보의 수집목적 및 이용목적)</h2>
             <p>회사는 다음과 같은 목적을 위하여 개인정보를 수집하고 있습니다.</p>
-            <div className="legal-table-wrap">
-              <table className="legal-table">
+            <div className="my-4 overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr>
-                    <th>수집 항목</th>
-                    <th>이용 목적</th>
+                  <tr className="border-b-2 border-gray-200">
+                    <th className="px-4 py-2.5 text-left font-semibold text-gray-900">수집 항목</th>
+                    <th className="px-4 py-2.5 text-left font-semibold text-gray-900">이용 목적</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="[&_td]:border-b [&_td]:border-gray-100 [&_td]:px-4 [&_td]:py-2.5 [&_td]:text-gray-600">
                   <tr>
                     <td>아이디, 비밀번호, 닉네임</td>
                     <td>회원제 서비스 이용에 따른 본인 식별 절차에 이용</td>
@@ -106,7 +109,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 4 조 (제3자에 대한 제공 및 공유)</h2>
             <p>
               회사는 이용자들의 개인정보를 제3조에서 고지한 범위 내에서 사용하며,
@@ -132,7 +135,7 @@ export default function PrivacyPage() {
             </ol>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 5 조 (개인정보의 열람, 정정)</h2>
             <ol>
               <li>
@@ -151,7 +154,7 @@ export default function PrivacyPage() {
             </ol>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 6 조 (개인정보 수집·이용·제공에 대한 동의철회)</h2>
             <ol>
               <li>
@@ -174,7 +177,7 @@ export default function PrivacyPage() {
             </ol>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 7 조 (개인정보의 보유기간 및 이용기간)</h2>
             <p>
               회원님의 개인정보는 개인정보의 수집목적 또는 제공받은 목적이 달성되면
@@ -188,16 +191,16 @@ export default function PrivacyPage() {
               단, 관련법령의 규정에 의하여 거래 관련 권리 의무 관계의 확인 등을 이유로
               일정기간 보유하여야 할 필요가 있을 경우에는 다음과 같이 보유합니다.
             </p>
-            <div className="legal-table-wrap">
-              <table className="legal-table">
+            <div className="my-4 overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr>
-                    <th>보유 정보</th>
-                    <th>보유 기간</th>
-                    <th>근거</th>
+                  <tr className="border-b-2 border-gray-200">
+                    <th className="px-4 py-2.5 text-left font-semibold text-gray-900">보유 정보</th>
+                    <th className="px-4 py-2.5 text-left font-semibold text-gray-900">보유 기간</th>
+                    <th className="px-4 py-2.5 text-left font-semibold text-gray-900">근거</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="[&_td]:border-b [&_td]:border-gray-100 [&_td]:px-4 [&_td]:py-2.5 [&_td]:text-gray-600">
                   <tr>
                     <td>계약 또는 청약철회 등에 관한 기록</td>
                     <td>5년</td>
@@ -237,7 +240,7 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 8 조 (쿠키에 의한 개인정보 수집)</h2>
 
             <article>
@@ -270,7 +273,7 @@ export default function PrivacyPage() {
             </article>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 9 조 (개인정보의 기술적/관리적 보호 대책)</h2>
             <p>
               회사는 이용자들의 개인정보를 처리함에 있어 개인정보가 분실, 도난, 유출, 변조 또는
@@ -317,7 +320,7 @@ export default function PrivacyPage() {
             </article>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 10 조 (게시물)</h2>
             <p>
               회사는 귀하의 게시물을 소중하게 생각하며 변조, 훼손, 삭제되지 않도록 최선을
@@ -336,21 +339,21 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 11 조 (의견수렴 및 불만처리)</h2>
             <p>
               회사는 귀하의 의견을 소중하게 생각하며, 귀하는 의문사항으로부터 언제나
               성실한 답변을 받을 권리가 있습니다.
             </p>
-            <div className="legal-contact-box">
-              <p><strong>고객센터</strong></p>
-              <p>이메일: support@kumarket.com</p>
-              <p>고객센터를 이용한 상담은 접수 후 24시간 내에 성실하게 답변 드리겠습니다.</p>
+            <div className="my-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm not-prose">
+              <p className="font-semibold text-gray-900">고객센터</p>
+              <p className="mt-1 text-gray-600">이메일: support@kumarket.com</p>
+              <p className="mt-0.5 text-gray-600">고객센터를 이용한 상담은 접수 후 24시간 내에 성실하게 답변 드리겠습니다.</p>
             </div>
             <p>
               기타 개인정보에 관한 상담이 필요한 경우에는 아래 기관에 문의하실 수 있습니다.
             </p>
-            <ul className="legal-resources">
+            <ul className="text-gray-500">
               <li>개인정보침해신고센터: (국번없이) 118 (privacy.kisa.or.kr)</li>
               <li>개인정보분쟁조정위원회: (국번없이) 1833-6972 (www.kopico.go.kr)</li>
               <li>대검찰청: (국번없이) 1301 (www.spo.go.kr)</li>
@@ -358,7 +361,7 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 12 조 (개인정보관리책임자)</h2>
             <p>
               회사는 귀하가 좋은 정보를 안전하게 이용할 수 있도록 최선을 다하고 있습니다.
@@ -368,14 +371,14 @@ export default function PrivacyPage() {
               사고로 인한 정보의 훼손 및 방문자가 작성한 게시물에 의한 각종 분쟁에 관해서는
               책임이 없습니다.
             </p>
-            <div className="legal-contact-box">
-              <p><strong>개인정보관리책임자</strong></p>
-              <p>이메일: privacy@kumarket.com</p>
-              <p>개인정보 관련 문의사항에 신속하고 성실하게 답변해 드리고 있습니다.</p>
+            <div className="my-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm not-prose">
+              <p className="font-semibold text-gray-900">개인정보관리책임자</p>
+              <p className="mt-1 text-gray-600">이메일: privacy@kumarket.com</p>
+              <p className="mt-0.5 text-gray-600">개인정보 관련 문의사항에 신속하고 성실하게 답변해 드리고 있습니다.</p>
             </div>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 13 조 (고지의 의무)</h2>
             <p>
               현 개인정보처리방침은 2026년 4월 1일에 제정되었으며, 정부의 정책 또는
@@ -389,9 +392,15 @@ export default function PrivacyPage() {
           </section>
         </div>
 
-        <div className="legal-footer-links">
-          <Link to="/terms">이용약관</Link>
-          <Link to="/report">저작권 침해 신고</Link>
+        <Separator className="my-6" />
+
+        <div className="flex gap-4">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/terms">이용약관</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/report">저작권 침해 신고</Link>
+          </Button>
         </div>
       </div>
     </div>

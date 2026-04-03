@@ -1,7 +1,11 @@
 import { useState, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import "./LoginPage.css";
+import { Mail } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 60_000; // 1분
@@ -119,236 +123,293 @@ export default function LoginPage() {
 
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <Link to="/" className="login-logo">
-          <span className="login-logo-icon">K</span>
-          <span>KU market</span>
-        </Link>
+    <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-6 py-12 bg-secondary">
+      <Card className="w-full max-w-[420px] border-none shadow-sm">
+        <CardHeader className="px-10 pt-11 pb-0">
+          <Link to="/" className="flex items-center gap-2 font-bold text-lg text-foreground mb-8 no-underline">
+            <span className="w-9 h-9 bg-foreground text-white rounded-md flex items-center justify-center font-bold">
+              K
+            </span>
+            <span>KU market</span>
+          </Link>
 
-        <h1>{resetMode ? "비밀번호 찾기" : isSignUp ? "회원가입" : "로그인"}</h1>
-        <p className="login-subtitle">
-          {resetMode
-            ? "가입한 이메일을 입력하면 비밀번호 재설정 링크를 보내드립니다"
-            : isSignUp
-              ? "학교 이메일로 가입하고 자료를 거래하세요"
-              : "계정에 로그인하세요"}
-        </p>
+          <h1 className="text-2xl font-bold text-foreground mb-2">
+            {resetMode ? "비밀번호 찾기" : isSignUp ? "회원가입" : "로그인"}
+          </h1>
+          <p className="text-muted-foreground text-[15px] mb-8 leading-relaxed">
+            {resetMode
+              ? "가입한 이메일을 입력하면 비밀번호 재설정 링크를 보내드립니다"
+              : isSignUp
+                ? "학교 이메일로 가입하고 자료를 거래하세요"
+                : "계정에 로그인하세요"}
+          </p>
+        </CardHeader>
 
-        {resetSent && (
-          <div className="login-success">
-            <p>비밀번호 재설정 이메일을 보냈습니다.</p>
-            <p>이메일을 확인하고 링크를 클릭하여 비밀번호를 재설정해주세요.</p>
-            <button
-              type="button"
-              className="btn-back-login"
-              onClick={() => { setResetMode(false); setResetSent(false); setError(""); }}
-            >
-              로그인으로 돌아가기
-            </button>
-          </div>
-        )}
-
-        {signUpSuccess && (
-          <div className="login-success">
-            <p>회원가입이 완료되었습니다!</p>
-            <p>{fullEmail}로 인증 링크를 보냈습니다. 이메일을 확인하고 인증을 완료한 후 로그인해주세요.</p>
-          </div>
-        )}
-
-        {error && <p className="login-error">{error}</p>}
-
-        {showResend && (
-          <button
-            type="button"
-            className="btn-resend"
-            disabled={resendCooldown}
-            onClick={async () => {
-              try {
-                setResendCooldown(true);
-                const { signInWithEmailAndPassword: signInTemp, sendEmailVerification: sendVerif, signOut: signOutTemp } = await import("firebase/auth");
-                const { auth: firebaseAuth } = await import("../firebase");
-                const loginEmail = isSignUp ? fullEmail : formData.email;
-                const cred = await signInTemp(firebaseAuth, loginEmail, formData.password);
-                await sendVerif(cred.user);
-                await signOutTemp(firebaseAuth);
-                setError("");
-                setShowResend(false);
-                setSignUpSuccess(true);
-                setTimeout(() => setResendCooldown(false), 60000);
-              } catch {
-                setResendCooldown(false);
-                setError("인증 이메일 재발송에 실패했습니다. 다시 시도해주세요.");
-              }
-            }}
-          >
-            {resendCooldown ? "잠시 후 다시 시도해주세요" : "인증 이메일 재발송"}
-          </button>
-        )}
-
-        {!signUpSuccess && !resetSent && <form onSubmit={handleSubmit}>
-          {resetMode ? (
-            <>
-              <div className="form-group">
-                <label htmlFor="email">이메일</label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  placeholder="가입한 학교 이메일을 입력하세요"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                />
-              </div>
-              <button type="submit" className="btn-login" disabled={loading}>
-                {loading ? "처리 중..." : "재설정 링크 보내기"}
-              </button>
-              <button
+        <CardContent className="px-10 pb-0">
+          {resetSent && (
+            <div className="bg-success/5 text-[#1B8A4A] p-3.5 rounded-md text-sm mb-4.5 leading-relaxed">
+              <p className="font-bold mb-1">비밀번호 재설정 이메일을 보냈습니다.</p>
+              <p>이메일을 확인하고 링크를 클릭하여 비밀번호를 재설정해주세요.</p>
+              <Button
                 type="button"
-                className="btn-back-login"
-                onClick={() => { setResetMode(false); setError(""); }}
+                variant="ghost"
+                className="w-full mt-3 text-muted-foreground font-semibold text-sm hover:bg-secondary hover:text-foreground"
+                onClick={() => { setResetMode(false); setResetSent(false); setError(""); }}
               >
                 로그인으로 돌아가기
-              </button>
-            </>
-          ) : (
-            <>
-              {isSignUp && (
+              </Button>
+            </div>
+          )}
+
+          {signUpSuccess && (
+            <div className="bg-success/5 text-[#1B8A4A] p-3.5 rounded-md text-sm mb-4.5 leading-relaxed">
+              <p className="font-bold mb-1">회원가입이 완료되었습니다!</p>
+              <p>{fullEmail}로 인증 링크를 보냈습니다. 이메일을 확인하고 인증을 완료한 후 로그인해주세요.</p>
+            </div>
+          )}
+
+          {error && (
+            <p className="bg-destructive/5 text-destructive p-3 rounded-md text-sm font-medium mb-4.5">
+              {error}
+            </p>
+          )}
+
+          {showResend && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="w-full mb-4 font-bold text-sm"
+              disabled={resendCooldown}
+              onClick={async () => {
+                try {
+                  setResendCooldown(true);
+                  const { signInWithEmailAndPassword: signInTemp, sendEmailVerification: sendVerif, signOut: signOutTemp } = await import("firebase/auth");
+                  const { auth: firebaseAuth } = await import("../firebase");
+                  const loginEmail = isSignUp ? fullEmail : formData.email;
+                  const cred = await signInTemp(firebaseAuth, loginEmail, formData.password);
+                  await sendVerif(cred.user);
+                  await signOutTemp(firebaseAuth);
+                  setError("");
+                  setShowResend(false);
+                  setSignUpSuccess(true);
+                  setTimeout(() => setResendCooldown(false), 60000);
+                } catch {
+                  setResendCooldown(false);
+                  setError("인증 이메일 재발송에 실패했습니다. 다시 시도해주세요.");
+                }
+              }}
+            >
+              {resendCooldown ? "잠시 후 다시 시도해주세요" : "인증 이메일 재발송"}
+            </Button>
+          )}
+
+          {!signUpSuccess && !resetSent && (
+            <form onSubmit={handleSubmit}>
+              {resetMode ? (
                 <>
-                  <div className="form-group">
-                    <label htmlFor="name">이름</label>
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      placeholder="실명을 입력하세요"
-                      value={formData.name}
+                  <div className="mb-4.5">
+                    <label htmlFor="email" className="block text-sm font-semibold text-foreground mb-2">
+                      이메일
+                    </label>
+                    <Input
+                      type="email"
+                      id="email"
+                      name="email"
+                      placeholder="가입한 학교 이메일을 입력하세요"
+                      value={formData.email}
                       onChange={handleChange}
                       required
+                      className="h-11 text-[15px]"
                     />
                   </div>
-                  <div className="form-group">
-                    <label htmlFor="nickname">닉네임</label>
-                    <input
-                      type="text"
-                      id="nickname"
-                      name="nickname"
-                      placeholder="다른 사용자에게 표시될 닉네임"
-                      value={formData.nickname}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label>캠퍼스 선택</label>
-                    <div className="campus-selector">
-                      {CAMPUSES.map((campus, idx) => (
-                        <button
-                          key={campus.domain}
-                          type="button"
-                          className={`campus-btn ${selectedCampus === idx ? "active" : ""}`}
-                          onClick={() => setSelectedCampus(idx)}
-                        >
-                          {campus.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label htmlFor="emailId">학교 이메일</label>
-                    <div className="email-input-row">
-                      <div className="email-id-wrapper">
-                        <svg className="email-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="2" y="4" width="20" height="16" rx="2" />
-                          <path d="M22 7l-10 6L2 7" />
-                        </svg>
-                        <input
+                  <Button
+                    type="submit"
+                    className="w-full h-12 text-base font-bold mt-3"
+                    disabled={loading}
+                  >
+                    {loading ? "처리 중..." : "재설정 링크 보내기"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full mt-3 text-muted-foreground font-semibold text-sm hover:bg-secondary hover:text-foreground"
+                    onClick={() => { setResetMode(false); setError(""); }}
+                  >
+                    로그인으로 돌아가기
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {isSignUp && (
+                    <>
+                      <div className="mb-4.5">
+                        <label htmlFor="name" className="block text-sm font-semibold text-foreground mb-2">
+                          이름
+                        </label>
+                        <Input
                           type="text"
-                          id="emailId"
-                          name="emailId"
-                          placeholder="아이디만 입력"
-                          value={formData.emailId}
+                          id="name"
+                          name="name"
+                          placeholder="실명을 입력하세요"
+                          value={formData.name}
                           onChange={handleChange}
                           required
+                          className="h-11 text-[15px]"
                         />
                       </div>
-                      <span className="email-domain">@{campusDomain}</span>
+                      <div className="mb-4.5">
+                        <label htmlFor="nickname" className="block text-sm font-semibold text-foreground mb-2">
+                          닉네임
+                        </label>
+                        <Input
+                          type="text"
+                          id="nickname"
+                          name="nickname"
+                          placeholder="다른 사용자에게 표시될 닉네임"
+                          value={formData.nickname}
+                          onChange={handleChange}
+                          required
+                          className="h-11 text-[15px]"
+                        />
+                      </div>
+
+                      <div className="mb-4.5">
+                        <label className="block text-sm font-semibold text-foreground mb-2">
+                          캠퍼스 선택
+                        </label>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {CAMPUSES.map((campus, idx) => (
+                            <button
+                              key={campus.domain}
+                              type="button"
+                              className={cn(
+                                "py-3 px-3.5 rounded-md text-sm font-bold transition-colors cursor-pointer border-none",
+                                selectedCampus === idx
+                                  ? "bg-foreground text-white"
+                                  : "bg-secondary text-muted-foreground hover:bg-border hover:text-foreground"
+                              )}
+                              onClick={() => setSelectedCampus(idx)}
+                            >
+                              {campus.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="mb-4.5">
+                        <label htmlFor="emailId" className="block text-sm font-semibold text-foreground mb-2">
+                          학교 이메일
+                        </label>
+                        <div className="flex items-center rounded-md bg-secondary overflow-hidden transition-all focus-within:bg-muted focus-within:ring-2 focus-within:ring-primary">
+                          <div className="flex items-center flex-1 pl-3">
+                            <Mail className="w-[18px] h-[18px] text-muted-foreground shrink-0" />
+                            <input
+                              type="text"
+                              id="emailId"
+                              name="emailId"
+                              placeholder="아이디만 입력"
+                              value={formData.emailId}
+                              onChange={handleChange}
+                              required
+                              className="border-none bg-transparent shadow-none py-3 px-2 flex-1 min-w-0 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+                            />
+                          </div>
+                          <span className="shrink-0 py-3 px-3.5 text-sm text-muted-foreground bg-border font-semibold">
+                            @{campusDomain}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          학교 이메일은 소속 학교 인증에 이용됩니다.
+                        </p>
+                      </div>
+                    </>
+                  )}
+
+                  {!isSignUp && (
+                    <div className="mb-4.5">
+                      <label htmlFor="email" className="block text-sm font-semibold text-foreground mb-2">
+                        이메일
+                      </label>
+                      <Input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="학교 이메일을 입력하세요"
+                        value={formData.email}
+                        onChange={handleChange}
+                        required
+                        className="h-11 text-[15px]"
+                      />
                     </div>
-                    <p className="email-hint">학교 이메일은 소속 학교 인증에 이용됩니다.</p>
+                  )}
+
+                  <div className="mb-4.5">
+                    <label htmlFor="password" className="block text-sm font-semibold text-foreground mb-2">
+                      비밀번호
+                    </label>
+                    <Input
+                      type="password"
+                      id="password"
+                      name="password"
+                      placeholder="비밀번호를 입력하세요"
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                      minLength={6}
+                      className="h-11 text-[15px]"
+                    />
                   </div>
+
+                  {!isSignUp && (
+                    <div className="flex items-center justify-between mb-2 -mt-0.5">
+                      <label className="inline-flex items-center gap-2 text-sm text-muted-foreground cursor-pointer leading-none">
+                        <input
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="w-4 h-4 m-0 p-0 shrink-0 accent-foreground"
+                        />
+                        <span className="align-middle leading-4 font-medium">로그인 유지</span>
+                      </label>
+                      <button
+                        type="button"
+                        className="bg-transparent text-muted-foreground text-[13px] font-medium p-0 border-none cursor-pointer transition-colors hover:text-foreground"
+                        onClick={() => { setResetMode(true); setError(""); }}
+                      >
+                        비밀번호 찾기
+                      </button>
+                    </div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="w-full h-12 text-base font-bold mt-3"
+                    disabled={loading || (!isSignUp && lockoutRemaining > 0)}
+                  >
+                    {loading
+                      ? "처리 중..."
+                      : !isSignUp && lockoutRemaining > 0
+                        ? `${lockoutRemaining}초 후 재시도`
+                        : isSignUp ? "가입하기" : "로그인"}
+                  </Button>
                 </>
               )}
-
-              {!isSignUp && (
-                <div className="form-group">
-                  <label htmlFor="email">이메일</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="학교 이메일을 입력하세요"
-                    value={formData.email}
-                    onChange={handleChange}
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="form-group">
-                <label htmlFor="password">비밀번호</label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  placeholder="비밀번호를 입력하세요"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  minLength={6}
-                />
-              </div>
-
-              {!isSignUp && (
-                <div className="login-options">
-                  <label className="remember-me">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                    />
-                    <span>로그인 유지</span>
-                  </label>
-                  <button
-                    type="button"
-                    className="btn-forgot"
-                    onClick={() => { setResetMode(true); setError(""); }}
-                  >
-                    비밀번호 찾기
-                  </button>
-                </div>
-              )}
-
-              <button type="submit" className="btn-login" disabled={loading || (!isSignUp && lockoutRemaining > 0)}>
-                {loading
-                  ? "처리 중..."
-                  : !isSignUp && lockoutRemaining > 0
-                    ? `${lockoutRemaining}초 후 재시도`
-                    : isSignUp ? "가입하기" : "로그인"}
-              </button>
-            </>
+            </form>
           )}
-        </form>}
+        </CardContent>
 
-        <p className="login-toggle">
-          {isSignUp ? "이미 계정이 있나요?" : "계정이 없나요?"}{" "}
-          <button onClick={() => { setIsSignUp(!isSignUp); setError(""); setSignUpSuccess(false); setShowResend(false); }}>
-            {isSignUp ? "로그인" : "회원가입"}
-          </button>
-        </p>
-      </div>
+        <CardFooter className="px-10 pb-11 pt-6 justify-center">
+          <p className="text-center text-sm text-muted-foreground">
+            {isSignUp ? "이미 계정이 있나요?" : "계정이 없나요?"}{" "}
+            <button
+              className="bg-transparent text-primary font-bold text-sm border-none cursor-pointer transition-colors hover:text-primary/80"
+              onClick={() => { setIsSignUp(!isSignUp); setError(""); setSignUpSuccess(false); setShowResend(false); }}
+            >
+              {isSignUp ? "로그인" : "회원가입"}
+            </button>
+          </p>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

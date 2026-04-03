@@ -8,7 +8,11 @@ import {
   type PaymentMethod,
 } from "../services/pointsService";
 import { loadTossPayments } from "@tosspayments/tosspayments-sdk";
-import "./ChargePage.css";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
+import { AlertCircle } from "lucide-react";
 
 const PRESET_AMOUNTS = [1000, 3000, 5000, 10000, 30000, 50000];
 const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY || "test_ck_test";
@@ -59,13 +63,20 @@ export default function ChargePage() {
 
   if (!user) {
     return (
-      <div className="charge-page">
-        <div className="charge-card">
-          <h1>포인트 충전</h1>
-          <p className="charge-login-msg">
-            로그인이 필요합니다. <Link to="/login">로그인하기</Link>
-          </p>
-        </div>
+      <div className="min-h-[calc(100vh-64px)] flex items-start justify-center p-12 bg-muted/50">
+        <Card className="w-full max-w-[520px] shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-2xl">포인트 충전</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              로그인이 필요합니다.{" "}
+              <Link to="/login" className="text-[#862633] font-semibold hover:underline">
+                로그인하기
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -107,98 +118,144 @@ export default function ChargePage() {
   };
 
   return (
-    <div className="charge-page">
-      <div className="charge-card">
-        <h1>포인트 충전</h1>
+    <div className="min-h-[calc(100vh-64px)] flex items-start justify-center px-6 py-12 bg-muted/50">
+      <Card className="w-full max-w-[520px] shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-2xl">포인트 충전</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {status === "cancel" && (
+            <div className="flex items-center gap-2 bg-destructive/5 text-destructive rounded-lg py-3 px-4 text-sm">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              결제가 취소되었습니다.
+            </div>
+          )}
+          {status === "fail" && (
+            <div className="flex items-center gap-2 bg-destructive/5 text-destructive rounded-lg py-3 px-4 text-sm">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              결제에 실패했습니다. 다시 시도해주세요.
+            </div>
+          )}
 
-        {status === "cancel" && (
-          <p className="charge-error">결제가 취소되었습니다.</p>
-        )}
-        {status === "fail" && (
-          <p className="charge-error">결제에 실패했습니다. 다시 시도해주세요.</p>
-        )}
-
-        <div className="charge-balance">
-          <span className="balance-label">현재 보유 포인트</span>
-          <span className="balance-value">
-            {(userProfile?.points ?? 0).toLocaleString()}P
-          </span>
-        </div>
-
-        <Link to="/transactions" className="charge-tx-link">
-          거래 내역 보기
-        </Link>
-
-        <div className="charge-amounts">
-          <h3>충전 금액 선택</h3>
-          <div className="amount-grid">
-            {PRESET_AMOUNTS.map((a) => (
-              <button
-                key={a}
-                className={`amount-btn ${selectedAmount === a ? "active" : ""}`}
-                onClick={() => setSelectedAmount(a)}
-              >
-                {a.toLocaleString()}원
-              </button>
-            ))}
-          </div>
-
-        </div>
-
-        {/* 결제 수단 선택 */}
-        <div className="payment-methods">
-          <h3>결제 수단</h3>
-          <div className="method-grid">
-            <button
-              className={`method-btn ${paymentMethod === "kakaopay" ? "active" : ""}`}
-              onClick={() => setPaymentMethod("kakaopay")}
-            >
-              <span className="method-icon method-kakao">K</span>
-              <span>카카오페이</span>
-            </button>
-            <button
-              className={`method-btn ${paymentMethod === "toss" ? "active" : ""}`}
-              onClick={() => setPaymentMethod("toss")}
-            >
-              <span className="method-icon method-toss">T</span>
-              <span>토스페이먼츠</span>
-            </button>
-          </div>
-        </div>
-
-        {error && <p className="charge-error">{error}</p>}
-
-        <div className="charge-summary">
-          <div className="summary-row">
-            <span>충전 금액</span>
-            <span>{amount > 0 ? `${amount.toLocaleString()}원` : "-"}</span>
-          </div>
-          <div className="summary-row">
-            <span>결제 수단</span>
-            <span>{paymentMethod === "kakaopay" ? "카카오페이" : "토스페이먼츠"}</span>
-          </div>
-          <div className="summary-row">
-            <span>충전 후 포인트</span>
-            <span>
-              {amount > 0
-                ? `${((userProfile?.points ?? 0) + amount).toLocaleString()}P`
-                : "-"}
+          {/* Current balance */}
+          <div className="flex justify-between items-center rounded-lg bg-muted/70 px-5 py-4">
+            <span className="text-sm text-muted-foreground">현재 보유 포인트</span>
+            <span className="text-[22px] font-bold text-[#862633] tracking-tight">
+              {(userProfile?.points ?? 0).toLocaleString()}P
             </span>
           </div>
-        </div>
 
-        <button
-          className={`btn-charge ${paymentMethod === "toss" ? "btn-charge-toss" : ""}`}
-          onClick={handleCharge}
-          disabled={loading || amount < 1000}
-        >
-          {loading
-            ? "처리 중..."
-            : paymentMethod === "kakaopay"
-              ? "카카오페이로 충전하기"
-              : "토스페이먼츠로 충전하기"}
-        </button>
-      </div>
+          <Link
+            to="/transactions"
+            className="block text-center text-sm font-semibold text-[#862633] hover:opacity-75 hover:underline transition-opacity"
+          >
+            거래 내역 보기
+          </Link>
+
+          {/* Amount selection */}
+          <div>
+            <h3 className="text-[15px] font-semibold text-foreground mb-3">충전 금액 선택</h3>
+            <div className="grid grid-cols-3 gap-2.5 max-sm:grid-cols-2">
+              {PRESET_AMOUNTS.map((a) => (
+                <button
+                  key={a}
+                  className={cn(
+                    "py-3.5 rounded-lg border text-[15px] font-semibold transition-colors cursor-pointer",
+                    selectedAmount === a
+                      ? "border-[#862633] bg-[#862633]/[0.04] text-[#862633]"
+                      : "border-border bg-background text-foreground hover:bg-muted/70"
+                  )}
+                  onClick={() => setSelectedAmount(a)}
+                >
+                  {a.toLocaleString()}원
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Payment method */}
+          <div>
+            <h3 className="text-[15px] font-semibold text-foreground mb-3">결제 수단</h3>
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                className={cn(
+                  "flex items-center justify-center gap-2.5 py-4 rounded-lg border text-[15px] font-semibold transition-colors cursor-pointer",
+                  paymentMethod === "kakaopay"
+                    ? "border-[#862633] bg-[#862633]/[0.04] text-[#862633]"
+                    : "border-border bg-background text-foreground hover:bg-muted/70"
+                )}
+                onClick={() => setPaymentMethod("kakaopay")}
+              >
+                <span className="w-7 h-7 rounded flex items-center justify-center font-extrabold text-sm bg-[#FEE500] text-[#191919]">
+                  K
+                </span>
+                <span>카카오페이</span>
+              </button>
+              <button
+                className={cn(
+                  "flex items-center justify-center gap-2.5 py-4 rounded-lg border text-[15px] font-semibold transition-colors cursor-pointer",
+                  paymentMethod === "toss"
+                    ? "border-[#862633] bg-[#862633]/[0.04] text-[#862633]"
+                    : "border-border bg-background text-foreground hover:bg-muted/70"
+                )}
+                onClick={() => setPaymentMethod("toss")}
+              >
+                <span className="w-7 h-7 rounded flex items-center justify-center font-extrabold text-sm bg-[#0064FF] text-white">
+                  T
+                </span>
+                <span>토스페이먼츠</span>
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 bg-destructive/5 text-destructive rounded-lg py-3 px-4 text-sm">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {error}
+            </div>
+          )}
+
+          {/* Charge summary */}
+          <div>
+            <Separator className="mb-4" />
+            <div className="space-y-2 mb-5">
+              <div className="flex justify-between py-1 text-sm text-muted-foreground">
+                <span>충전 금액</span>
+                <span>{amount > 0 ? `${amount.toLocaleString()}원` : "-"}</span>
+              </div>
+              <div className="flex justify-between py-1 text-sm text-muted-foreground">
+                <span>결제 수단</span>
+                <span>{paymentMethod === "kakaopay" ? "카카오페이" : "토스페이먼츠"}</span>
+              </div>
+              <div className="flex justify-between py-1 text-base font-bold text-foreground">
+                <span>충전 후 포인트</span>
+                <span>
+                  {amount > 0
+                    ? `${((userProfile?.points ?? 0) + amount).toLocaleString()}P`
+                    : "-"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            className={cn(
+              "w-full h-12 text-base font-bold",
+              paymentMethod === "kakaopay"
+                ? "bg-[#FEE500] text-[#191919] hover:bg-[#F5DC00]"
+                : "bg-[#0064FF] text-white hover:bg-[#0055DD]"
+            )}
+            onClick={handleCharge}
+            disabled={loading || amount < 1000}
+          >
+            {loading
+              ? "처리 중..."
+              : paymentMethod === "kakaopay"
+                ? "카카오페이로 충전하기"
+                : "토스페이먼츠로 충전하기"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

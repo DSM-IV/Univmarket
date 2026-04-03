@@ -9,8 +9,14 @@ import { db, functions } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
 import { addToCart, isInCart } from "../services/cartService";
+import { departments, convergenceMajors, microDegrees, exchangeCountries } from "../data/mockData";
 import type { Material } from "../types";
-import "./DetailPage.css";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ChevronLeft, ChevronRight, Download, ShoppingCart, AlertTriangle, Star } from "lucide-react";
 
 interface Review {
   id: string;
@@ -64,6 +70,7 @@ export default function DetailPage() {
   const [editPrice, setEditPrice] = useState(0);
   const [editSubject, setEditSubject] = useState("");
   const [editProfessor, setEditProfessor] = useState("");
+  const [editDepartment, setEditDepartment] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -262,14 +269,14 @@ export default function DetailPage() {
   }, [reviews, user?.uid, reviewSort]);
 
   if (loading) {
-    return <div className="detail-not-found"><p>불러오는 중...</p></div>;
+    return <div className="text-center py-24 px-6"><p>불러오는 중...</p></div>;
   }
 
   if (!material) {
     return (
-      <div className="detail-not-found">
-        <h2>자료를 찾을 수 없습니다</h2>
-        <Link to="/browse">둘러보기로 돌아가기</Link>
+      <div className="text-center py-24 px-6">
+        <h2 className="text-xl font-bold mb-3">자료를 찾을 수 없습니다</h2>
+        <Link to="/browse" className="text-primary font-medium hover:underline">둘러보기로 돌아가기</Link>
       </div>
     );
   }
@@ -281,6 +288,7 @@ export default function DetailPage() {
     setEditPrice(material.price);
     setEditSubject(material.subject);
     setEditProfessor(material.professor || "");
+    setEditDepartment(material.department || "");
     setEditing(true);
   };
 
@@ -298,6 +306,7 @@ export default function DetailPage() {
         price: editPrice,
         subject: editSubject.trim(),
         professor: editProfessor.trim(),
+        department: (material.category === "수업" || material.category === "이중전공 & 전과" || material.category === "교환학생") ? editDepartment : "",
       });
       const snap = await getDoc(doc(db, "materials", id));
       if (snap.exists()) {
@@ -386,128 +395,186 @@ export default function DetailPage() {
   const previewImages = material.previewImages ?? [];
 
   return (
-    <div className="detail">
-      <div className="detail-inner">
-        <div className="detail-main">
-          <div className="detail-preview">
-            <h3 className="preview-heading">미리보기</h3>
+    <div className="py-10 pb-20 md:py-6 md:pb-14">
+      <div className="max-w-[1200px] mx-auto px-6 grid grid-cols-[1fr_340px] gap-9 items-start md:max-lg:grid-cols-[1fr_340px] max-md:grid-cols-1 max-md:px-4 max-md:gap-6">
+        {/* Main content */}
+        <div className="flex flex-col gap-6">
+          {/* Preview section */}
+          <Card className="overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-border">
+              <h3 className="text-[15px] font-semibold m-0">미리보기</h3>
+            </div>
             {previewImages?.length > 0 ? (
-              <div className="preview-page">
+              <div className="relative bg-secondary flex flex-col items-center p-5">
                 <img
                   src={previewImages[previewIndex]}
                   alt={`미리보기 ${previewIndex + 1}`}
-                  className="preview-image"
+                  className="w-full max-h-[600px] object-contain rounded-sm shadow-md bg-white"
                 />
                 {previewImages.length > 1 && (
-                  <div className="preview-nav">
+                  <div className="flex items-center justify-center gap-4 mt-3">
                     <button
-                      className="preview-nav-btn"
+                      className="w-8 h-8 flex items-center justify-center border border-border rounded-full bg-card text-lg text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
                       onClick={() => setPreviewIndex((i) => Math.max(0, i - 1))}
                       disabled={previewIndex === 0}
                     >
-                      ‹
+                      <ChevronLeft className="w-4 h-4" />
                     </button>
-                    <span className="preview-nav-label">
+                    <span className="text-sm font-semibold text-muted-foreground">
                       {previewIndex + 1} / {previewImages.length}
                     </span>
                     <button
-                      className="preview-nav-btn"
+                      className="w-8 h-8 flex items-center justify-center border border-border rounded-full bg-card text-lg text-foreground transition-colors hover:border-primary hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed"
                       onClick={() => setPreviewIndex((i) => Math.min(previewImages.length - 1, i + 1))}
                       disabled={previewIndex === previewImages.length - 1}
                     >
-                      ›
+                      <ChevronRight className="w-4 h-4" />
                     </button>
                   </div>
                 )}
               </div>
             ) : material.thumbnail ? (
-              <div className="preview-page">
-                <img src={material.thumbnail} alt="미리보기" className="preview-image" />
+              <div className="relative bg-secondary flex flex-col items-center p-5">
+                <img src={material.thumbnail} alt="미리보기" className="w-full max-h-[600px] object-contain rounded-sm shadow-md bg-white" />
               </div>
             ) : (
-              <div className="preview-placeholder">
-                <span className="preview-filetype">{material.fileType}</span>
-                <span className="preview-pages">{material.pages}페이지</span>
-                <span className="preview-no-thumb">미리보기가 없습니다</span>
+              <div className="h-[280px] max-sm:h-[180px] bg-gradient-to-br from-[#667eea] to-[#764ba2] flex flex-col items-center justify-center gap-3">
+                <span className="bg-white/90 px-4 py-2 rounded-sm font-bold text-lg">{material.fileType}</span>
+                <span className="text-white text-base font-medium">{material.pages}페이지</span>
+                <span className="text-white/70 text-[13px]">미리보기가 없습니다</span>
               </div>
             )}
-          </div>
+          </Card>
 
-          <div className="detail-info">
+          {/* Info section */}
+          <div>
             {editing ? (
-              <div className="edit-form">
-                <h3 className="edit-form-title">자료 수정</h3>
-                <div className="edit-form-field">
-                  <label className="edit-form-label">제목</label>
-                  <input
-                    type="text"
-                    className="edit-form-input"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                  />
-                </div>
-                <div className="edit-form-field">
-                  <label className="edit-form-label">과목</label>
-                  <input
-                    type="text"
-                    className="edit-form-input"
-                    value={editSubject}
-                    onChange={(e) => setEditSubject(e.target.value)}
-                  />
-                </div>
-                <div className="edit-form-field">
-                  <label className="edit-form-label">교수</label>
-                  <input
-                    type="text"
-                    className="edit-form-input"
-                    value={editProfessor}
-                    onChange={(e) => setEditProfessor(e.target.value)}
-                  />
-                </div>
-                <div className="edit-form-field">
-                  <label className="edit-form-label">가격 (P)</label>
-                  <input
-                    type="number"
-                    className="edit-form-input"
-                    value={editPrice}
-                    onChange={(e) => setEditPrice(Number(e.target.value))}
-                    min={0}
-                  />
-                </div>
-                <div className="edit-form-field">
-                  <label className="edit-form-label">설명</label>
-                  <textarea
-                    className="edit-form-textarea"
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    rows={5}
-                  />
-                </div>
-                <div className="edit-form-actions">
-                  <button
-                    className="btn-edit-cancel"
-                    onClick={handleCancelEdit}
-                    disabled={saving}
-                  >
-                    취소
-                  </button>
-                  <button
-                    className="btn-edit-save"
-                    onClick={handleSaveEdit}
-                    disabled={saving || !editTitle.trim() || !editSubject.trim()}
-                  >
-                    {saving ? "저장 중..." : "저장"}
-                  </button>
-                </div>
-              </div>
+              <Card className="border-2 border-primary-light">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-bold mb-5">자료 수정</h3>
+                  <div className="mb-4">
+                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">제목</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] transition-colors focus:outline-none focus:border-primary"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">과목</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] transition-colors focus:outline-none focus:border-primary"
+                      value={editSubject}
+                      onChange={(e) => setEditSubject(e.target.value)}
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">교수</label>
+                    <input
+                      type="text"
+                      className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] transition-colors focus:outline-none focus:border-primary"
+                      value={editProfessor}
+                      onChange={(e) => setEditProfessor(e.target.value)}
+                    />
+                  </div>
+                  {(material.category === "수업" || material.category === "이중전공 & 전과" || material.category === "교환학생") && (
+                    <div className="mb-4">
+                      <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">
+                        {material.category === "교환학생" ? "국가" : "학과"}
+                      </label>
+                      <select
+                        className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] transition-colors focus:outline-none focus:border-primary"
+                        value={editDepartment}
+                        onChange={(e) => setEditDepartment(e.target.value)}
+                      >
+                        {material.category === "교환학생" ? (
+                          <>
+                            <option value="">국가를 선택하세요</option>
+                            {Object.entries(exchangeCountries).map(([region, countries]) => (
+                              <optgroup key={region} label={region}>
+                                {countries.map((c) => (
+                                  <option key={c} value={c}>{c}</option>
+                                ))}
+                              </optgroup>
+                            ))}
+                          </>
+                        ) : (
+                          <>
+                            <option value="">학과를 선택하세요</option>
+                            <optgroup label="학과">
+                              {departments.map((dept) => (
+                                <option key={dept} value={dept}>{dept}</option>
+                              ))}
+                            </optgroup>
+                            {material.category === "이중전공 & 전과" && (
+                              <>
+                                <optgroup label="융합전공">
+                                  {convergenceMajors.map((m) => (
+                                    <option key={m} value={m}>{m}</option>
+                                  ))}
+                                </optgroup>
+                                <optgroup label="마이크로디그리">
+                                  {microDegrees.map((m) => (
+                                    <option key={m} value={m}>{m}</option>
+                                  ))}
+                                </optgroup>
+                              </>
+                            )}
+                          </>
+                        )}
+                      </select>
+                    </div>
+                  )}
+                  <div className="mb-4">
+                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">가격 (P)</label>
+                    <input
+                      type="number"
+                      className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] transition-colors focus:outline-none focus:border-primary"
+                      value={editPrice}
+                      onChange={(e) => setEditPrice(Number(e.target.value))}
+                      min={0}
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">설명</label>
+                    <textarea
+                      className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] resize-y transition-colors focus:outline-none focus:border-primary"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      rows={5}
+                    />
+                  </div>
+                  <div className="flex gap-2 justify-end mt-2">
+                    <Button
+                      variant="secondary"
+                      onClick={handleCancelEdit}
+                      disabled={saving}
+                    >
+                      취소
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={handleSaveEdit}
+                      disabled={saving || !editTitle.trim() || !editSubject.trim()}
+                    >
+                      {saving ? "저장 중..." : "저장"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             ) : (
               <>
-                <div className="detail-badges">
-                  <span className="badge badge-category">{material.category}</span>
-                  <span className="badge badge-filetype">{material.fileType}</span>
+                <div className="flex gap-2 mb-3">
+                  <Badge variant="primary">{material.category}</Badge>
+                  {material.department && (
+                    <Badge variant="success">{material.department}</Badge>
+                  )}
+                  <Badge variant="secondary">{material.fileType}</Badge>
                 </div>
-                <h1 className="detail-title">{material.title}</h1>
-                <div className="detail-meta">
+                <h1 className="text-[26px] font-bold leading-[1.35] tracking-tight max-md:text-[22px]">{material.title}</h1>
+                <div className="flex items-center gap-2 text-muted-foreground text-sm mt-2">
                   <span>{material.subject}</span>
                   {material.professor && (
                     <>
@@ -516,327 +583,400 @@ export default function DetailPage() {
                     </>
                   )}
                   <span>·</span>
-                  <span className="detail-rating">
+                  <span className="text-amber-400">
                     ★ {ratingStats.avg} ({ratingStats.total}개 리뷰)
                   </span>
                 </div>
 
-                <div className="detail-author">
-                  <div className="author-avatar">
+                <div className="flex items-center gap-3 p-4 bg-secondary rounded-lg mt-4 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-base shrink-0">
                     {material.author.charAt(0)}
                   </div>
                   <div>
-                    <span className="author-name">{material.author}</span>
-                    <span className="author-sales">
+                    <span className="block font-semibold text-sm">{material.author}</span>
+                    <span className="text-[13px] text-muted-foreground">
                       총 판매 {authorSalesCount}건
                     </span>
                   </div>
                 </div>
 
-                <div className="detail-description">
-                  <h3>자료 설명</h3>
-                  <p>{material.description}</p>
-                </div>
+                <Card className="mb-6">
+                  <CardContent className="p-6">
+                    <h3 className="text-base font-semibold mb-3">자료 설명</h3>
+                    <p className="text-[15px] text-muted-foreground leading-[1.7] whitespace-pre-wrap">{material.description}</p>
+                  </CardContent>
+                </Card>
               </>
             )}
 
-            <div className="detail-specs">
-              <div className="spec">
-                <span className="spec-label">파일 형식</span>
-                <span className="spec-value">{material.fileType}</span>
-              </div>
-              <div className="spec">
-                <span className="spec-label">페이지 수</span>
-                <span className="spec-value">{material.pages}페이지</span>
-              </div>
-              <div className="spec">
-                <span className="spec-label">등록일</span>
-                <span className="spec-value">{formatDate(material.createdAt)}</span>
-              </div>
-              <div className="spec">
-                <span className="spec-label">판매 수</span>
-                <span className="spec-value">{material.salesCount}건</span>
-              </div>
+            {/* Specs grid */}
+            <div className="grid grid-cols-2 gap-2.5 max-sm:grid-cols-1">
+              <Card>
+                <CardContent className="p-4">
+                  <span className="block text-xs text-muted-foreground mb-1">파일 형식</span>
+                  <span className="text-[15px] font-semibold">{material.fileType}</span>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <span className="block text-xs text-muted-foreground mb-1">페이지 수</span>
+                  <span className="text-[15px] font-semibold">{material.pages}페이지</span>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <span className="block text-xs text-muted-foreground mb-1">등록일</span>
+                  <span className="text-[15px] font-semibold">{formatDate(material.createdAt)}</span>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <span className="block text-xs text-muted-foreground mb-1">판매 수</span>
+                  <span className="text-[15px] font-semibold">{material.salesCount}건</span>
+                </CardContent>
+              </Card>
             </div>
 
             {/* 후기 섹션 */}
-            <div className="reviews-section">
-              <h3 className="reviews-title">후기 ({ratingStats.total})</h3>
+            <Card className="mt-6">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-bold mb-5 tracking-tight">후기 ({ratingStats.total})</h3>
 
-              {/* 별점 분포 그래프 */}
-              {ratingStats.total > 0 && (
-                <div className="rating-summary">
-                  <div className="rating-summary-left">
-                    <span className="rating-big">{ratingStats.avg}</span>
-                    <span className="rating-big-stars">
-                      {"★".repeat(Math.round(Number(ratingStats.avg)))}
-                      {"☆".repeat(5 - Math.round(Number(ratingStats.avg)))}
-                    </span>
-                    <span className="rating-total">{ratingStats.total}개 리뷰</span>
-                  </div>
-                  <div className="rating-bars">
-                    {[5, 4, 3, 2, 1].map((star) => {
-                      const count = ratingStats.counts[star - 1];
-                      const pct = ratingStats.total > 0 ? (count / ratingStats.total) * 100 : 0;
-                      return (
-                        <div key={star} className="rating-bar-row">
-                          <span className="rating-bar-label">{star}점</span>
-                          <div className="rating-bar-track">
-                            <div className="rating-bar-fill" style={{ width: `${pct}%` }} />
+                {/* 별점 분포 그래프 */}
+                {ratingStats.total > 0 && (
+                  <div className="flex gap-8 p-5 bg-secondary rounded-lg mb-6 max-md:flex-col max-md:gap-4">
+                    <div className="flex flex-col items-center justify-center min-w-[100px]">
+                      <span className="text-[40px] font-extrabold leading-none tracking-tight">{ratingStats.avg}</span>
+                      <span className="text-base text-amber-400 my-1.5 tracking-widest">
+                        {"★".repeat(Math.round(Number(ratingStats.avg)))}
+                        {"☆".repeat(5 - Math.round(Number(ratingStats.avg)))}
+                      </span>
+                      <span className="text-[13px] text-muted-foreground">{ratingStats.total}개 리뷰</span>
+                    </div>
+                    <div className="flex-1 flex flex-col gap-1.5 justify-center">
+                      {[5, 4, 3, 2, 1].map((star) => {
+                        const count = ratingStats.counts[star - 1];
+                        const pct = ratingStats.total > 0 ? (count / ratingStats.total) * 100 : 0;
+                        return (
+                          <div key={star} className="flex items-center gap-2">
+                            <span className="text-[13px] text-muted-foreground w-7 text-right">{star}점</span>
+                            <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
+                              <div className="h-full bg-amber-400 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
+                            </div>
+                            <span className="text-[13px] text-muted-foreground w-6">{count}</span>
                           </div>
-                          <span className="rating-bar-count">{count}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 후기 작성 폼 (구매자 + 아직 후기 안 쓴 경우만) */}
-              {(canReview || editingReview) && (
-                <div className="review-form">
-                  <div className="review-rating-input">
-                    <span className="review-rating-label">평점</span>
-                    <div className="review-stars-input">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          className={`review-star-btn ${star <= reviewRating ? "active" : ""}`}
-                          onClick={() => setReviewRating(star)}
-                        >
-                          ★
-                        </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
-                  <textarea
-                    className="review-textarea"
-                    placeholder="후기를 작성해주세요..."
-                    value={reviewContent}
-                    onChange={(e) => setReviewContent(e.target.value)}
-                    maxLength={1000}
-                    rows={3}
-                  />
-                  <div className="review-form-actions">
-                    {editingReview && (
-                      <button
-                        className="btn-review-cancel"
-                        onClick={() => { setEditingReview(false); setReviewContent(""); }}
-                      >
-                        취소
-                      </button>
-                    )}
-                    <button
-                      className="btn-review-submit"
-                      onClick={handleSubmitReview}
-                      disabled={submittingReview || !reviewContent.trim()}
-                    >
-                      {submittingReview ? "등록 중..." : editingReview ? "수정하기" : "후기 등록"}
-                    </button>
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* 내 후기 (항상 최상단) */}
-              {myReview && !editingReview && (
-                <div className="review-item review-mine">
-                  <div className="review-item-header">
-                    <div className="review-item-user">
-                      <div className="review-avatar">{myReview.userName.charAt(0)}</div>
-                      <div>
-                        <span className="review-user-name">
-                          {myReview.userName}
-                          <span className="review-mine-badge">내 후기</span>
-                        </span>
-                        <span className="review-stars">
-                          {"★".repeat(myReview.rating)}{"☆".repeat(5 - myReview.rating)}
-                          <span className="review-date">{formatDate(myReview.createdAt)}</span>
-                        </span>
+                {/* 후기 작성 폼 (구매자 + 아직 후기 안 쓴 경우만) */}
+                {(canReview || editingReview) && (
+                  <div className="mb-6 pb-6 border-b border-border">
+                    <div className="flex items-center gap-3 mb-3">
+                      <span className="text-sm font-semibold text-muted-foreground">평점</span>
+                      <div className="flex gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            className={cn(
+                              "bg-transparent border-none text-2xl p-0 cursor-pointer transition-colors",
+                              star <= reviewRating ? "text-amber-400" : "text-border",
+                              "hover:text-amber-500"
+                            )}
+                            onClick={() => setReviewRating(star)}
+                          >
+                            ★
+                          </button>
+                        ))}
                       </div>
                     </div>
-                    <div className="review-item-actions">
-                      <button className="btn-review-edit" onClick={handleEditReview}>수정</button>
-                      <button className="btn-review-delete" onClick={handleDeleteReview}>삭제</button>
+                    <textarea
+                      className="w-full p-3 border border-border rounded-lg text-sm font-[inherit] resize-y mb-3 transition-colors focus:outline-none focus:border-primary"
+                      placeholder="후기를 작성해주세요..."
+                      value={reviewContent}
+                      onChange={(e) => setReviewContent(e.target.value)}
+                      maxLength={1000}
+                      rows={3}
+                    />
+                    <div className="flex gap-2 justify-end">
+                      {editingReview && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => { setEditingReview(false); setReviewContent(""); }}
+                        >
+                          취소
+                        </Button>
+                      )}
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleSubmitReview}
+                        disabled={submittingReview || !reviewContent.trim()}
+                      >
+                        {submittingReview ? "등록 중..." : editingReview ? "수정하기" : "후기 등록"}
+                      </Button>
                     </div>
                   </div>
-                  <p className="review-content">{myReview.content}</p>
-                </div>
-              )}
+                )}
 
-              {/* 정렬 옵션 + 다른 사람 후기 */}
-              {sortedOtherReviews.length > 0 && (
-                <>
-                  <div className="review-sort-bar">
-                    <button
-                      className={`review-sort-btn ${reviewSort === "recent" ? "active" : ""}`}
-                      onClick={() => setReviewSort("recent")}
-                    >
-                      최신순
-                    </button>
-                    <button
-                      className={`review-sort-btn ${reviewSort === "rating-high" ? "active" : ""}`}
-                      onClick={() => setReviewSort("rating-high")}
-                    >
-                      평점 높은순
-                    </button>
+                {/* 내 후기 (항상 최상단) */}
+                {myReview && !editingReview && (
+                  <div className="p-4 border border-primary-light bg-primary/5 rounded-lg mb-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#862633] to-[#A83344] text-white flex items-center justify-center text-[13px] font-bold">
+                          {myReview.userName.charAt(0)}
+                        </div>
+                        <div>
+                          <span className="block text-sm font-semibold">
+                            {myReview.userName}
+                            <span className="inline-block ml-2 px-2 py-0.5 text-[11px] font-semibold text-primary bg-primary/10 rounded-full align-middle">내 후기</span>
+                          </span>
+                          <span className="text-[13px] text-amber-400 tracking-wider">
+                            {"★".repeat(myReview.rating)}{"☆".repeat(5 - myReview.rating)}
+                            <span className="ml-2 text-xs text-muted-foreground tracking-normal">{formatDate(myReview.createdAt)}</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          className="bg-transparent border-none text-[13px] text-primary cursor-pointer px-2 py-1 rounded hover:bg-primary/5"
+                          onClick={handleEditReview}
+                        >
+                          수정
+                        </button>
+                        <button
+                          className="bg-transparent border-none text-[13px] text-destructive cursor-pointer px-2 py-1 rounded hover:bg-destructive/5"
+                          onClick={handleDeleteReview}
+                        >
+                          삭제
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-sm text-muted-foreground leading-relaxed m-0">{myReview.content}</p>
                   </div>
-                  <div className="review-list">
-                    {sortedOtherReviews.map((review) => (
-                      <div key={review.id} className="review-item">
-                        <div className="review-item-header">
-                          <div className="review-item-user">
-                            <div className="review-avatar">{review.userName.charAt(0)}</div>
-                            <div>
-                              <span className="review-user-name">{review.userName}</span>
-                              <span className="review-stars">
-                                {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
-                                <span className="review-date">{formatDate(review.createdAt)}</span>
-                              </span>
+                )}
+
+                {/* 정렬 옵션 + 다른 사람 후기 */}
+                {sortedOtherReviews.length > 0 && (
+                  <>
+                    <div className="flex gap-1.5 mb-4">
+                      <button
+                        className={cn(
+                          "px-3.5 py-1.5 text-[13px] font-semibold border-none rounded-full cursor-pointer transition-colors",
+                          reviewSort === "recent"
+                            ? "text-white bg-foreground"
+                            : "text-muted-foreground bg-secondary hover:bg-border"
+                        )}
+                        onClick={() => setReviewSort("recent")}
+                      >
+                        최신순
+                      </button>
+                      <button
+                        className={cn(
+                          "px-3.5 py-1.5 text-[13px] font-semibold border-none rounded-full cursor-pointer transition-colors",
+                          reviewSort === "rating-high"
+                            ? "text-white bg-foreground"
+                            : "text-muted-foreground bg-secondary hover:bg-border"
+                        )}
+                        onClick={() => setReviewSort("rating-high")}
+                      >
+                        평점 높은순
+                      </button>
+                    </div>
+                    <div className="flex flex-col gap-3">
+                      {sortedOtherReviews.map((review) => (
+                        <div key={review.id} className="p-4 border border-border rounded-lg">
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#862633] to-[#A83344] text-white flex items-center justify-center text-[13px] font-bold">
+                                {review.userName.charAt(0)}
+                              </div>
+                              <div>
+                                <span className="block text-sm font-semibold">{review.userName}</span>
+                                <span className="text-[13px] text-amber-400 tracking-wider">
+                                  {"★".repeat(review.rating)}{"☆".repeat(5 - review.rating)}
+                                  <span className="ml-2 text-xs text-muted-foreground tracking-normal">{formatDate(review.createdAt)}</span>
+                                </span>
+                              </div>
                             </div>
                           </div>
+                          <p className="text-sm text-muted-foreground leading-relaxed m-0">{review.content}</p>
                         </div>
-                        <p className="review-content">{review.content}</p>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+                      ))}
+                    </div>
+                  </>
+                )}
 
-              {ratingStats.total === 0 && (
-                <p className="reviews-empty">아직 후기가 없습니다.</p>
-              )}
-            </div>
+                {ratingStats.total === 0 && (
+                  <p className="text-center py-6 text-muted-foreground text-sm">아직 후기가 없습니다.</p>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
 
-        <aside className="detail-sidebar">
-          <div className="sidebar-card">
-            <div className="sidebar-price">
-              {material.price.toLocaleString()}
-              <span className="price-unit">P</span>
-            </div>
-            {user && (
-              <div className="sidebar-balance">
-                보유 포인트: {points.toLocaleString()}P
+        {/* Sidebar */}
+        <aside className="max-md:order-none">
+          <Card className="sticky top-[84px] max-md:static">
+            <CardContent className="p-7">
+              <div className="text-[32px] font-extrabold tracking-tight mb-5 max-md:text-[28px]">
+                {material.price.toLocaleString()}
+                <span className="text-lg font-medium text-muted-foreground">P</span>
               </div>
-            )}
-            {material.authorId === user?.uid ? (
-              <>
-                <p className="sidebar-owned-label">내가 등록한 자료입니다</p>
-                <button
-                  className="btn-buy btn-download-main"
-                  onClick={handleDownload}
-                  disabled={downloading}
-                >
-                  {downloading ? "준비 중..." : "다운로드"}
-                </button>
-                <div className="sidebar-author-actions">
-                  <button
-                    className="btn-edit-material"
-                    onClick={handleStartEdit}
-                    disabled={editing}
+              {user && (
+                <p className="text-sm text-muted-foreground mb-4">
+                  보유 포인트: {points.toLocaleString()}P
+                </p>
+              )}
+              {material.authorId === user?.uid ? (
+                <>
+                  <p className="text-center text-[13px] text-success font-medium mb-2.5">내가 등록한 자료입니다</p>
+                  <Button
+                    className="w-full mb-2.5 bg-success hover:bg-success/90 text-white"
+                    size="lg"
+                    onClick={handleDownload}
+                    disabled={downloading}
                   >
-                    수정
-                  </button>
-                  <button
-                    className="btn-delete-material"
-                    onClick={handleDeleteMaterial}
-                    disabled={deleting}
+                    <Download className="w-4 h-4 mr-1" />
+                    {downloading ? "준비 중..." : "다운로드"}
+                  </Button>
+                  <div className="flex gap-2 mt-2.5 mb-2.5">
+                    <Button
+                      variant="ghost"
+                      className="flex-1 bg-primary/5 text-primary hover:bg-primary/10"
+                      onClick={handleStartEdit}
+                      disabled={editing}
+                    >
+                      수정
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="flex-1 bg-destructive/5 text-destructive hover:bg-destructive/10"
+                      onClick={handleDeleteMaterial}
+                      disabled={deleting}
+                    >
+                      {deleting ? "삭제 중..." : "삭제"}
+                    </Button>
+                  </div>
+                </>
+              ) : owned ? (
+                <>
+                  <Button
+                    className="w-full mb-2.5 bg-success hover:bg-success/90 text-white"
+                    size="lg"
+                    onClick={handleDownload}
+                    disabled={downloading}
                   >
-                    {deleting ? "삭제 중..." : "삭제"}
-                  </button>
-                </div>
-              </>
-            ) : owned ? (
-              <>
-                <button
-                  className="btn-buy btn-download-main"
-                  onClick={handleDownload}
-                  disabled={downloading}
-                >
-                  {downloading ? "준비 중..." : "다운로드"}
-                </button>
-                <p className="sidebar-owned-label">구매 완료된 자료입니다</p>
-              </>
-            ) : (
-              <>
-                <button className="btn-buy" onClick={handleBuyClick}>
-                  구매하기
-                </button>
-                <button
-                  className="btn-cart"
-                  onClick={inCart ? () => navigate("/cart") : handleAddToCart}
-                  disabled={addingToCart}
-                >
-                  {addingToCart ? "추가 중..." : inCart ? "장바구니 보기" : "장바구니에 담기"}
-                </button>
-              </>
-            )}
-            <div className="sidebar-info">
-              <p>{owned ? "파일을 다운로드할 수 있습니다" : "구매 후 즉시 다운로드 가능"}</p>
-              <p>포인트로 결제됩니다</p>
-            </div>
-            <Link
-              to={`/report?materialId=${material.id}&title=${encodeURIComponent(material.title)}`}
-              className="btn-report-copyright"
-            >
-              저작권 침해 신고
-            </Link>
-          </div>
+                    <Download className="w-4 h-4 mr-1" />
+                    {downloading ? "준비 중..." : "다운로드"}
+                  </Button>
+                  <p className="text-center text-[13px] text-success font-medium mb-2.5">구매 완료된 자료입니다</p>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="w-full mb-2.5"
+                    onClick={handleBuyClick}
+                  >
+                    구매하기
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="w-full mb-4"
+                    onClick={inCart ? () => navigate("/cart") : handleAddToCart}
+                    disabled={addingToCart}
+                  >
+                    <ShoppingCart className="w-4 h-4 mr-1" />
+                    {addingToCart ? "추가 중..." : inCart ? "장바구니 보기" : "장바구니에 담기"}
+                  </Button>
+                </>
+              )}
+              <Separator className="my-4" />
+              <div className="space-y-1">
+                <p className="text-[13px] text-muted-foreground">{owned ? "파일을 다운로드할 수 있습니다" : "구매 후 즉시 다운로드 가능"}</p>
+                <p className="text-[13px] text-muted-foreground">포인트로 결제됩니다</p>
+              </div>
+              <Link
+                to={`/report?materialId=${material.id}&title=${encodeURIComponent(material.title)}`}
+                className="block text-center py-2 mt-3 text-[13px] text-muted-foreground transition-colors hover:text-destructive"
+              >
+                저작권 침해 신고
+              </Link>
+            </CardContent>
+          </Card>
         </aside>
       </div>
 
       {/* 구매 확인 모달 */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <h2>구매 확인</h2>
-            <div className="modal-info">
-              <p className="modal-title">{material.title}</p>
-              <div className="modal-row">
-                <span>가격</span>
-                <span>{material.price.toLocaleString()}P</span>
+        <div
+          className="fixed inset-0 bg-black/45 backdrop-blur-sm flex items-center justify-center z-[200] p-6"
+          onClick={() => setShowModal(false)}
+        >
+          <Card className="max-w-[420px] w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <CardContent className="p-8">
+              <h2 className="text-xl font-bold mb-5 tracking-tight">구매 확인</h2>
+              <div>
+                <p className="font-semibold mb-4 text-[15px]">{material.title}</p>
+                <div className="flex justify-between py-2 text-sm text-muted-foreground">
+                  <span>가격</span>
+                  <span>{material.price.toLocaleString()}P</span>
+                </div>
+                <div className="flex justify-between py-2 text-sm text-muted-foreground">
+                  <span>보유 포인트</span>
+                  <span>{points.toLocaleString()}P</span>
+                </div>
+                <div className="flex justify-between py-3 text-sm font-semibold text-foreground border-t border-border mt-1">
+                  <span>구매 후 잔액</span>
+                  <span className={cn(points < material.price && "text-destructive")}>
+                    {(points - material.price).toLocaleString()}P
+                  </span>
+                </div>
               </div>
-              <div className="modal-row">
-                <span>보유 포인트</span>
-                <span>{points.toLocaleString()}P</span>
-              </div>
-              <div className="modal-row modal-row-after">
-                <span>구매 후 잔액</span>
-                <span className={points < material.price ? "text-danger" : ""}>
-                  {(points - material.price).toLocaleString()}P
-                </span>
-              </div>
-            </div>
 
-            {error === "insufficient" ? (
-              <div className="modal-error">
-                <p>포인트가 부족합니다.</p>
-                <Link to="/charge" className="btn-to-charge">
-                  포인트 충전하기
-                </Link>
-              </div>
-            ) : error ? (
-              <p className="modal-error-text">{error}</p>
-            ) : null}
+              {error === "insufficient" ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center my-4">
+                  <p className="text-destructive text-sm mb-3">포인트가 부족합니다.</p>
+                  <Link
+                    to="/charge"
+                    className="inline-block px-5 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors"
+                  >
+                    포인트 충전하기
+                  </Link>
+                </div>
+              ) : error ? (
+                <p className="text-destructive text-sm my-3">{error}</p>
+              ) : null}
 
-            <div className="modal-actions">
-              <button
-                className="btn-modal-cancel"
-                onClick={() => setShowModal(false)}
-              >
-                취소
-              </button>
-              <button
-                className="btn-modal-confirm"
-                onClick={handleConfirmPurchase}
-                disabled={buying || points < material.price}
-              >
-                {buying ? "처리 중..." : "구매하기"}
-              </button>
-            </div>
-          </div>
+              <div className="flex gap-2.5 mt-5">
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => setShowModal(false)}
+                >
+                  취소
+                </Button>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="flex-1"
+                  onClick={handleConfirmPurchase}
+                  disabled={buying || points < material.price}
+                >
+                  {buying ? "처리 중..." : "구매하기"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>

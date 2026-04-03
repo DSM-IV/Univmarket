@@ -7,6 +7,7 @@ export interface Material {
   university?: string;
   subject: string;
   professor?: string;
+  department?: string;
   author: string;
   authorId: string;
   thumbnail: string;

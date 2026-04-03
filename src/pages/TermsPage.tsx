@@ -1,15 +1,18 @@
 import { Link } from "react-router-dom";
-import "./LegalPage.css";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 export default function TermsPage() {
   return (
-    <div className="legal-page">
-      <div className="legal-inner">
-        <h1 className="legal-title">이용약관</h1>
-        <p className="legal-updated">시행일: 2026년 4월 1일</p>
+    <div className="min-h-screen bg-white py-8">
+      <div className="mx-auto max-w-3xl px-4">
+        <h1 className="text-2xl font-bold text-gray-900">이용약관</h1>
+        <p className="mt-1 text-sm text-gray-400">시행일: 2026년 4월 1일</p>
 
-        <div className="legal-content">
-          <section className="legal-chapter">
+        <Separator className="my-6" />
+
+        <div className="prose prose-sm prose-gray max-w-none [&_article]:mb-6 [&_h2]:mb-4 [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-gray-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-gray-800 [&_li]:mb-1 [&_ol]:ml-5 [&_ol]:list-decimal [&_ol]:space-y-1 [&_p]:mb-3 [&_p]:leading-relaxed [&_p]:text-gray-600 [&_section]:mb-8 [&_ul]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1">
+          <section>
             <h2>제 1 장 총칙</h2>
 
             <article>
@@ -63,7 +66,7 @@ export default function TermsPage() {
             </article>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 2 장 서비스 이용 계약</h2>
 
             <article>
@@ -98,7 +101,7 @@ export default function TermsPage() {
                 </li>
                 <li>
                   회사는 다음 각 호에 해당하는 신청에 대하여는 그 사유가 해소될 때까지 승낙을 제한할 수 있습니다.
-                  <ol className="legal-sub-list">
+                  <ol className="ml-5 mt-1 list-[lower-alpha]">
                     <li>가입신청자가 회원 자격을 상실한 사실이 있는 경우</li>
                     <li>허위의 정보를 기재한 경우</li>
                     <li>회사가 요구한 정보를 제공하지 아니한 경우</li>
@@ -129,7 +132,7 @@ export default function TermsPage() {
             </article>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 3 장 계약당사자의 의무</h2>
 
             <article>
@@ -147,7 +150,7 @@ export default function TermsPage() {
                 <li>
                   다음 각 호의 사유 발생 시 부득이한 경우 예고 없이 서비스의 전부 또는 일부의
                   제공을 일시 중지할 수 있습니다.
-                  <ol className="legal-sub-list">
+                  <ol className="ml-5 mt-1 list-[lower-alpha]">
                     <li>긴급한 시스템 점검, 증설, 교체, 보수 또는 공사를 하기 위한 경우</li>
                     <li>시스템 또는 기타 서비스 설비의 장애로 정상적인 서비스 제공이 불가능할 경우</li>
                     <li>천재지변, 국가비상사태, 정전 등 불가항력적 사유로 인한 경우</li>
@@ -183,7 +186,7 @@ export default function TermsPage() {
               </ol>
               <p>
                 개인정보의 수집범위, 이용목적, 보유기간 등 구체적인 사항은{" "}
-                <Link to="/privacy">개인정보처리방침</Link>에서 확인하실 수 있습니다.
+                <Link to="/privacy" className="text-[#862633] hover:underline">개인정보처리방침</Link>에서 확인하실 수 있습니다.
               </p>
             </article>
 
@@ -192,7 +195,7 @@ export default function TermsPage() {
               <ol>
                 <li>
                   회원은 다음 각 호에 해당하는 행위를 하여서는 아니됩니다.
-                  <ol className="legal-sub-list">
+                  <ol className="ml-5 mt-1 list-[lower-alpha]">
                     <li>회원가입 신청 또는 회원정보 변경 시 허위내용을 기재하는 행위</li>
                     <li>제3자의 개인정보를 도용하는 행위</li>
                     <li>회사나 기타 제3자의 저작권 기타 일체의 권리를 침해하는 행위</li>
@@ -212,7 +215,7 @@ export default function TermsPage() {
             </article>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 4 장 서비스의 제공 및 이용</h2>
 
             <article>
@@ -220,7 +223,7 @@ export default function TermsPage() {
               <ol>
                 <li>
                   회사는 회원에게 다음 각 호의 서비스를 제공합니다.
-                  <ol className="legal-sub-list">
+                  <ol className="ml-5 mt-1 list-[lower-alpha]">
                     <li>자료 구매 서비스</li>
                     <li>자료 판매 서비스</li>
                     <li>검색 서비스</li>
@@ -275,7 +278,7 @@ export default function TermsPage() {
                 <li>
                   다음 각 호에 해당하는 사유가 발생한 경우, 회원은 회사가 정한 절차에 따라
                   구매계약을 취소하고 환불을 요청할 수 있습니다.
-                  <ol className="legal-sub-list">
+                  <ol className="ml-5 mt-1 list-[lower-alpha]">
                     <li>회원에게 저작권이 없는 자료</li>
                     <li>파일이 손상된 자료</li>
                     <li>다른 자료와 중복된 자료</li>
@@ -310,7 +313,7 @@ export default function TermsPage() {
                 <li>
                   다음 각 호에 해당하는 경우, 회사는 별도의 조치 없이 해당 게시물에 대한 게시중단,
                   삭제 기타 필요한 조치를 취할 수 있습니다.
-                  <ol className="legal-sub-list">
+                  <ol className="ml-5 mt-1 list-[lower-alpha]">
                     <li>해당 게시물이 저작권법 기타 관련법령을 위반하거나 위반할 우려가 있는 경우</li>
                     <li>해당 게시물이 제3자의 권리를 침해하거나 침해할 우려가 있는 경우</li>
                     <li>해당 게시물이 이 약관이나 회사의 정책에 위반되는 경우</li>
@@ -335,7 +338,7 @@ export default function TermsPage() {
             </article>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 5 장 계약 해지 및 서비스 이용 제한</h2>
 
             <article>
@@ -346,7 +349,7 @@ export default function TermsPage() {
                 </li>
                 <li>
                   다음 각 호에 해당하는 사유가 발생한 경우, 회사는 별도의 조치 없이 이용계약을 해지할 수 있습니다.
-                  <ol className="legal-sub-list">
+                  <ol className="ml-5 mt-1 list-[lower-alpha]">
                     <li>회원이 회사의 명예를 훼손한 경우</li>
                     <li>회원이 서비스의 제공 기타 회사의 업무를 방해한 경우</li>
                     <li>다른 회원의 ID 또는 비밀번호를 도용한 경우</li>
@@ -370,7 +373,7 @@ export default function TermsPage() {
                 </li>
                 <li>
                   다음 각 호에 해당하는 경우, 회사는 즉시 이용계약을 해지할 수 있습니다.
-                  <ol className="legal-sub-list">
+                  <ol className="ml-5 mt-1 list-[lower-alpha]">
                     <li>명의 도용 또는 결제 도용</li>
                     <li>저작권법 기타 관련법령을 위반한 불법 저작물의 제공</li>
                     <li>불법통신 및 해킹, 악성 프로그램의 배포</li>
@@ -390,7 +393,7 @@ export default function TermsPage() {
             </article>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>제 6 장 손해배상과 면책</h2>
 
             <article>
@@ -421,15 +424,21 @@ export default function TermsPage() {
             </article>
           </section>
 
-          <section className="legal-chapter">
+          <section>
             <h2>부칙</h2>
             <p>이 약관은 2026년 4월 1일부터 시행합니다.</p>
           </section>
         </div>
 
-        <div className="legal-footer-links">
-          <Link to="/privacy">개인정보처리방침</Link>
-          <Link to="/report">저작권 침해 신고</Link>
+        <Separator className="my-6" />
+
+        <div className="flex gap-4">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/privacy">개인정보처리방침</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/report">저작권 침해 신고</Link>
+          </Button>
         </div>
       </div>
     </div>
