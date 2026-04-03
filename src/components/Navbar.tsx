@@ -4,7 +4,7 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Plus, Wallet } from "lucide-react";
+import { ShoppingCart, Wallet } from "lucide-react";
 
 export default function Navbar() {
   const [cartCount, setCartCount] = useState(0);
@@ -70,22 +70,12 @@ export default function Navbar() {
                   </span>
                 )}
               </Link>
-              <div className="flex items-center gap-0.5">
-                <Link
-                  to="/charge"
-                  className="px-3 py-1 bg-primary/5 text-primary rounded-l-full text-[13px] font-bold hover:bg-primary/10 transition-colors"
-                >
-                  {(userProfile?.points ?? 0).toLocaleString()}P
-                </Link>
-                <Link
-                  to="/charge"
-                  className="px-2 py-1 bg-primary/5 text-primary rounded-r-full text-[13px] font-bold hover:bg-primary/10 transition-colors flex items-center gap-0.5"
-                  title="포인트 충전"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span className="hidden lg:inline">충전</span>
-                </Link>
-              </div>
+              <Link
+                to="/charge"
+                className="px-3 py-1.5 bg-[#DC143C] text-white rounded-full text-[13px] font-bold hover:bg-[#B01030] transition-colors"
+              >
+                {(userProfile?.points ?? 0).toLocaleString()}P
+              </Link>
               <Link
                 to="/withdraw"
                 className="hidden md:inline-flex px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors items-center gap-1"
