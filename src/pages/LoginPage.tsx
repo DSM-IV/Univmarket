@@ -127,7 +127,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-[420px] border-none shadow-sm">
         <CardHeader className="px-10 pt-11 pb-0">
           <Link to="/" className="flex items-center gap-2 font-bold text-lg text-foreground mb-8 no-underline">
-            <span className="w-9 h-9 bg-foreground text-white rounded-md flex items-center justify-center font-bold">
+            <span className="w-9 h-9 bg-primary text-white rounded-md flex items-center justify-center font-bold">
               K
             </span>
             <span>KU market</span>
@@ -285,7 +285,7 @@ export default function LoginPage() {
                               className={cn(
                                 "py-3 px-3.5 rounded-md text-sm font-bold transition-colors cursor-pointer border-none",
                                 selectedCampus === idx
-                                  ? "bg-foreground text-white"
+                                  ? "bg-primary text-white"
                                   : "bg-secondary text-muted-foreground hover:bg-border hover:text-foreground"
                               )}
                               onClick={() => setSelectedCampus(idx)}

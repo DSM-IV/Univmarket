@@ -154,7 +154,7 @@ export default function BrowsePage() {
               className={cn(
                 "px-4 py-2 rounded-full text-sm font-medium transition-colors",
                 selectedCategory === "전체"
-                  ? "bg-foreground text-background"
+                  ? "bg-primary text-white"
                   : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
               onClick={() => setSelectedCategory("전체")}
@@ -167,7 +167,7 @@ export default function BrowsePage() {
                 className={cn(
                   "px-4 py-2 rounded-full text-sm font-medium transition-colors",
                   selectedCategory === cat.name
-                    ? "bg-foreground text-background"
+                    ? "bg-primary text-white"
                     : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
                 onClick={() => setSelectedCategory(cat.name)}
@@ -295,7 +295,7 @@ export default function BrowsePage() {
                           className={cn(
                             "min-w-9 h-9 px-2.5 rounded-lg text-sm font-medium transition-colors",
                             currentPage === page
-                              ? "bg-foreground text-background"
+                              ? "bg-primary text-white"
                               : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
                           )}
                           onClick={() => setCurrentPage(page)}

@@ -8,7 +8,7 @@ export default function Footer() {
         {/* Brand */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-2">
-            <span className="w-7 h-7 bg-foreground text-white rounded-md flex items-center justify-center font-extrabold text-sm">
+            <span className="w-7 h-7 bg-primary text-white rounded-md flex items-center justify-center font-extrabold text-sm">
               K
             </span>
             <span className="font-bold text-[15px]">KU market</span>

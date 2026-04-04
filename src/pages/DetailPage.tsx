@@ -769,7 +769,7 @@ export default function DetailPage() {
                         className={cn(
                           "px-3.5 py-1.5 text-[13px] font-semibold border-none rounded-full cursor-pointer transition-colors",
                           reviewSort === "recent"
-                            ? "text-white bg-foreground"
+                            ? "text-white bg-primary"
                             : "text-muted-foreground bg-secondary hover:bg-border"
                         )}
                         onClick={() => setReviewSort("recent")}
@@ -780,7 +780,7 @@ export default function DetailPage() {
                         className={cn(
                           "px-3.5 py-1.5 text-[13px] font-semibold border-none rounded-full cursor-pointer transition-colors",
                           reviewSort === "rating-high"
-                            ? "text-white bg-foreground"
+                            ? "text-white bg-primary"
                             : "text-muted-foreground bg-secondary hover:bg-border"
                         )}
                         onClick={() => setReviewSort("rating-high")}
