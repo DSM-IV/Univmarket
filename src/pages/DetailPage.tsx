@@ -897,6 +897,17 @@ export default function DetailPage() {
                     <ShoppingCart className="w-4 h-4 mr-1" />
                     {addingToCart ? "추가 중..." : inCart ? "장바구니 보기" : "장바구니에 담기"}
                   </Button>
+                  {user && points < material.price && (
+                    <div className="bg-amber-500/5 rounded-lg p-3.5 text-center mb-4">
+                      <p className="text-sm text-amber-600 font-semibold mb-1.5">포인트가 부족합니다.</p>
+                      <Link
+                        to="/charge"
+                        className="text-[13px] text-primary font-semibold hover:opacity-75 transition-opacity"
+                      >
+                        충전하러 가기
+                      </Link>
+                    </div>
+                  )}
                 </>
               )}
               <Separator className="my-4" />

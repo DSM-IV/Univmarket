@@ -4,10 +4,11 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Wallet } from "lucide-react";
+import { ShoppingCart, Wallet, Menu, X } from "lucide-react";
 
 export default function Navbar() {
   const [cartCount, setCartCount] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { user, userProfile, logOut } = useAuth();
   const navigate = useNavigate();
 
@@ -28,11 +29,13 @@ export default function Navbar() {
     navigate("/");
   };
 
+  const closeMobile = () => setMobileOpen(false);
+
   return (
     <nav className="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-border">
       <div className="max-w-[1140px] mx-auto px-6 max-sm:px-4 h-[60px] flex items-center gap-5 max-sm:gap-2">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 shrink-0">
+        <Link to="/" className="flex items-center gap-2.5 shrink-0" onClick={closeMobile}>
           <span className="w-8 h-8 bg-primary text-white rounded-lg flex items-center justify-center font-extrabold text-base">
             K
           </span>
@@ -41,11 +44,11 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* Nav Links */}
-        <div className="flex items-center gap-1 shrink-0 ml-auto">
+        {/* Desktop Nav Links */}
+        <div className="hidden md:flex items-center gap-1 shrink-0 ml-auto">
           <Link
             to="/browse"
-            className="hidden md:inline-flex px-3.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
           >
             자료 찾기
           </Link>
@@ -60,7 +63,7 @@ export default function Navbar() {
             <>
               <Link
                 to="/cart"
-                className="relative p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors hidden md:flex"
+                className="relative p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex"
                 title="장바구니"
               >
                 <ShoppingCart className="w-[18px] h-[18px]" />
@@ -72,13 +75,13 @@ export default function Navbar() {
               </Link>
               <Link
                 to="/charge"
-                className="hidden md:inline-flex px-3.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               >
                 {(userProfile?.points ?? 0).toLocaleString()}P
               </Link>
               <Link
                 to="/withdraw"
-                className="hidden md:inline-flex px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors items-center gap-1"
+                className="px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors inline-flex items-center gap-1"
                 title="출금"
               >
                 <Wallet className="w-4 h-4" />
@@ -87,14 +90,14 @@ export default function Navbar() {
               {userProfile?.role === "admin" && (
                 <Link
                   to="/admin"
-                  className="hidden md:inline-flex px-3.5 py-1.5 rounded-lg text-sm font-semibold text-destructive hover:bg-destructive/5 transition-colors"
+                  className="px-3.5 py-1.5 rounded-lg text-sm font-semibold text-destructive hover:bg-destructive/5 transition-colors"
                 >
                   관리자
                 </Link>
               )}
               <Link
                 to="/mypage"
-                className="hidden md:inline-flex text-sm font-semibold text-foreground px-2 py-1.5 hover:text-primary transition-colors"
+                className="text-sm font-semibold text-foreground px-2 py-1.5 hover:text-primary transition-colors"
               >
                 마이페이지
               </Link>
@@ -113,7 +116,104 @@ export default function Navbar() {
             </Button>
           )}
         </div>
+
+        {/* Mobile: key actions + hamburger */}
+        <div className="flex md:hidden items-center gap-1 ml-auto">
+          {user && (
+            <Link
+              to="/cart"
+              className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              onClick={closeMobile}
+            >
+              <ShoppingCart className="w-5 h-5" />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 text-[10px] font-bold leading-4 text-center text-white bg-primary rounded-full">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+          )}
+          <button
+            onClick={() => setMobileOpen((v) => !v)}
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+            aria-label="메뉴"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile dropdown */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-border bg-white/95 backdrop-blur-xl px-6 pb-4 pt-2 flex flex-col gap-1">
+          <Link
+            to="/browse"
+            onClick={closeMobile}
+            className="px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            자료 찾기
+          </Link>
+          <Link
+            to="/upload"
+            onClick={closeMobile}
+            className="px-3 py-2.5 rounded-lg text-sm font-semibold text-primary hover:bg-primary/5 transition-colors"
+          >
+            자료 판매
+          </Link>
+
+          {user ? (
+            <>
+              <Link
+                to="/charge"
+                onClick={closeMobile}
+                className="px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+              >
+                포인트 {(userProfile?.points ?? 0).toLocaleString()}P
+              </Link>
+              <Link
+                to="/withdraw"
+                onClick={closeMobile}
+                className="px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors inline-flex items-center gap-1"
+              >
+                <Wallet className="w-4 h-4" />
+                출금
+              </Link>
+              {userProfile?.role === "admin" && (
+                <Link
+                  to="/admin"
+                  onClick={closeMobile}
+                  className="px-3 py-2.5 rounded-lg text-sm font-semibold text-destructive hover:bg-destructive/5 transition-colors"
+                >
+                  관리자
+                </Link>
+              )}
+              <Link
+                to="/mypage"
+                onClick={closeMobile}
+                className="px-3 py-2.5 rounded-lg text-sm font-semibold text-foreground hover:text-primary transition-colors"
+              >
+                마이페이지
+              </Link>
+              <div className="px-3 pt-1">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => { closeMobile(); handleLogout(); }}
+                  className="rounded-full w-full"
+                >
+                  로그아웃
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="px-3 pt-1">
+              <Button variant="default" size="sm" className="rounded-full w-full" asChild>
+                <Link to="/login" onClick={closeMobile}>로그인</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </nav>
   );
 }
