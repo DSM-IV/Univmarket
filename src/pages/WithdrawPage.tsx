@@ -293,6 +293,98 @@ export default function WithdrawPage() {
             출금은 영업일 기준 1~3일 소요되며, 최소 출금 금액은 {MIN_WITHDRAW.toLocaleString()}P입니다.
           </p>
         </form>
+
+        {/* 출금 안내 */}
+        <Card className="mt-8">
+          <CardContent className="p-5">
+            <h2 className="text-[15px] font-bold mb-3">출금 안내</h2>
+            <ul className="text-[13px] text-muted-foreground space-y-2 ml-1">
+              <li>• 수익금(판매수익)은 반드시 <span className="font-semibold text-foreground">본인 명의 계좌</span>로만 신청 가능하며, 신청한 다음 영업일에 입금됩니다. (은행 영업일 기준)</li>
+              <li>• 계좌번호를 잘못 입력하여 출금된 경우 책임지지 않습니다.</li>
+              <li>• 출금 신청 시 최초 1회에 한해 실명확인을 진행합니다. (단, 마지막 출금일로부터 5년 경과 시 재확인 필요)</li>
+              <li>• CMA통장 및 가상계좌는 거래시간 제한으로 출금 오류가 발생할 수 있으니, 가급적 <span className="font-semibold text-foreground">입출금이 자유로운 보통예금통장</span>으로 신청해주세요.</li>
+            </ul>
+          </CardContent>
+        </Card>
+
+        {/* 수수료 & 세금 안내 */}
+        <Card className="mt-4">
+          <CardContent className="p-5">
+            <h2 className="text-[15px] font-bold mb-3">수수료 & 세금 안내</h2>
+            <ul className="text-[13px] text-muted-foreground space-y-2 ml-1 mb-5">
+              <li>• 최소 출금 금액은 <span className="font-semibold text-foreground">5,000원</span>이며, 출금처리수수료 <span className="font-semibold text-foreground">500원</span>을 포함한 잔액이 5,500원 이상인 경우 신청 가능합니다.</li>
+              <li>• 신청금액이 <span className="font-semibold text-foreground">건별 125,000원 초과</span> 시 기타소득세와 주민세(8.8%)가 포함된 금액이 수익금 계정에서 출금 처리됩니다.</li>
+              <li>• 신청금액이 <span className="font-semibold text-foreground">연간 누적 7,500,000원 초과</span> 시 사업소득세와 주민세(3.3%)가 포함된 금액이 수익금 계정에서 출금 처리됩니다.</li>
+            </ul>
+
+            <div className="space-y-4">
+              {/* 기타소득 */}
+              <div className="rounded-lg border border-border p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="shrink-0 px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-700">기타소득</span>
+                  <span className="text-sm font-semibold">건별 125,000원 초과 시</span>
+                </div>
+                <ul className="text-[13px] text-muted-foreground space-y-1.5 ml-1">
+                  <li>• 출금 신청금액이 건별 125,000원을 초과할 경우 기타소득으로 국세청에 통보되며, 기타소득세율(8.8%)이 포함된 금액이 수익금 계정에서 출금됩니다.</li>
+                  <li>• 125,000원 이하 출금 시에는 세금이 부과되지 않습니다.</li>
+                </ul>
+                <div className="mt-3 p-3 rounded-lg bg-muted/50">
+                  <p className="text-[12px] text-muted-foreground font-semibold mb-1">출금 예시</p>
+                  <p className="text-[12px] text-muted-foreground leading-relaxed">
+                    200,000원 출금 시 → 세금 포함 219,298원(8.8%) + 수수료 500원 = 총 219,798원 차감
+                  </p>
+                </div>
+                <div className="mt-3">
+                  <p className="text-[13px] text-muted-foreground leading-relaxed">
+                    출금금액(기타소득 지급액)이 <span className="font-semibold text-foreground">7,500,000원</span>(기타소득금액 총 300만 원)을 초과하면 다른 소득과 합산하여 종합소득세로 신고해야 합니다.
+                  </p>
+                  <div className="mt-2 p-3 rounded-lg bg-muted/50">
+                    <p className="text-[12px] text-muted-foreground font-semibold mb-1">기타소득금액 계산</p>
+                    <p className="text-[12px] text-muted-foreground leading-relaxed">
+                      기타소득금액 = 출금금액(수입금액) − 필요경비(60% 인정)<br />
+                      예) 3,000,000원 = 7,500,000원 − 4,500,000원(필요경비 60%)<br />
+                      → 300만 원 이하: 분리과세 선택 가능<br />
+                      → 300만 원 초과: 종합소득세 합산 신고 대상
+                    </p>
+                    <p className="text-[11px] text-muted-foreground mt-1.5">
+                      ※ 필요경비란 노력의 대가로 증빙 없이 인정되는 금액입니다.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 사업소득 */}
+              <div className="rounded-lg border border-border p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="shrink-0 px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-700">사업소득</span>
+                  <span className="text-sm font-semibold">연간 누적 7,500,000원 초과 시</span>
+                </div>
+                <ul className="text-[13px] text-muted-foreground space-y-1.5 ml-1">
+                  <li>• 출금 신청금액이 연간 누적 7,500,000원을 초과하는 경우 계속적·반복적 판매 활동으로 보아 사업소득으로 국세청에 통보됩니다.</li>
+                  <li>• 이후 출금 신청금액과 상관없이 사업소득 세율(3.3%)이 포함된 금액이 수익금 계정에서 출금 처리됩니다.</li>
+                </ul>
+                <div className="mt-3 p-3 rounded-lg bg-muted/50">
+                  <p className="text-[12px] text-muted-foreground font-semibold mb-1">출금 예시</p>
+                  <p className="text-[12px] text-muted-foreground leading-relaxed">
+                    50,000원 출금 시 → 세금 포함 51,705원(3.3%) + 수수료 500원 = 총 52,205원 차감
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 rounded-lg bg-amber-500/5 border border-amber-200">
+              <p className="text-[12px] text-amber-700 leading-relaxed font-medium">
+                ※ KU market 총 출금금액이 7,500,000원 미만이더라도 다른 기타소득 지급액과 합산하여 7,500,000원 이상일 경우 종합소득세 신고 대상입니다. 세금신고 누락 시 가산세 등 불이익이 발생할 수 있으니 반드시 다른 소득과 합산하여 국세청에 소득신고 하시기 바랍니다.
+              </p>
+            </div>
+
+            <div className="mt-3 p-3 rounded-lg bg-muted/50">
+              <p className="text-[12px] text-muted-foreground leading-relaxed">
+                ※ 위 안내는 일반적인 기준이며, 개인 상황에 따라 달라질 수 있습니다. 정확한 세무 상담은 국세청(126) 또는 세무사에게 문의하시기 바랍니다.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
