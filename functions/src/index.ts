@@ -131,7 +131,7 @@ export const sendKakaoVerification = onCall(
         formData.append("receiver_1", cleanPhone);
         formData.append("subject_1", "본인인증");
         formData.append("message_1", `유니파일 본인인증번호\n\n[${code}]\n\n타인에게 노출되지 않도록 유의해주세요.`);
-        await axios.post(
+        const res = await axios.post(
           "https://kakaoapi.aligo.in/akv10/alimtalk/send/",
           formData.toString(),
           {
@@ -140,13 +140,12 @@ export const sendKakaoVerification = onCall(
             },
           },
         );
+        console.log("[ALIGO] 응답:", JSON.stringify(res.data));
       } else {
-        // 개발 환경: 콘솔에 출력
         console.log(`[DEV] 알림톡 인증번호 for ${cleanPhone}: ${code}`);
       }
     } catch (err: any) {
       console.error("알리고 알림톡 발송 오류:", err?.response?.data || err.message);
-      // 발송 실패해도 세션은 유지 (개발 환경 대응)
       console.log(`[FALLBACK] 인증번호 for ${cleanPhone}: ${code}`);
     }
 
@@ -874,11 +873,12 @@ export const requestVerification = onCall({ secrets: ALIGO_SECRETS }, async (req
       formData.append("receiver_1", cleanPhone);
       formData.append("subject_1", "본인인증");
       formData.append("message_1", `유니파일 본인인증번호\n\n[${code}]\n\n타인에게 노출되지 않도록 유의해주세요.`);
-      await axios.post(
+      const res = await axios.post(
         "https://kakaoapi.aligo.in/akv10/alimtalk/send/",
         formData.toString(),
         { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
       );
+      console.log("[ALIGO] 본인인증 응답:", JSON.stringify(res.data));
     } else {
       console.log(`[DEV] 본인인증 코드 for ${cleanPhone}: ${code}`);
     }
