@@ -130,7 +130,7 @@ export const sendKakaoVerification = onCall(
         formData.append("sender", ALIGO_SENDER_NUMBER);
         formData.append("receiver_1", cleanPhone);
         formData.append("subject_1", "본인인증");
-        formData.append("message_1", `유니파일 본인인증번호\n\n[${code}]\n\n타인에게 노출되지 않도록 유의해주세요.`);
+        formData.append("message_1", `유니파일 본인인증번호\n[${code}]\n\n타인에게 노출되지 않도록 유의해주세요.`);
         const res = await axios.post(
           "https://kakaoapi.aligo.in/akv10/alimtalk/send/",
           formData.toString(),
@@ -878,7 +878,7 @@ export const requestVerification = onCall({ secrets: ALIGO_SECRETS }, async (req
       formData.append("sender", ALIGO_SENDER_NUMBER);
       formData.append("receiver_1", cleanPhone);
       formData.append("subject_1", "본인인증");
-      formData.append("message_1", `유니파일 본인인증번호\n\n[${code}]\n\n타인에게 노출되지 않도록 유의해주세요.`);
+      formData.append("message_1", `유니파일 본인인증번호\n[${code}]\n\n타인에게 노출되지 않도록 유의해주세요.`);
       const res = await axios.post(
         "https://kakaoapi.aligo.in/akv10/alimtalk/send/",
         formData.toString(),
