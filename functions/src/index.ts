@@ -12,18 +12,20 @@ admin.initializeApp();
 const db = admin.firestore();
 
 // 프로덕션 배포 전 반드시 Firebase 환경변수 설정 필요:
-// firebase functions:secrets:set KAKAO_ALIMTALK_API_KEY
-// firebase functions:secrets:set KAKAO_ALIMTALK_SENDER_KEY
-// firebase functions:secrets:set KAKAO_ALIMTALK_TEMPLATE_CODE
+// firebase functions:secrets:set ALIGO_API_KEY
+// firebase functions:secrets:set ALIGO_USER_ID
+// firebase functions:secrets:set ALIGO_SENDER_KEY
+// firebase functions:secrets:set ALIGO_SENDER_NUMBER
 // firebase functions:secrets:set KAKAOPAY_CID
 // firebase functions:secrets:set KAKAOPAY_SECRET_KEY
 // firebase functions:secrets:set TOSS_SECRET_KEY
 // firebase functions:config:set app.frontend_url="https://unifile.store"
 const VIRUSTOTAL_API_KEY = process.env.VIRUSTOTAL_API_KEY || "";
 
-const KAKAO_ALIMTALK_API_KEY = process.env.KAKAO_ALIMTALK_API_KEY || "";
-const KAKAO_ALIMTALK_SENDER_KEY = process.env.KAKAO_ALIMTALK_SENDER_KEY || "";
-const KAKAO_ALIMTALK_TEMPLATE_CODE = process.env.KAKAO_ALIMTALK_TEMPLATE_CODE || "";
+const ALIGO_API_KEY = process.env.ALIGO_API_KEY || "";
+const ALIGO_USER_ID = process.env.ALIGO_USER_ID || "";
+const ALIGO_SENDER_KEY = process.env.ALIGO_SENDER_KEY || "";
+const ALIGO_SENDER_NUMBER = process.env.ALIGO_SENDER_NUMBER || "";
 
 const KAKAOPAY_CID = process.env.KAKAOPAY_CID || "TC0ONETIME";
 const KAKAOPAY_SECRET_KEY = process.env.KAKAOPAY_SECRET_KEY || "";
@@ -77,8 +79,10 @@ export const createUserProfile = onCall(async (request) => {
 });
 
 // 카카오톡 인증번호 발송 (회원가입용 - 인증 불필요)
+const ALIGO_SECRETS = ["ALIGO_API_KEY", "ALIGO_USER_ID", "ALIGO_SENDER_KEY", "ALIGO_SENDER_NUMBER"];
+
 export const sendKakaoVerification = onCall(
-  { secrets: ["KAKAO_ALIMTALK_API_KEY", "KAKAO_ALIMTALK_SENDER_KEY", "KAKAO_ALIMTALK_TEMPLATE_CODE"] },
+  { secrets: ALIGO_SECRETS },
   async (request) => {
     const { name, phone } = request.data;
     if (!name?.trim()) {
@@ -115,37 +119,33 @@ export const sendKakaoVerification = onCall(
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // 카카오 알림톡 발송
+    // 알리고 알림톡 발송
     try {
-      if (KAKAO_ALIMTALK_API_KEY && KAKAO_ALIMTALK_SENDER_KEY) {
+      if (ALIGO_API_KEY && ALIGO_SENDER_KEY) {
+        const formData = new URLSearchParams();
+        formData.append("apikey", ALIGO_API_KEY);
+        formData.append("userid", ALIGO_USER_ID);
+        formData.append("senderkey", ALIGO_SENDER_KEY);
+        formData.append("tpl_code", "UG_8781");
+        formData.append("sender", ALIGO_SENDER_NUMBER);
+        formData.append("receiver_1", cleanPhone);
+        formData.append("subject_1", "본인인증");
+        formData.append("message_1", `유니파일 본인인증번호\n\n[${code}]\n\n타인에게 노출되지 않도록 유의해주세요.`);
         await axios.post(
-          "https://bizapi.kakao.com/v2/sender/send",
-          {
-            senderKey: KAKAO_ALIMTALK_SENDER_KEY,
-            templateCode: KAKAO_ALIMTALK_TEMPLATE_CODE,
-            recipientList: [
-              {
-                recipientNo: cleanPhone,
-                templateParameter: {
-                  code: code,
-                  name: name.trim(),
-                },
-              },
-            ],
-          },
+          "https://kakaoapi.aligo.in/akv10/alimtalk/send/",
+          formData.toString(),
           {
             headers: {
-              "Content-Type": "application/json",
-              "X-Secret-Key": KAKAO_ALIMTALK_API_KEY,
+              "Content-Type": "application/x-www-form-urlencoded",
             },
           },
         );
       } else {
         // 개발 환경: 콘솔에 출력
-        console.log(`[DEV] 카카오톡 인증번호 for ${cleanPhone}: ${code}`);
+        console.log(`[DEV] 알림톡 인증번호 for ${cleanPhone}: ${code}`);
       }
     } catch (err: any) {
-      console.error("카카오 알림톡 발송 오류:", err?.response?.data || err.message);
+      console.error("알리고 알림톡 발송 오류:", err?.response?.data || err.message);
       // 발송 실패해도 세션은 유지 (개발 환경 대응)
       console.log(`[FALLBACK] 인증번호 for ${cleanPhone}: ${code}`);
     }
@@ -837,7 +837,7 @@ export const purchaseMaterial = onCall(async (request) => {
 // --- 본인인증 ---
 
 // 인증번호 발송 요청
-export const requestVerification = onCall(async (request) => {
+export const requestVerification = onCall({ secrets: ALIGO_SECRETS }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
@@ -862,11 +862,30 @@ export const requestVerification = onCall(async (request) => {
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // TODO: 실제 SMS 발송 연동 (CoolSMS, NHN Cloud 등)
-  // await sendSms(cleanPhone, `[UniFile] 인증번호: ${code}`);
-
-  // 개발 환경에서는 콘솔에 출력
-  console.log(`[DEV] 본인인증 코드 for ${cleanPhone}: ${code}`);
+  // 알리고 알림톡 발송 (본인인증)
+  try {
+    if (ALIGO_API_KEY && ALIGO_SENDER_KEY) {
+      const formData = new URLSearchParams();
+      formData.append("apikey", ALIGO_API_KEY);
+      formData.append("userid", ALIGO_USER_ID);
+      formData.append("senderkey", ALIGO_SENDER_KEY);
+      formData.append("tpl_code", "UG_8781");
+      formData.append("sender", ALIGO_SENDER_NUMBER);
+      formData.append("receiver_1", cleanPhone);
+      formData.append("subject_1", "본인인증");
+      formData.append("message_1", `유니파일 본인인증번호\n\n[${code}]\n\n타인에게 노출되지 않도록 유의해주세요.`);
+      await axios.post(
+        "https://kakaoapi.aligo.in/akv10/alimtalk/send/",
+        formData.toString(),
+        { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+      );
+    } else {
+      console.log(`[DEV] 본인인증 코드 for ${cleanPhone}: ${code}`);
+    }
+  } catch (err: any) {
+    console.error("알리고 알림톡 발송 오류:", err?.response?.data || err.message);
+    console.log(`[FALLBACK] 본인인증 코드 for ${cleanPhone}: ${code}`);
+  }
 
   return { success: true };
 });
@@ -1898,7 +1917,7 @@ export const onMaterialCreated = onDocumentCreated("materials/{materialId}", asy
     if (subject.includes(reqSubject) || reqSubject.includes(subject)) {
       const needUsers: string[] = reqData.needUsers || [];
 
-      // 각 사용자에게 알림 생성
+      // 각 사용자에게 알림 생성 + 알림톡 발송
       const batch = db.batch();
       for (const userId of needUsers) {
         const notifRef = db.collection("notifications").doc();
@@ -1912,6 +1931,34 @@ export const onMaterialCreated = onDocumentCreated("materials/{materialId}", asy
           read: false,
           createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
+
+        // 알리고 알림톡 발송 (자료등록)
+        if (ALIGO_API_KEY && ALIGO_SENDER_KEY) {
+          try {
+            const userDoc = await db.collection("users").doc(userId).get();
+            const userData = userDoc.data();
+            const userPhone = userData?.verifiedPhone;
+            const userName = userData?.displayName || "회원";
+            if (userPhone) {
+              const formData = new URLSearchParams();
+              formData.append("apikey", ALIGO_API_KEY);
+              formData.append("userid", ALIGO_USER_ID);
+              formData.append("senderkey", ALIGO_SENDER_KEY);
+              formData.append("tpl_code", "UG_8790");
+              formData.append("sender", ALIGO_SENDER_NUMBER);
+              formData.append("receiver_1", userPhone);
+              formData.append("subject_1", "자료등록");
+              formData.append("message_1", `관심과목 자료 등록\n\n${reqData.subject}\n\n${userName}님이 요청한 ${reqData.subject} 과목의 자료가 등록되었어요. 유니파일에서 확인해보세요!`);
+              await axios.post(
+                "https://kakaoapi.aligo.in/akv10/alimtalk/send/",
+                formData.toString(),
+                { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+              );
+            }
+          } catch (err: any) {
+            console.error("알리고 자료등록 알림톡 오류:", err?.response?.data || err.message);
+          }
+        }
       }
       await batch.commit();
 
