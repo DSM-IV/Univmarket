@@ -8,6 +8,7 @@ export interface Material {
   subject: string;
   professor?: string;
   department?: string;
+  semester?: string;
   author: string;
   authorId: string;
   thumbnail: string;
@@ -18,6 +19,10 @@ export interface Material {
   pages: number;
   fileType: string;
   previewImages?: string[];
+  gradeImage?: string;
+  gradeClaim?: string;
+  gradeStatus?: "pending" | "verified" | "rejected";
+  verifiedGrade?: string;
 }
 
 export interface User {
@@ -41,17 +46,28 @@ export interface UserProfile {
   email: string;
   university: string;
   points: number;
+  earnings: number;
+  pendingEarnings: number;
+  pendingPoints: number;
   totalEarned: number;
   totalSpent: number;
   role?: string;
+  identityVerified?: boolean;
+  identityVerifiedAt?: string;
+  banned?: boolean;
+  banReason?: string;
+  suspended?: boolean;
+  suspendedUntil?: string;
+  suspendReason?: string;
 }
 
 export interface Transaction {
   id: string;
   userId: string;
-  type: "charge" | "purchase" | "sale" | "refund";
+  type: "charge" | "purchase" | "sale" | "refund" | "withdraw";
   amount: number;
   balanceAfter: number;
+  balanceType?: "points" | "earnings";
   description: string;
   relatedMaterialId?: string;
   status: "pending" | "completed" | "failed";

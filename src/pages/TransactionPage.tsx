@@ -9,13 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { CreditCard, Receipt } from "lucide-react";
 
-type FilterTab = "all" | "charge" | "purchase" | "sale";
+type FilterTab = "all" | "charge" | "purchase" | "sale" | "withdraw";
 
 const TAB_LABELS: Record<FilterTab, string> = {
   all: "전체",
   charge: "충전",
   purchase: "구매",
   sale: "판매",
+  withdraw: "출금",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -23,6 +24,7 @@ const TYPE_LABELS: Record<string, string> = {
   purchase: "구매",
   sale: "판매",
   refund: "환불",
+  withdraw: "출금",
 };
 
 const TYPE_BADGE_VARIANT: Record<string, "default" | "primary" | "secondary" | "success" | "destructive" | "outline"> = {
@@ -30,6 +32,14 @@ const TYPE_BADGE_VARIANT: Record<string, "default" | "primary" | "secondary" | "
   purchase: "destructive",
   sale: "success",
   refund: "secondary",
+  withdraw: "outline",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  pending: "처리 대기",
+  completed: "완료",
+  failed: "실패",
+  rejected: "거절 (환불)",
 };
 
 function formatDate(iso: string): string {
@@ -67,7 +77,7 @@ export default function TransactionPage() {
         const data = await getTransactions(user!.uid, 100);
         setTransactions(data);
       } catch (err) {
-        console.error("거래 내역 불러오기 실패:", err);
+
       } finally {
         setLoading(false);
       }
@@ -134,9 +144,21 @@ export default function TransactionPage() {
                         <p className="truncate text-sm font-medium text-gray-900">
                           {t.description}
                         </p>
-                        <p className="text-xs text-gray-400">
-                          {formatDate(t.createdAt)}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-gray-400">
+                            {formatDate(t.createdAt)}
+                          </p>
+                          {t.type === "withdraw" && t.status && (
+                            <span className={cn(
+                              "text-[11px] font-semibold px-1.5 py-0.5 rounded",
+                              t.status === "pending" && "bg-amber-100 text-amber-700",
+                              t.status === "completed" && "bg-emerald-100 text-emerald-700",
+                              t.status === "failed" && "bg-red-100 text-red-700",
+                            )}>
+                              {STATUS_LABELS[t.status] || t.status}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
@@ -147,10 +169,10 @@ export default function TransactionPage() {
                         )}
                       >
                         {income ? "+" : "-"}
-                        {Math.abs(t.amount).toLocaleString()}P
+                        {Math.abs(t.amount).toLocaleString()}{t.balanceType === "earnings" ? "원" : "P"}
                       </span>
                       <span className="text-xs text-gray-400">
-                        잔액 {t.balanceAfter.toLocaleString()}P
+                        {t.balanceType === "earnings" ? "수익금" : "포인트"} 잔액 {t.balanceAfter.toLocaleString()}{t.balanceType === "earnings" ? "원" : "P"}
                       </span>
                     </div>
                   </CardContent>

@@ -1,30 +1,24 @@
 import { useState, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Mail } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 60_000; // 1분
 
-const CAMPUSES = [
-  { label: "고려대학교(서울)", domain: "korea.ac.kr" },
-  { label: "고려대학교(세종)", domain: "sejong.korea.ac.kr" },
-];
 
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [formData, setFormData] = useState({
-    emailId: "",
     email: "",
     password: "",
     name: "",
     nickname: "",
   });
-  const [selectedCampus, setSelectedCampus] = useState(0);
+  const [selectedUniversity, setSelectedUniversity] = useState("고려대학교(서울)");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [signUpSuccess, setSignUpSuccess] = useState(false);
@@ -39,11 +33,15 @@ export default function LoginPage() {
   const failCountRef = useRef(0);
   const lockoutTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
+  const [capsLock, setCapsLock] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
+
   const { logIn, signUp, resetPassword } = useAuth();
   const navigate = useNavigate();
 
-  const campusDomain = CAMPUSES[selectedCampus].domain;
-  const fullEmail = isSignUp ? `${formData.emailId}@${campusDomain}` : formData.email;
 
   const startLockout = useCallback(() => {
     const unlockAt = Date.now() + LOCKOUT_MS;
@@ -84,12 +82,22 @@ export default function LoginPage() {
         return;
       }
       if (isSignUp) {
-        if (!formData.emailId.trim()) {
-          setError("이메일 아이디를 입력해주세요.");
+        if (!formData.email.trim()) {
+          setError("이메일을 입력해주세요.");
           setLoading(false);
           return;
         }
-        await signUp(fullEmail, formData.password, formData.name, formData.nickname, CAMPUSES[selectedCampus].label);
+        if (!formData.email.trim().endsWith("@korea.ac.kr")) {
+          setError("고려대학교 이메일(@korea.ac.kr)만 사용할 수 있습니다.");
+          setLoading(false);
+          return;
+        }
+        if (!agreeTerms || !agreePrivacy) {
+          setError("이용약관과 개인정보처리방침에 모두 동의해주세요.");
+          setLoading(false);
+          return;
+        }
+        await signUp(formData.email, formData.password, formData.name, formData.nickname, selectedUniversity);
         setSignUpSuccess(true);
         setLoading(false);
         return;
@@ -126,11 +134,8 @@ export default function LoginPage() {
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-6 py-12 bg-secondary">
       <Card className="w-full max-w-[420px] border-none shadow-sm">
         <CardHeader className="px-10 pt-11 pb-0">
-          <Link to="/" className="flex items-center gap-2 font-bold text-lg text-foreground mb-8 no-underline">
-            <span className="w-9 h-9 bg-primary text-white rounded-md flex items-center justify-center font-bold">
-              K
-            </span>
-            <span>KU market</span>
+          <Link to="/" className="flex items-center mb-8 no-underline">
+            <img src="/logo.png" alt="UniFile" className="h-10" />
           </Link>
 
           <h1 className="text-2xl font-bold text-foreground mb-2">
@@ -140,7 +145,7 @@ export default function LoginPage() {
             {resetMode
               ? "가입한 이메일을 입력하면 비밀번호 재설정 링크를 보내드립니다"
               : isSignUp
-                ? "학교 이메일로 가입하고 자료를 거래하세요"
+                ? "고려대학교 이메일로 가입하여 자료를 거래하세요"
                 : "계정에 로그인하세요"}
           </p>
         </CardHeader>
@@ -164,7 +169,7 @@ export default function LoginPage() {
           {signUpSuccess && (
             <div className="bg-success/5 text-[#1B8A4A] p-3.5 rounded-md text-sm mb-4.5 leading-relaxed">
               <p className="font-bold mb-1">회원가입이 완료되었습니다!</p>
-              <p>{fullEmail}로 인증 링크를 보냈습니다. 이메일을 확인하고 인증을 완료한 후 로그인해주세요.</p>
+              <p>{formData.email}로 인증 링크를 보냈습니다. 이메일을 확인하고 인증을 완료한 후 로그인해주세요.</p>
             </div>
           )}
 
@@ -185,7 +190,7 @@ export default function LoginPage() {
                   setResendCooldown(true);
                   const { signInWithEmailAndPassword: signInTemp, sendEmailVerification: sendVerif, signOut: signOutTemp } = await import("firebase/auth");
                   const { auth: firebaseAuth } = await import("../firebase");
-                  const loginEmail = isSignUp ? fullEmail : formData.email;
+                  const loginEmail = formData.email;
                   const cred = await signInTemp(firebaseAuth, loginEmail, formData.password);
                   await sendVerif(cred.user);
                   await signOutTemp(firebaseAuth);
@@ -215,20 +220,20 @@ export default function LoginPage() {
                       type="email"
                       id="email"
                       name="email"
-                      placeholder="가입한 학교 이메일을 입력하세요"
+                      placeholder="가입한 이메일을 입력하세요"
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="h-11 text-[15px]"
+                      className="h-11 text-[15px] focus:ring-primary"
                     />
                   </div>
-                  <Button
+                  <button
                     type="submit"
-                    className="w-full h-12 text-base font-bold mt-3"
+                    className="w-full h-12 text-base font-bold mt-3 rounded-lg bg-gradient-to-r from-[#1B3A5C] to-[#2E8BC0] !text-white hover:opacity-90 transition-opacity disabled:opacity-50"
                     disabled={loading}
                   >
                     {loading ? "처리 중..." : "재설정 링크 보내기"}
-                  </Button>
+                  </button>
                   <Button
                     type="button"
                     variant="ghost"
@@ -254,7 +259,7 @@ export default function LoginPage() {
                           value={formData.name}
                           onChange={handleChange}
                           required
-                          className="h-11 text-[15px]"
+                          className="h-11 text-[15px] focus:ring-primary"
                         />
                       </div>
                       <div className="mb-4.5">
@@ -269,57 +274,38 @@ export default function LoginPage() {
                           value={formData.nickname}
                           onChange={handleChange}
                           required
-                          className="h-11 text-[15px]"
+                          className="h-11 text-[15px] focus:ring-primary"
                         />
                       </div>
 
                       <div className="mb-4.5">
                         <label className="block text-sm font-semibold text-foreground mb-2">
-                          캠퍼스 선택
+                          학교
                         </label>
-                        <div className="grid grid-cols-2 gap-2.5">
-                          {CAMPUSES.map((campus, idx) => (
-                            <button
-                              key={campus.domain}
-                              type="button"
-                              className={cn(
-                                "py-3 px-3.5 rounded-md text-sm font-bold transition-colors cursor-pointer border-none",
-                                selectedCampus === idx
-                                  ? "bg-primary text-white"
-                                  : "bg-secondary text-muted-foreground hover:bg-border hover:text-foreground"
-                              )}
-                              onClick={() => setSelectedCampus(idx)}
-                            >
-                              {campus.label}
-                            </button>
-                          ))}
+                        <div className="h-11 px-3 flex items-center text-[15px] rounded-md border border-border bg-muted text-foreground">
+                          고려대학교(서울)
                         </div>
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          현재 클로즈드 베타 기간으로 고려대학교만 이용 가능합니다.
+                        </p>
                       </div>
 
                       <div className="mb-4.5">
-                        <label htmlFor="emailId" className="block text-sm font-semibold text-foreground mb-2">
-                          학교 이메일
+                        <label htmlFor="email" className="block text-sm font-semibold text-foreground mb-2">
+                          고려대학교 이메일
                         </label>
-                        <div className="flex items-center rounded-md bg-secondary overflow-hidden transition-all focus-within:bg-muted focus-within:ring-2 focus-within:ring-primary">
-                          <div className="flex items-center flex-1 pl-3">
-                            <Mail className="w-[18px] h-[18px] text-muted-foreground shrink-0" />
-                            <input
-                              type="text"
-                              id="emailId"
-                              name="emailId"
-                              placeholder="아이디만 입력"
-                              value={formData.emailId}
-                              onChange={handleChange}
-                              required
-                              className="border-none bg-transparent shadow-none py-3 px-2 flex-1 min-w-0 text-[15px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
-                            />
-                          </div>
-                          <span className="shrink-0 py-3 px-3.5 text-sm text-muted-foreground bg-border font-semibold">
-                            @{campusDomain}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-2">
-                          학교 이메일은 소속 학교 인증에 이용됩니다.
+                        <Input
+                          type="email"
+                          id="email"
+                          name="email"
+                          placeholder="example@korea.ac.kr"
+                          value={formData.email}
+                          onChange={handleChange}
+                          required
+                          className="h-11 text-[15px] focus:ring-primary"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1.5">
+                          @korea.ac.kr 이메일만 사용 가능합니다.
                         </p>
                       </div>
                     </>
@@ -334,11 +320,11 @@ export default function LoginPage() {
                         type="email"
                         id="email"
                         name="email"
-                        placeholder="학교 이메일을 입력하세요"
+                        placeholder="이메일을 입력하세요"
                         value={formData.email}
                         onChange={handleChange}
                         required
-                        className="h-11 text-[15px]"
+                        className="h-11 text-[15px] focus:ring-primary"
                       />
                     </div>
                   )}
@@ -354,10 +340,17 @@ export default function LoginPage() {
                       placeholder="비밀번호를 입력하세요"
                       value={formData.password}
                       onChange={handleChange}
+                      onKeyDown={(e) => setCapsLock(e.getModifierState("CapsLock"))}
+                      onKeyUp={(e) => setCapsLock(e.getModifierState("CapsLock"))}
                       required
                       minLength={6}
-                      className="h-11 text-[15px]"
+                      className="h-11 text-[15px] focus:ring-primary"
                     />
+                    {capsLock && (
+                      <p className="text-xs text-amber-600 mt-1.5 font-medium">
+                        Caps Lock이 켜져 있습니다
+                      </p>
+                    )}
                   </div>
 
                   {!isSignUp && (
@@ -381,9 +374,105 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  <Button
+                  {isSignUp && (
+                    <div className="mb-4 mt-2 space-y-2.5">
+                      <label className="flex items-start gap-2.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={agreeTerms && agreePrivacy}
+                          onChange={(e) => {
+                            setAgreeTerms(e.target.checked);
+                            setAgreePrivacy(e.target.checked);
+                          }}
+                          className="w-4 h-4 mt-0.5 shrink-0 accent-[#1B3A5C]"
+                        />
+                        <span className="text-sm font-bold text-foreground">전체 동의</span>
+                      </label>
+                      <div className="border border-border rounded-lg p-3.5 space-y-2">
+                        <div>
+                          <div className="flex items-start gap-2.5">
+                            <label className="flex items-start gap-2.5 cursor-pointer flex-1">
+                              <input
+                                type="checkbox"
+                                checked={agreeTerms}
+                                onChange={(e) => setAgreeTerms(e.target.checked)}
+                                className="w-4 h-4 mt-0.5 shrink-0 accent-[#1B3A5C]"
+                              />
+                              <span className="text-sm text-foreground">
+                                <span className="text-destructive font-bold">[필수]</span>{" "}
+                                이용약관에 동의합니다
+                              </span>
+                            </label>
+                            <button
+                              type="button"
+                              className="bg-transparent border-none p-0 cursor-pointer text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                              onClick={() => setShowTerms(!showTerms)}
+                              aria-label="이용약관 보기"
+                            >
+                              <ChevronDown className={`w-4 h-4 transition-transform ${showTerms ? "rotate-180" : ""}`} />
+                            </button>
+                          </div>
+                          {showTerms && (
+                            <div className="mt-2 ml-6.5 max-h-48 overflow-y-auto rounded border border-border bg-secondary/50 p-3 text-xs text-muted-foreground leading-relaxed space-y-2">
+                              <p className="font-semibold text-foreground">이용약관 (시행일: 2026년 4월 1일)</p>
+                              <p><strong>제 1 조 (목적)</strong> 이 약관은 UniFile(이하 "회사")이 제공하는 서비스 이용에 있어 회사와 "회원"의 권리 및 의무, 기타 필요한 사항을 규정함을 목적으로 합니다.</p>
+                              <p><strong>제 2 조 (정의)</strong> "회원"이란 회사와 이용계약을 체결하고 서비스를 이용하는 자, "판매회원"이란 자료를 등록하고 판매하는 회원, "구매회원"이란 자료를 구매하는 회원, "포인트"란 서비스 내에서 자료 구매 등에 사용할 수 있는 결제 수단을 말합니다.</p>
+                              <p><strong>제 5 조 (이용계약의 성립)</strong> 이용자 가입 신청 내역을 작성 후 가입 버튼을 누름과 동시에 이 약관에 동의하는 것으로 간주됩니다.</p>
+                              <p><strong>제 9 조 (회사의 의무)</strong> 회사는 계속적이고 안정적인 서비스의 제공을 위하여 최선을 다합니다.</p>
+                              <p><strong>제 11 조 (회원의 의무)</strong> 회원은 허위내용 기재, 제3자의 개인정보 도용, 저작권 침해, 명예훼손 등의 행위를 하여서는 아니됩니다.</p>
+                              <p><strong>제 14 조 (자료대금 및 수수료)</strong> 회사는 구매회원이 지급한 자료대금 중 수수료 및 제세공과금을 제외한 나머지 금액을 판매회원의 계정에 적립합니다.</p>
+                              <p><strong>제 19 조 (계약의 해지)</strong> 이용계약이 해지된 경우, 회원이 등록한 자료는 삭제되며, 보유한 포인트 기타 혜택은 모두 소멸합니다.</p>
+                              <p className="text-[11px] pt-1 border-t border-border">
+                                <Link to="/terms" target="_blank" className="text-[#2E8BC0] hover:underline">전문 보기 →</Link>
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-start gap-2.5">
+                            <label className="flex items-start gap-2.5 cursor-pointer flex-1">
+                              <input
+                                type="checkbox"
+                                checked={agreePrivacy}
+                                onChange={(e) => setAgreePrivacy(e.target.checked)}
+                                className="w-4 h-4 mt-0.5 shrink-0 accent-[#1B3A5C]"
+                              />
+                              <span className="text-sm text-foreground">
+                                <span className="text-destructive font-bold">[필수]</span>{" "}
+                                개인정보처리방침에 동의합니다
+                              </span>
+                            </label>
+                            <button
+                              type="button"
+                              className="bg-transparent border-none p-0 cursor-pointer text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                              onClick={() => setShowPrivacy(!showPrivacy)}
+                              aria-label="개인정보처리방침 보기"
+                            >
+                              <ChevronDown className={`w-4 h-4 transition-transform ${showPrivacy ? "rotate-180" : ""}`} />
+                            </button>
+                          </div>
+                          {showPrivacy && (
+                            <div className="mt-2 ml-6.5 max-h-48 overflow-y-auto rounded border border-border bg-secondary/50 p-3 text-xs text-muted-foreground leading-relaxed space-y-2">
+                              <p className="font-semibold text-foreground">개인정보처리방침 (시행일: 2026년 4월 4일 | v1.1)</p>
+                              <p><strong>수집하는 개인정보</strong> 필수항목: ID, 비밀번호, 닉네임, 학교명, 학교 이메일 주소. 출금 시: 이름, 생년월일, 휴대폰 번호, 은행명, 계좌번호, 예금주명.</p>
+                              <p><strong>수집 및 이용 목적</strong> 회원제 서비스 이용에 따른 본인 식별, 재학생 인증, 출금 처리, 서비스 통계 분석에 이용합니다.</p>
+                              <p><strong>제3자 제공</strong> 이용자의 사전 동의 없이 개인정보를 외부에 공개하지 않습니다. 단, 법령의 규정에 의한 경우는 예외입니다.</p>
+                              <p><strong>보유 기간</strong> 계약/청약철회 기록 5년, 대금결제 기록 5년, 소비자 불만 기록 3년, 접속 로그 3개월 (관련 법령 근거).</p>
+                              <p><strong>동의 철회</strong> 회원탈퇴를 통해 언제든지 동의를 철회할 수 있으며, 탈퇴 후 90일간 재가입 방지를 위해 정보를 보존한 후 삭제합니다.</p>
+                              <p><strong>기술적 보호 대책</strong> 비밀번호 암호화, 해킹 대비 백업 및 백신 운영, 암호화 통신을 통해 개인정보를 보호합니다.</p>
+                              <p className="text-[11px] pt-1 border-t border-border">
+                                <Link to="/privacy" target="_blank" className="text-[#2E8BC0] hover:underline">전문 보기 →</Link>
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <button
                     type="submit"
-                    className="w-full h-12 text-base font-bold mt-3"
+                    className="w-full h-12 text-base font-bold mt-3 rounded-lg bg-gradient-to-r from-[#1B3A5C] to-[#2E8BC0] !text-white hover:opacity-90 transition-opacity disabled:opacity-50"
                     disabled={loading || (!isSignUp && lockoutRemaining > 0)}
                   >
                     {loading
@@ -391,7 +480,7 @@ export default function LoginPage() {
                       : !isSignUp && lockoutRemaining > 0
                         ? `${lockoutRemaining}초 후 재시도`
                         : isSignUp ? "가입하기" : "로그인"}
-                  </Button>
+                  </button>
                 </>
               )}
             </form>
@@ -402,8 +491,8 @@ export default function LoginPage() {
           <p className="text-center text-sm text-muted-foreground">
             {isSignUp ? "이미 계정이 있나요?" : "계정이 없나요?"}{" "}
             <button
-              className="bg-transparent text-primary font-bold text-sm border-none cursor-pointer transition-colors hover:text-primary/80"
-              onClick={() => { setIsSignUp(!isSignUp); setError(""); setSignUpSuccess(false); setShowResend(false); }}
+              className="bg-transparent text-[#1B3A5C] font-bold text-sm border-none cursor-pointer transition-colors hover:text-[#2E8BC0]"
+              onClick={() => { setIsSignUp(!isSignUp); setError(""); setSignUpSuccess(false); setShowResend(false); setAgreeTerms(false); setAgreePrivacy(false); setShowTerms(false); setShowPrivacy(false); setSelectedUniversity("고려대학교(서울)"); }}
             >
               {isSignUp ? "로그인" : "회원가입"}
             </button>
@@ -430,9 +519,12 @@ function getErrorMessage(err: unknown, isSignUp: boolean): string {
       return "이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.";
     case "auth/too-many-requests":
       return "너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.";
+    case "auth/user-disabled":
+      return "이 계정은 이용이 정지되었습니다. 문의사항은 고객센터로 연락해주세요.";
     case "auth/popup-closed-by-user":
       return "로그인 팝업이 닫혔습니다.";
     default:
+      if (err instanceof Error && err.message) return err.message;
       return "오류가 발생했습니다. 다시 시도해주세요.";
   }
 }

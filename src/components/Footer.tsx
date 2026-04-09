@@ -7,49 +7,34 @@ export default function Footer() {
       <div className="max-w-[1140px] mx-auto px-6 pt-12 pb-8">
         {/* Brand */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="w-7 h-7 bg-primary text-white rounded-md flex items-center justify-center font-extrabold text-sm">
-              K
-            </span>
-            <span className="font-bold text-[15px]">KU market</span>
+          <div className="mb-2">
+            <span className="font-bold text-[15px]">UniFile</span>
           </div>
           <p className="text-sm text-muted-foreground">
             대학생을 위한 공부자료 마켓플레이스
           </p>
         </div>
 
-        {/* Links */}
-        <div className="grid grid-cols-3 gap-8 pb-8 max-sm:grid-cols-1 max-sm:gap-5">
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wide mb-3">서비스</h4>
-            <div className="flex flex-col gap-1">
-              <Link to="/browse" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1">자료 찾기</Link>
-              <Link to="/upload" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1">자료 판매하기</Link>
-              <Link to="/browse" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1">인기 자료</Link>
-            </div>
-          </div>
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wide mb-3">고객지원</h4>
-            <div className="flex flex-col gap-1">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1">자주 묻는 질문</a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1">1:1 문의</a>
-              <Link to="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1">이용약관</Link>
-            </div>
-          </div>
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wide mb-3">회사</h4>
-            <div className="flex flex-col gap-1">
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1">소개</a>
-              <Link to="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1">개인정보처리방침</Link>
-              <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors py-1">공지사항</a>
-            </div>
-          </div>
+        <div className="flex items-center gap-4 pb-8 text-sm">
+          <Link to="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">개인정보처리방침</Link>
+          <Link to="/terms" className="text-muted-foreground hover:text-foreground transition-colors">이용약관</Link>
+          <a href="https://www.instagram.com/unifile.official?igsh=ZWtpcWt3dXh3Ymdh&utm_source=qr" target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">1:1 문의</a>
         </div>
 
         <Separator />
 
-        <p className="text-center text-xs text-muted-foreground pt-6">
-          &copy; 2026 KU market. All rights reserved.
+        {/* 사업자 정보 */}
+        <div className="pt-6 pb-4 text-xs text-muted-foreground leading-relaxed space-y-1">
+          <p>상호: UniFile | 대표: 장찬수 | 사업자등록번호: 883-12-02954</p>
+          <p>소재지: 경기도 화성시 병점구 경기대로 1014, 603동 6층 127호(병점동, 병점프라자)</p>
+          <p>이메일: UniFileService@gmail.com | 호스팅 서비스: Google Cloud (Firebase)</p>
+          <p className="pt-2 text-muted-foreground/80">
+            UniFile은 통신판매중개자로서 거래 당사자가 아니며, 판매자가 등록한 자료의 정보 및 거래에 대한 책임은 각 판매자에게 있습니다.
+          </p>
+        </div>
+
+        <p className="text-center text-xs text-muted-foreground pb-2">
+          &copy; 2026 UniFile. All rights reserved.
         </p>
       </div>
     </footer>

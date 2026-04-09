@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "../firebase";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -60,7 +60,8 @@ export default function ReportPage() {
     setError("");
 
     try {
-      await addDoc(collection(db, "reports"), {
+      const submitReportFn = httpsCallable(functions, "submitReport");
+      await submitReportFn({
         materialId,
         materialTitle,
         reason: formData.reason,
@@ -68,14 +69,11 @@ export default function ReportPage() {
         description: formData.description.trim(),
         contactEmail: formData.contactEmail,
         isRightsHolder: formData.isRightsHolder,
-        reporterId: user?.uid || null,
-        reporterName: user?.displayName || user?.email || "비회원",
-        status: "pending",
-        createdAt: serverTimestamp(),
       });
       setSubmitted(true);
-    } catch (err) {
-      setError((err as Error).message || "신고 접수 중 오류가 발생했습니다.");
+    } catch (err: unknown) {
+      const message = (err as { message?: string }).message || "신고 접수 중 오류가 발생했습니다.";
+      setError(message);
     } finally {
       setSubmitting(false);
     }

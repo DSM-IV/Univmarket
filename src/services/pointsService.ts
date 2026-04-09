@@ -10,7 +10,7 @@ import {
 import { functions, db } from "../firebase";
 import type { Transaction } from "../types";
 
-export type PaymentMethod = "kakaopay" | "toss";
+export type PaymentMethod = "kakaopay" | "toss" | "card";
 
 export async function chargeWithKakaopay(amount: number): Promise<string> {
   const fn = httpsCallable<{ amount: number }, { redirectUrl: string }>(

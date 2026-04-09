@@ -1,16 +1,18 @@
 import { useState, useRef } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
-import { categories, departments, convergenceMajors, microDegrees, exchangeCountries } from "../data/mockData";
+import { categories, departments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 import { httpsCallable } from "firebase/functions";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import { db, functions } from "../firebase";
+
+const UPLOAD_COOLDOWN_MS = 5 * 60 * 1000; // 5분
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Upload, X, CheckCircle, Image, AlertTriangle } from "lucide-react";
+import { Upload, X, CheckCircle, Image, AlertTriangle, Lightbulb, ChevronDown, Camera, FileText, Award, GraduationCap } from "lucide-react";
 
 const ALLOWED_TYPES = [
   "application/pdf",
@@ -49,18 +51,28 @@ export default function UploadPage() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewInputRef = useRef<HTMLInputElement>(null);
+  const gradeInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
+  const [showGuide, setShowGuide] = useState(false);
+  const [gradeImage, setGradeImage] = useState<PreviewImage | null>(null);
+  const [gradeClaim, setGradeClaim] = useState("");
+  const [customSubject, setCustomSubject] = useState(false);
+  const [customProfessor, setCustomProfessor] = useState(false);
+  const [isuType, setIsuType] = useState(""); // 전공, 학문의기초, 교양, 교직
+  const [subCategory, setSubCategory] = useState(""); // 학문의기초/교양/교직 하위분류
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     category: "",
+    subType: "",
     subject: "",
     professor: "",
     department: "",
+    semester: "",
     price: "",
     pages: "",
   });
@@ -68,7 +80,26 @@ export default function UploadPage() {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === "category") {
+      setCustomSubject(false);
+      setIsuType("");
+      setSubCategory("");
+      setFormData({ ...formData, [name]: value, subType: "", subject: "", department: "" });
+      return;
+    } else if (name === "department") {
+      setCustomSubject(false);
+      setCustomProfessor(false);
+      setFormData({ ...formData, [name]: value, subject: "", professor: "" });
+      return;
+    } else if (name === "semester") {
+      setCustomSubject(false);
+      setCustomProfessor(false);
+      setFormData({ ...formData, [name]: value, subject: "", professor: "" });
+      return;
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const validateFile = (f: File): string | null => {
@@ -158,6 +189,25 @@ export default function UploadPage() {
       return;
     }
 
+    // 등록 쿨타임 확인 (5분)
+    const recentQ = query(
+      collection(db, "materials"),
+      where("authorId", "==", user.uid),
+      orderBy("createdAt", "desc"),
+      limit(1)
+    );
+    const recentSnap = await getDocs(recentQ);
+    if (!recentSnap.empty) {
+      const lastCreated = recentSnap.docs[0].data().createdAt?.toDate?.();
+      if (lastCreated && Date.now() - lastCreated.getTime() < UPLOAD_COOLDOWN_MS) {
+        const remaining = Math.ceil((UPLOAD_COOLDOWN_MS - (Date.now() - lastCreated.getTime())) / 1000);
+        const min = Math.floor(remaining / 60);
+        const sec = remaining % 60;
+        setError(`자료 등록 후 5분간 재등록할 수 없습니다. (${min}분 ${sec}초 후 가능)`);
+        return;
+      }
+    }
+
     if (!file) {
       setError("파일을 선택해주세요.");
       return;
@@ -165,6 +215,11 @@ export default function UploadPage() {
 
     if (previewImages.length === 0) {
       setError("미리보기 이미지를 최소 1장 첨부해주세요.");
+      return;
+    }
+
+    if (gradeClaim && !gradeImage) {
+      setError("성적을 선택하셨다면 성적증명서 캡처를 첨부해주세요.");
       return;
     }
 
@@ -206,12 +261,29 @@ export default function UploadPage() {
         uploadedPreviewUrls.push(imgData.fileUrl);
       }
 
+      // 성적증명서 이미지 업로드
+      let gradeImageUrl = "";
+      if (gradeImage && gradeClaim) {
+        const gradeFileName = `grade_${Date.now()}.${gradeImage.file.name.split(".").pop()}`;
+        const { data: gradeData } = await getUploadUrl({
+          fileName: gradeFileName,
+          contentType: gradeImage.file.type,
+        });
+        await fetch(gradeData.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": gradeImage.file.type },
+          body: gradeImage.file,
+        });
+        gradeImageUrl = gradeData.fileUrl;
+      }
+
       // Firestore에 자료 정보 저장
-      await addDoc(collection(db, "materials"), {
+      const materialData: Record<string, unknown> = {
         title: formData.title,
         description: formData.description,
         category: formData.category,
         department: (formData.category === "수업" || formData.category === "이중전공 & 전과" || formData.category === "교환학생") ? formData.department : "",
+        semester: formData.semester || "",
         subject: formData.subject,
         professor: formData.professor,
         price: parseInt(formData.price),
@@ -228,8 +300,21 @@ export default function UploadPage() {
         rating: 0,
         reviewCount: 0,
         salesCount: 0,
+        scanStatus: "scanning",
         createdAt: serverTimestamp(),
-      });
+      };
+
+      if (gradeImageUrl && gradeClaim) {
+        materialData.gradeImage = gradeImageUrl;
+        materialData.gradeClaim = gradeClaim;
+        materialData.gradeStatus = "pending";
+      }
+
+      const docRef = await addDoc(collection(db, "materials"), materialData);
+
+      // 바이러스 검사 (백그라운드 실행)
+      const scanFileFn = httpsCallable(functions, "scanFile");
+      scanFileFn({ materialId: docRef.id }).catch(() => {});
 
       navigate("/browse");
     } catch (err) {
@@ -259,9 +344,118 @@ export default function UploadPage() {
         <h1 className="text-[26px] font-extrabold text-foreground mb-2 tracking-tight">
           공부한 자료, 더 이상 버리지 마세요
         </h1>
-        <p className="text-[15px] text-muted-foreground mb-9">
+        <p className="text-[15px] text-muted-foreground mb-6">
           내 자료를 올려 다른 학생들에게 판매해 보세요
         </p>
+
+        {/* 잘 팔리는 자료 가이드 */}
+        <div className="mb-7">
+          <button
+            type="button"
+            className={cn(
+              "w-full flex items-center gap-3 px-5 py-4 rounded-lg border cursor-pointer transition-colors bg-background",
+              showGuide
+                ? "border-[#862633]/30 bg-[#862633]/[0.03]"
+                : "border-border hover:border-[#862633]/30 hover:bg-[#862633]/[0.02]"
+            )}
+            onClick={() => setShowGuide(!showGuide)}
+          >
+            <div className="w-8 h-8 rounded-full bg-[#862633]/10 flex items-center justify-center shrink-0">
+              <Lightbulb className="w-4 h-4 text-[#862633]" />
+            </div>
+            <span className="text-[15px] font-bold text-foreground flex-1 text-left">
+              잘 팔리는 자료 가이드
+            </span>
+            <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", showGuide && "rotate-180")} />
+          </button>
+
+          {showGuide && (
+            <Card className="mt-2 border-[#862633]/20">
+              <CardContent className="p-6 max-sm:p-4 space-y-6">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  아래 가이드를 참고하면 자료의 판매 전환율이 크게 올라갑니다. 구매자가 신뢰할 수 있는 자료일수록 잘 팔립니다.
+                </p>
+
+                {/* 1. 미리보기 이미지 */}
+                <div className="flex gap-4 max-sm:flex-col">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Camera className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-[15px] font-bold text-foreground mb-2">
+                      1. 미리보기 이미지를 정성스럽게 준비하세요
+                    </h3>
+                    <div className="text-[13px] text-muted-foreground leading-relaxed space-y-1.5">
+                      <p>
+                        구매자는 미리보기 이미지만 보고 구매를 결정합니다. <strong className="text-foreground">자료의 내용과 구성이 한눈에 보이는 캡처</strong>를 올려주세요.
+                      </p>
+                      <ul className="pl-4 list-disc space-y-1 mt-2">
+                        <li><strong className="text-foreground">목차 페이지</strong>를 첫 번째 이미지로 — 전체 구성을 파악할 수 있어요</li>
+                        <li><strong className="text-foreground">핵심 내용이 담긴 페이지</strong> 2~3장 — 자료의 퀄리티를 보여주세요</li>
+                        <li><strong className="text-foreground">표, 그래프, 정리 노트</strong> 등 시각적으로 정돈된 페이지가 효과적이에요</li>
+                        <li>흐릿하거나 잘린 캡처는 피하고, <strong className="text-foreground">깨끗하게 전체 화면을 캡처</strong>하세요</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-border" />
+
+                {/* 2. 상세한 자료 설명 */}
+                <div className="flex gap-4 max-sm:flex-col">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <FileText className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-[15px] font-bold text-foreground mb-2">
+                      2. 자료 설명은 구체적으로 작성하세요
+                    </h3>
+                    <div className="text-[13px] text-muted-foreground leading-relaxed space-y-1.5">
+                      <p>
+                        "시험 정리"보다 <strong className="text-foreground">"2025-1 운영체제 중간고사 범위(1~7장) 핵심 요약 + 기출 복원"</strong>처럼 구체적으로 쓸수록 검색에 잘 노출되고 구매율이 높아집니다.
+                      </p>
+                      <ul className="pl-4 list-disc space-y-1 mt-2">
+                        <li><strong className="text-foreground">어떤 시험/과제</strong>를 위한 자료인지 명시하세요 (중간, 기말, 레포트 등)</li>
+                        <li><strong className="text-foreground">다루는 범위</strong>를 구체적으로 적어주세요 (단원, 주차, 챕터 등)</li>
+                        <li><strong className="text-foreground">자료의 특장점</strong>을 어필하세요 (교수님 판서 반영, 기출 복원, 핵심 요약 등)</li>
+                        <li><strong className="text-foreground">페이지 수와 분량</strong>을 꼭 기입하면 구매 결정에 도움이 됩니다</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-border" />
+
+                {/* 3. 성적 인증 시스템 */}
+                <div className="flex gap-4 max-sm:flex-col">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <Award className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-[15px] font-bold text-foreground mb-2">
+                      3. 성적 인증 시스템을 활용하세요
+                    </h3>
+                    <div className="text-[13px] text-muted-foreground leading-relaxed space-y-1.5">
+                      <p>
+                        <strong className="text-foreground">해당 과목에서 높은 성적을 받았다면, 성적 인증을 등록해보세요.</strong> 성적 인증 배지가 표시된 자료는 구매자의 신뢰도가 크게 올라갑니다.
+                      </p>
+                      <ul className="pl-4 list-disc space-y-1 mt-2">
+                        <li>마이페이지에서 <strong className="text-foreground">성적표 캡처를 업로드</strong>하면 관리자 검토 후 인증 배지가 부여됩니다</li>
+                        <li><strong className="text-foreground">A+ 인증 자료</strong>는 검색 결과에서 상위에 노출되며 판매량이 평균 2배 이상 높습니다</li>
+                        <li>성적 인증은 <strong className="text-foreground">과목별로 한 번만</strong> 하면 해당 과목의 모든 자료에 자동 적용됩니다</li>
+                        <li>이름 이외의 개인정보(학번, 생년월일 등)는 <strong className="text-foreground">반드시 모자이크 처리 후 업로드</strong>해야 합니다</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-[#862633]/[0.04] rounded-lg p-4 text-[13px] text-muted-foreground leading-relaxed">
+                  <strong className="text-foreground">TIP:</strong> 위 세 가지를 모두 갖춘 자료는 평균 대비 <strong className="text-foreground">판매량이 3배 이상</strong> 높습니다. 처음 등록할 때 조금만 신경 쓰면 꾸준한 수익으로 이어집니다.
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         <form className="flex flex-col gap-7" onSubmit={handleSubmit}>
           {/* 기본 정보 */}
@@ -335,10 +529,37 @@ export default function UploadPage() {
                 </div>
               </div>
 
-              {(formData.category === "수업" || formData.category === "이중전공 & 전과" || formData.category === "교환학생") && (
+              {/* 이수구분 선택 (수업 카테고리) */}
+              {formData.category === "수업" && (
+                <div className="mb-4">
+                  <label className="block text-[13px] font-semibold mb-2 text-foreground">
+                    이수구분 *
+                  </label>
+                  <select
+                    value={isuType}
+                    onChange={(e) => {
+                      setIsuType(e.target.value);
+                      setSubCategory("");
+                      setCustomSubject(false);
+                      setFormData({ ...formData, department: "", subject: "" });
+                    }}
+                    required
+                    className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
+                  >
+                    <option value="">이수구분을 선택하세요</option>
+                    <option value="전공">전공</option>
+                    <option value="학문의기초">학문의기초</option>
+                    <option value="교양">교양</option>
+                    <option value="교직">교직</option>
+                  </select>
+                </div>
+              )}
+
+              {/* 전공 → 학과 선택 */}
+              {formData.category === "수업" && isuType === "전공" && (
                 <div className="mb-4">
                   <label htmlFor="department" className="block text-[13px] font-semibold mb-2 text-foreground">
-                    {formData.category === "교환학생" ? "국가" : "학과"} *
+                    학과 *
                   </label>
                   <select
                     id="department"
@@ -348,83 +569,263 @@ export default function UploadPage() {
                     required
                     className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
                   >
-                    {formData.category === "교환학생" ? (
-                      <>
-                        <option value="">국가를 선택하세요</option>
-                        {Object.entries(exchangeCountries).map(([region, countries]) => (
-                          <optgroup key={region} label={region}>
-                            {countries.map((c) => (
-                              <option key={c} value={c}>{c}</option>
-                            ))}
-                          </optgroup>
-                        ))}
-                      </>
-                    ) : (
-                      <>
-                        <option value="">학과를 선택하세요</option>
-                        <optgroup label="학과">
-                          {departments.map((dept) => (
-                            <option key={dept} value={dept}>{dept}</option>
-                          ))}
-                        </optgroup>
-                        {formData.category === "이중전공 & 전과" && (
-                          <>
-                            <optgroup label="융합전공">
-                              {convergenceMajors.map((m) => (
-                                <option key={m} value={m}>{m}</option>
-                              ))}
-                            </optgroup>
-                            <optgroup label="마이크로디그리">
-                              {microDegrees.map((m) => (
-                                <option key={m} value={m}>{m}</option>
-                              ))}
-                            </optgroup>
-                          </>
-                        )}
-                      </>
-                    )}
+                    <option value="">학과를 선택하세요</option>
+                    {departments.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
                   </select>
                 </div>
               )}
-            </CardContent>
-          </Card>
 
-          {/* 과목 정보 */}
-          <Card>
-            <CardContent className="p-7 max-sm:p-5">
-              <h2 className="text-[17px] font-bold text-foreground mb-5 pb-3.5 border-b border-border tracking-tight">
-                과목 정보
-              </h2>
+              {/* 학문의기초/교양/교직 → 하위분류 선택 */}
+              {formData.category === "수업" && (isuType === "학문의기초" || isuType === "교양" || isuType === "교직") && (
+                <div className="mb-4">
+                  <label className="block text-[13px] font-semibold mb-2 text-foreground">
+                    분류 *
+                  </label>
+                  <select
+                    value={subCategory}
+                    onChange={(e) => {
+                      setSubCategory(e.target.value);
+                      setCustomSubject(false);
+                      setFormData({ ...formData, subject: "" });
+                    }}
+                    required
+                    className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
+                  >
+                    <option value="">분류를 선택하세요</option>
+                    {Object.keys(coursesByIsuCategory[isuType] || {}).sort().map((sub) => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
-                <div>
+              {/* 이중전공/전과 → 유형 선택 */}
+              {formData.category === "이중전공 & 전과" && (
+                <div className="mb-4">
+                  <label className="block text-[13px] font-semibold mb-2 text-foreground">
+                    유형 *
+                  </label>
+                  <div className="flex gap-3">
+                    {["이중전공", "전과"].map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, subType: type, department: "" })}
+                        className={cn(
+                          "flex-1 py-3 rounded-lg text-sm font-medium transition-colors border",
+                          formData.subType === type
+                            ? "bg-primary text-white border-primary"
+                            : "bg-secondary text-muted-foreground border-border hover:bg-accent hover:text-foreground"
+                        )}
+                      >
+                        {type}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 이중전공/전과 → 학과 선택 (유형 선택 후) */}
+              {formData.category === "이중전공 & 전과" && formData.subType && (
+                <div className="mb-4">
+                  <label htmlFor="department" className="block text-[13px] font-semibold mb-2 text-foreground">
+                    학과 *
+                  </label>
+                  <select
+                    id="department"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
+                  >
+                    <option value="">학과를 선택하세요</option>
+                    <optgroup label="학과">
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="융합전공">
+                      {convergenceMajors.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+              )}
+
+              {/* 교환학생 → 국가 선택 */}
+              {formData.category === "교환학생" && (
+                <div className="mb-4">
+                  <label htmlFor="department" className="block text-[13px] font-semibold mb-2 text-foreground">
+                    국가 *
+                  </label>
+                  <select
+                    id="department"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
+                  >
+                    <option value="">국가를 선택하세요</option>
+                    {Object.entries(exchangeCountries).map(([region, countries]) => (
+                      <optgroup key={region} label={region}>
+                        {countries.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="mb-4">
+                <label htmlFor="semester" className="block text-[13px] font-semibold mb-2 text-foreground">
+                  학기
+                </label>
+                <select
+                  id="semester"
+                  name="semester"
+                  value={formData.semester}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
+                >
+                  <option value="">학기를 선택하세요</option>
+                  {Array.from({ length: 6 }, (_, i) => 2025 - i).map((year) => (
+                    <optgroup key={year} label={`${year}학년도`}>
+                      <option value={`${year}-1`}>{year}학년도 1학기</option>
+                      <option value={`${year}-2`}>{year}학년도 2학기</option>
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              {/* 과목명 — 학과/분류 선택 후 표시, 학기 선택 시 해당 학기 과목만 */}
+              {formData.category === "수업" && (
+                (isuType === "전공" && formData.department) ||
+                ((isuType === "학문의기초" || isuType === "교양" || isuType === "교직") && subCategory)
+              ) && (
+                <div className="mb-4">
                   <label htmlFor="subject" className="block text-[13px] font-semibold mb-2 text-foreground">
                     과목명 *
                   </label>
-                  <Input
-                    type="text"
-                    id="subject"
-                    name="subject"
-                    placeholder="예: 운영체제"
-                    value={formData.subject}
-                    onChange={handleChange}
-                    required
-                  />
+                  {!customSubject ? (
+                    <select
+                      id="subject"
+                      name="subject"
+                      value={formData.subject}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setCustomSubject(true);
+                          setCustomProfessor(false);
+                          setFormData({ ...formData, subject: "", professor: "" });
+                        } else {
+                          setCustomProfessor(false);
+                          setFormData({ ...formData, subject: e.target.value, professor: "" });
+                        }
+                      }}
+                      required
+                      className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
+                    >
+                      <option value="">과목을 선택하세요</option>
+                      {(isuType === "전공"
+                        ? departmentCourses[formData.department] || []
+                        : coursesByIsuCategory[isuType]?.[subCategory] || []
+                      ).filter((course) =>
+                        !formData.semester || !courseSemesters[course] || courseSemesters[course].includes(formData.semester)
+                      ).map((course) => (
+                        <option key={course} value={course}>{course}</option>
+                      ))}
+                      <option value="__custom__">기타 (직접 입력)</option>
+                    </select>
+                  ) : (
+                    <>
+                      <Input
+                        type="text"
+                        id="subject"
+                        name="subject"
+                        placeholder="예: 운영체제"
+                        value={formData.subject}
+                        onChange={handleChange}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="mt-1.5 text-xs text-primary hover:underline"
+                        onClick={() => {
+                          setCustomSubject(false);
+                          setFormData({ ...formData, subject: "", professor: "" });
+                        }}
+                      >
+                        목록에서 선택하기
+                      </button>
+                    </>
+                  )}
                 </div>
-                <div>
+              )}
+
+              {/* 교수명 — 과목 선택 후 표시, 학기 선택 시 해당 학기 교수만 */}
+              {formData.category === "수업" && formData.subject && (
+                <div className="mb-4">
                   <label htmlFor="professor" className="block text-[13px] font-semibold mb-2 text-foreground">
                     교수명
                   </label>
-                  <Input
-                    type="text"
-                    id="professor"
-                    name="professor"
-                    placeholder="예: 홍길동"
-                    value={formData.professor}
-                    onChange={handleChange}
-                  />
+                  {!customSubject && !customProfessor && (
+                    (formData.semester && courseProfessorsBySemester[formData.semester]?.[formData.subject]) ||
+                    (!formData.semester && courseProfessors[formData.subject])
+                  ) ? (
+                    <select
+                      id="professor"
+                      name="professor"
+                      value={formData.professor}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom_prof__") {
+                          setCustomProfessor(true);
+                          setFormData({ ...formData, professor: "" });
+                        } else {
+                          setFormData({ ...formData, professor: e.target.value });
+                        }
+                      }}
+                      className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
+                    >
+                      <option value="">교수를 선택하세요</option>
+                      {(formData.semester
+                        ? courseProfessorsBySemester[formData.semester]?.[formData.subject] || []
+                        : courseProfessors[formData.subject] || []
+                      ).map((prof) => (
+                        <option key={prof} value={prof}>{prof}</option>
+                      ))}
+                      <option value="__custom_prof__">기타 (직접 입력)</option>
+                    </select>
+                  ) : (
+                    <>
+                      <Input
+                        type="text"
+                        id="professor"
+                        name="professor"
+                        placeholder="예: 홍길동"
+                        value={formData.professor}
+                        onChange={handleChange}
+                      />
+                      {customProfessor && (
+                        <button
+                          type="button"
+                          className="mt-1.5 text-xs text-primary hover:underline"
+                          onClick={() => {
+                            setCustomProfessor(false);
+                            setFormData({ ...formData, professor: "" });
+                          }}
+                        >
+                          목록에서 선택하기
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -578,6 +979,123 @@ export default function UploadPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* 성적 인증 (선택, 수업 카테고리일 때만) */}
+          {formData.category === "수업" && <Card>
+            <CardContent className="p-7 max-sm:p-5">
+              <div className="flex items-center gap-3 mb-5 pb-3.5 border-b border-border">
+                <GraduationCap className="w-5 h-5 text-amber-500" />
+                <div>
+                  <h2 className="text-[17px] font-bold text-foreground tracking-tight">
+                    성적 인증
+                    <Badge className="ml-2 text-[11px] bg-secondary text-muted-foreground hover:bg-secondary">선택</Badge>
+                  </h2>
+                  <p className="text-[12px] text-muted-foreground mt-0.5">
+                    해당 과목의 성적을 인증하면 자료에 성적 배지가 표시됩니다
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-[13px] font-semibold mb-2 text-foreground">
+                  취득 성적
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {["A+", "A", "B+", "B", "C+", "C"].map((grade) => (
+                    <button
+                      key={grade}
+                      type="button"
+                      className={cn(
+                        "px-4 py-2 rounded-lg border text-sm font-bold transition-colors cursor-pointer",
+                        gradeClaim === grade
+                          ? grade.startsWith("A")
+                            ? "border-amber-500 bg-amber-500/10 text-amber-700"
+                            : grade.startsWith("B")
+                              ? "border-blue-500 bg-blue-500/10 text-blue-700"
+                              : "border-green-500 bg-green-500/10 text-green-700"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted/70"
+                      )}
+                      onClick={() => setGradeClaim(gradeClaim === grade ? "" : grade)}
+                    >
+                      {grade}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {gradeClaim && (
+                <div className="mb-4">
+                  <label className="block text-[13px] font-semibold mb-2 text-foreground">
+                    성적증명서 캡처 *
+                  </label>
+                  <p className="text-[12px] text-muted-foreground mb-2 leading-relaxed">
+                    성적증명서에서 해당 과목의 성적이 보이는 부분을 캡처해 주세요. 이름 이외의 개인정보(학번, 생년월일 등)는 반드시 모자이크 처리해야 합니다.
+                  </p>
+                  <p className="text-[11px] text-red-500 mb-2.5 leading-relaxed font-medium">
+                    ⚠ 허위 성적 증명 시 형법 제231조(사문서위조) 및 제234조(위조사문서행사)에 따라 5년 이하의 징역 또는 1천만 원 이하의 벌금에 처해질 수 있으며, 전자상거래법 제21조에 따라 허위·과장 정보 제공에 대한 법적 제재를 받을 수 있습니다.
+                  </p>
+
+                  {gradeImage ? (
+                    <div className="relative inline-block">
+                      <img
+                        src={gradeImage.url}
+                        alt="성적증명서"
+                        className="w-[200px] h-[150px] object-cover rounded-lg border border-border shadow-sm"
+                      />
+                      <button
+                        type="button"
+                        className="absolute top-1.5 right-1.5 w-[22px] h-[22px] flex items-center justify-center bg-black/50 text-white border-none rounded-full cursor-pointer p-0 transition-colors hover:bg-red-500"
+                        onClick={() => {
+                          URL.revokeObjectURL(gradeImage.url);
+                          setGradeImage(null);
+                          if (gradeInputRef.current) gradeInputRef.current.value = "";
+                        }}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className="border-2 border-dashed border-border rounded-lg cursor-pointer transition-colors overflow-hidden bg-muted hover:border-amber-400/60 hover:bg-amber-500/5"
+                      onClick={() => gradeInputRef.current?.click()}
+                    >
+                      <input
+                        ref={gradeInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (!f) return;
+                          if (!f.type.startsWith("image/")) {
+                            setError("이미지 파일만 업로드 가능합니다.");
+                            return;
+                          }
+                          if (f.size > 5 * 1024 * 1024) {
+                            setError("이미지 파일은 5MB를 초과할 수 없습니다.");
+                            return;
+                          }
+                          setGradeImage({ file: f, url: URL.createObjectURL(f) });
+                          setError("");
+                        }}
+                        hidden
+                      />
+                      <div className="flex flex-col items-center gap-1.5 py-8 px-5 text-muted-foreground/60 text-sm">
+                        <GraduationCap className="w-6 h-6" strokeWidth={1.5} />
+                        <span>클릭하여 성적증명서 캡처 첨부</span>
+                        <span className="text-xs text-muted-foreground/60">JPG, PNG (최대 5MB)</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!gradeClaim && (
+                <div className="bg-secondary/80 rounded-lg p-3.5 text-[13px] text-muted-foreground leading-relaxed">
+                  성적을 선택하면 성적증명서 업로드 영역이 나타납니다. 관리자 검토 후 인증 배지가 자료에 표시됩니다.
+                </div>
+              )}
+            </CardContent>
+          </Card>}
 
           {/* 저작권 배너 */}
           <div className="flex gap-3 p-4.5 bg-amber-500/[0.06] rounded-lg">

@@ -9,6 +9,21 @@ interface Props {
   reviewCount?: number;
 }
 
+function GradeBadge({ grade }: { grade: string }) {
+  const colorClass = grade.startsWith("A")
+    ? "bg-amber-500/15 text-amber-700 border-amber-400/40"
+    : grade.startsWith("B")
+      ? "bg-blue-500/15 text-blue-700 border-blue-400/40"
+      : "bg-green-500/15 text-green-700 border-green-400/40";
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-[11px] font-extrabold px-1.5 py-0.5 rounded border ${colorClass}`}>
+      {grade}
+    </span>
+  );
+}
+
+export { GradeBadge };
+
 export default function MaterialCard({ material, rating, reviewCount }: Props) {
   const displayRating = rating ?? material.rating ?? 0;
   const displayReviewCount = reviewCount ?? material.reviewCount ?? 0;
@@ -27,9 +42,14 @@ export default function MaterialCard({ material, rating, reviewCount }: Props) {
             className="absolute inset-0 w-full h-full object-cover"
           />
         )}
-        <Badge variant="secondary" className="relative z-10 bg-white/95 text-foreground text-[11px]">
-          {material.category}
-        </Badge>
+        <div className="relative z-10 flex items-center gap-1.5">
+          <Badge variant="secondary" className="bg-white/95 text-foreground text-[11px]">
+            {material.category}
+          </Badge>
+          {material.gradeStatus === "verified" && material.verifiedGrade && (
+            <GradeBadge grade={material.verifiedGrade} />
+          )}
+        </div>
         <Badge className="relative z-10 bg-black/35 text-white text-[11px] border-none">
           {material.fileType}
         </Badge>

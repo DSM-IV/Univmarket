@@ -18,7 +18,7 @@ export default function TermsPage() {
             <article>
               <h3>제 1 조 (목적)</h3>
               <p>
-                이 약관은 KU market(이하 "회사")이 제공하는 서비스(웹사이트 및 모바일 앱)
+                이 약관은 UniFile(이하 "회사")이 제공하는 서비스(웹사이트 및 모바일 앱)
                 이용에 있어 회사와 "회원"의 권리 및 의무, 기타 필요한 사항을 규정함을 목적으로 합니다.
               </p>
             </article>

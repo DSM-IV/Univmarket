@@ -7,14 +7,14 @@ export default function PrivacyPage() {
     <div className="min-h-screen bg-white py-8">
       <div className="mx-auto max-w-3xl px-4">
         <h1 className="text-2xl font-bold text-gray-900">개인정보처리방침</h1>
-        <p className="mt-1 text-sm text-gray-400">시행일: 2026년 4월 1일 | 버전: v1.0</p>
+        <p className="mt-1 text-sm text-gray-400">시행일: 2026년 4월 4일 | 버전: v1.1</p>
 
         <Separator className="my-6" />
 
         <div className="prose prose-sm prose-gray max-w-none [&_article]:mb-6 [&_h2]:mb-4 [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-gray-900 [&_h3]:mb-2 [&_h3]:mt-4 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:text-gray-800 [&_li]:mb-1 [&_ol]:ml-5 [&_ol]:list-decimal [&_ol]:space-y-1 [&_p]:mb-3 [&_p]:leading-relaxed [&_p]:text-gray-600 [&_section]:mb-8 [&_ul]:ml-5 [&_ul]:list-disc [&_ul]:space-y-1">
           <section>
             <p>
-              KU market(이하 "회사")은 귀하의 개인정보보호를 매우 중요시하며,
+              UniFile(이하 "회사")은 귀하의 개인정보보호를 매우 중요시하며,
               「개인정보보호법」, 「정보통신망 이용촉진 및 정보보호 등에 관한 법률」,
               「통신비밀보호법」, 「전기통신사업법」 등 정보통신서비스제공자가 준수하여야 할
               관련 법령상의 개인정보보호 규정을 준수하고 있습니다.
@@ -51,10 +51,20 @@ export default function PrivacyPage() {
             </article>
 
             <article>
+              <h3>본인인증 시 수집하는 개인정보의 범위</h3>
+              <ul>
+                <li><strong>필수항목:</strong> 이름(실명), 생년월일, 휴대폰 번호</li>
+                <li>최초 출금 시 1회 수집하며, 휴대폰 번호는 마스킹 처리하여 저장</li>
+                <li>마지막 출금일로부터 5년 경과 시 재인증 필요</li>
+              </ul>
+            </article>
+
+            <article>
               <h3>자료 판매금액 출금 시 수집하는 개인정보의 범위</h3>
               <ul>
-                <li><strong>필수항목:</strong> 은행명, 계좌번호, 주민등록번호</li>
-                <li>최초 1회 수집하며, 주민등록번호는 본인 확인 용도로만 사용하고 저장하지 않음</li>
+                <li><strong>필수항목:</strong> 은행명, 계좌번호, 예금주명</li>
+                <li>계좌번호는 마스킹 처리하여 저장하며, 원본은 별도 보안 저장소에 암호화 보관</li>
+                <li>출금 처리 완료 후 90일 경과 시 원본 계좌 정보 파기</li>
               </ul>
             </article>
 
@@ -96,8 +106,12 @@ export default function PrivacyPage() {
                     <td>재학생 이용을 위한 본인 인증 절차에 이용</td>
                   </tr>
                   <tr>
-                    <td>이름, 주민등록번호, 계좌번호</td>
-                    <td>출금 회원에 한하여 세금 신고를 위하여 수집</td>
+                    <td>이름, 생년월일, 휴대폰 번호</td>
+                    <td>출금 시 본인인증 확인 (최초 1회)</td>
+                  </tr>
+                  <tr>
+                    <td>은행명, 계좌번호, 예금주명</td>
+                    <td>출금 회원에 한하여 입금 처리를 위해 수집 (마스킹 저장)</td>
                   </tr>
                   <tr>
                     <td>서비스 이용기록, 접속로그 등</td>
@@ -347,7 +361,7 @@ export default function PrivacyPage() {
             </p>
             <div className="my-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm not-prose">
               <p className="font-semibold text-gray-900">고객센터</p>
-              <p className="mt-1 text-gray-600">이메일: support@kumarket.com</p>
+              <p className="mt-1 text-gray-600">이메일: support@unifile.com</p>
               <p className="mt-0.5 text-gray-600">고객센터를 이용한 상담은 접수 후 24시간 내에 성실하게 답변 드리겠습니다.</p>
             </div>
             <p>
@@ -373,7 +387,7 @@ export default function PrivacyPage() {
             </p>
             <div className="my-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm not-prose">
               <p className="font-semibold text-gray-900">개인정보관리책임자</p>
-              <p className="mt-1 text-gray-600">이메일: privacy@kumarket.com</p>
+              <p className="mt-1 text-gray-600">이메일: privacy@unifile.com</p>
               <p className="mt-0.5 text-gray-600">개인정보 관련 문의사항에 신속하고 성실하게 답변해 드리고 있습니다.</p>
             </div>
           </section>
@@ -386,8 +400,8 @@ export default function PrivacyPage() {
               최소 10일 전부터 홈페이지의 공지란을 통해 고지할 것입니다.
             </p>
             <ul>
-              <li>개인정보처리방침 버전번호: v1.0</li>
-              <li>개인정보처리방침 시행일자: 2026-04-01</li>
+              <li>개인정보처리방침 버전번호: v1.1</li>
+              <li>개인정보처리방침 시행일자: 2026-04-04</li>
             </ul>
           </section>
         </div>

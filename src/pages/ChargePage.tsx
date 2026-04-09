@@ -1,65 +1,43 @@
-import { useState, useEffect, useRef } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import {
-  chargeWithKakaopay,
-  chargeWithTossReady,
-  chargeWithTossApprove,
-  type PaymentMethod,
-} from "../services/pointsService";
-import { loadTossPayments } from "@tosspayments/tosspayments-sdk";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Copy, Info } from "lucide-react";
 
 const PRESET_AMOUNTS = [1000, 3000, 5000, 10000, 30000, 50000];
-const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY || "test_ck_test";
+const VAT_RATE = 0.10; // 부가세 10%
+const CHARGE_FEE_RATE = 0.10; // 수수료 10%
+
+function calcChargeDetails(amount: number) {
+  const vat = Math.ceil(amount * VAT_RATE);
+  const fee = Math.ceil(amount * CHARGE_FEE_RATE);
+  const transferAmount = amount + vat + fee;
+  return { vat, fee, transferAmount };
+}
+
+const BANK_ACCOUNT = {
+  bank: "토스뱅크",
+  number: "1110-1144-7452",
+  holder: "장찬수(유니파일)",
+};
 
 export default function ChargePage() {
   const { user, userProfile } = useAuth();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("kakaopay");
+  const [step, setStep] = useState<"select" | "transfer" | "done">("select");
+  const [senderName, setSenderName] = useState("");
+  const [senderPhone, setSenderPhone] = useState("");
+  const [receiptNumber, setReceiptNumber] = useState("");
+  const [receiptType, setReceiptType] = useState<"phone" | "business">("phone");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [searchParams] = useSearchParams();
-  const tossRef = useRef<Awaited<ReturnType<typeof loadTossPayments>> | null>(null);
-
-  const status = searchParams.get("status");
-
-  // 토스 결제 승인 처리 (리다이렉트 후)
-  const paymentKey = searchParams.get("paymentKey");
-  const tossOrderId = searchParams.get("orderId");
-  const tossAmount = searchParams.get("amount");
-
-  useEffect(() => {
-    if (paymentKey && tossOrderId && tossAmount) {
-      handleTossApprove(paymentKey, tossOrderId, parseInt(tossAmount));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paymentKey, tossOrderId, tossAmount]);
-
-  // 토스 SDK 초기화
-  useEffect(() => {
-    loadTossPayments(TOSS_CLIENT_KEY).then((tp) => {
-      tossRef.current = tp;
-    });
-  }, []);
-
-  const handleTossApprove = async (pk: string, oid: string, amt: number) => {
-    setLoading(true);
-    setError("");
-    try {
-      await chargeWithTossApprove(pk, oid, amt);
-      // 성공 시 success 페이지 파라미터로 대체
-      window.history.replaceState(null, "", `/charge/success?amount=${amt}`);
-      window.location.href = `/charge/success?amount=${amt}`;
-    } catch (err) {
-      setError((err as Error).message || "결제 승인에 실패했습니다.");
-      setLoading(false);
-    }
-  };
+  const [copied, setCopied] = useState(false);
 
   if (!user) {
     return (
@@ -82,37 +60,45 @@ export default function ChargePage() {
   }
 
   const amount = selectedAmount || 0;
+  const { vat, fee: chargeFee, transferAmount } = calcChargeDetails(amount);
 
-  const handleCharge = async () => {
-    if (amount < 1000) {
-      setError("최소 충전 금액은 1,000원입니다.");
+  const handleCopyAccount = async () => {
+    try {
+      await navigator.clipboard.writeText(`${BANK_ACCOUNT.bank} ${BANK_ACCOUNT.number}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback
+    }
+  };
+
+  const handleConfirmTransfer = async () => {
+    if (!senderName.trim()) {
+      setError("입금자명을 입력해주세요.");
+      return;
+    }
+    if (!/^\d{4}$/.test(senderPhone)) {
+      setError("전화번호 뒷자리 4자리를 입력해주세요.");
       return;
     }
     setError("");
     setLoading(true);
-
     try {
-      if (paymentMethod === "kakaopay") {
-        const redirectUrl = await chargeWithKakaopay(amount);
-        window.location.href = redirectUrl;
-      } else {
-        // 토스페이먼츠
-        const orderId = await chargeWithTossReady(amount);
-        if (!tossRef.current) {
-          throw new Error("결제 모듈을 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
-        }
-        const payment = tossRef.current.payment({ customerKey: user.uid });
-        await payment.requestPayment({
-          method: "CARD",
-          amount: { currency: "KRW", value: amount },
-          orderId,
-          orderName: `KU market 포인트 ${amount.toLocaleString()}P`,
-          successUrl: `${window.location.origin}/charge?paymentKey={paymentKey}&orderId=${orderId}&amount=${amount}`,
-          failUrl: `${window.location.origin}/charge?status=fail`,
-        });
-      }
+      const fn = httpsCallable(functions, "submitChargeRequest");
+      await fn({
+        amount,
+        transferAmount,
+        vat,
+        fee: chargeFee,
+        senderName: senderName.trim(),
+        senderPhone: senderPhone.trim(),
+        receiptNumber: receiptNumber.trim() || "",
+        receiptType: receiptNumber.trim() ? receiptType : "",
+      });
+      setStep("done");
     } catch (err) {
-      setError((err as Error).message || "충전 중 오류가 발생했습니다.");
+      setError((err as Error).message || "요청 중 오류가 발생했습니다.");
+    } finally {
       setLoading(false);
     }
   };
@@ -124,19 +110,6 @@ export default function ChargePage() {
           <CardTitle className="text-2xl">포인트 충전</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {status === "cancel" && (
-            <div className="flex items-center gap-2 bg-destructive/5 text-destructive rounded-lg py-3 px-4 text-sm">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              결제가 취소되었습니다.
-            </div>
-          )}
-          {status === "fail" && (
-            <div className="flex items-center gap-2 bg-destructive/5 text-destructive rounded-lg py-3 px-4 text-sm">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              결제에 실패했습니다. 다시 시도해주세요.
-            </div>
-          )}
-
           {/* Current balance */}
           <div className="flex justify-between items-center rounded-lg bg-muted/70 px-5 py-4">
             <span className="text-sm text-muted-foreground">현재 보유 포인트</span>
@@ -152,108 +125,281 @@ export default function ChargePage() {
             거래 내역 보기
           </Link>
 
-          {/* Amount selection */}
-          <div>
-            <h3 className="text-[15px] font-semibold text-foreground mb-3">충전 금액 선택</h3>
-            <div className="grid grid-cols-3 gap-2.5 max-sm:grid-cols-2">
-              {PRESET_AMOUNTS.map((a) => (
-                <button
-                  key={a}
-                  className={cn(
-                    "py-3.5 rounded-lg border text-[15px] font-semibold transition-colors cursor-pointer",
-                    selectedAmount === a
-                      ? "border-[#862633] bg-[#862633]/[0.04] text-[#862633]"
-                      : "border-border bg-background text-foreground hover:bg-muted/70"
+          {step === "select" && (
+            <>
+              {/* Amount selection */}
+              <div>
+                <h3 className="text-[15px] font-semibold text-foreground mb-3">충전 금액 선택</h3>
+                <div className="grid grid-cols-3 gap-2.5 max-sm:grid-cols-2">
+                  {PRESET_AMOUNTS.map((a) => (
+                    <button
+                      key={a}
+                      className={cn(
+                        "py-3.5 rounded-lg border text-[15px] font-semibold transition-colors cursor-pointer",
+                        selectedAmount === a
+                          ? "border-[#862633] bg-[#862633]/[0.04] text-[#862633]"
+                          : "border-border bg-background text-foreground hover:bg-muted/70"
+                      )}
+                      onClick={() => setSelectedAmount(a)}
+                    >
+                      {a.toLocaleString()}원
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Separator className="mb-4" />
+                <div className="space-y-2 mb-5">
+                  <div className="flex justify-between py-1 text-sm text-muted-foreground">
+                    <span>충전 포인트</span>
+                    <span>{amount > 0 ? `${amount.toLocaleString()}P` : "-"}</span>
+                  </div>
+                  {amount > 0 && (
+                    <>
+                      <div className="flex justify-between py-1 text-sm text-muted-foreground">
+                        <span>부가세 (10%)</span>
+                        <span>+{vat.toLocaleString()}원</span>
+                      </div>
+                      <div className="flex justify-between py-1 text-sm text-muted-foreground">
+                        <span>수수료 (10%)</span>
+                        <span>+{chargeFee.toLocaleString()}원</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between py-1 text-base font-bold text-[#862633]">
+                        <span>송금 금액</span>
+                        <span>{transferAmount.toLocaleString()}원</span>
+                      </div>
+                    </>
                   )}
-                  onClick={() => setSelectedAmount(a)}
-                >
-                  {a.toLocaleString()}원
-                </button>
-              ))}
-            </div>
-          </div>
+                  <div className="flex justify-between py-1 text-base font-bold text-foreground">
+                    <span>충전 후 포인트</span>
+                    <span>
+                      {amount > 0
+                        ? `${((userProfile?.points ?? 0) + amount).toLocaleString()}P`
+                        : "-"}
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-          {/* Payment method */}
-          <div>
-            <h3 className="text-[15px] font-semibold text-foreground mb-3">결제 수단</h3>
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                className={cn(
-                  "flex items-center justify-center gap-2.5 py-4 rounded-lg border text-[15px] font-semibold transition-colors cursor-pointer",
-                  paymentMethod === "kakaopay"
-                    ? "border-[#862633] bg-[#862633]/[0.04] text-[#862633]"
-                    : "border-border bg-background text-foreground hover:bg-muted/70"
-                )}
-                onClick={() => setPaymentMethod("kakaopay")}
+              <Button
+                className="w-full h-12 text-base font-bold bg-[#862633] hover:bg-[#6e1f2b] text-white"
+                onClick={() => {
+                  if (amount < 1000) {
+                    setError("충전 금액을 선택해주세요.");
+                    return;
+                  }
+                  setError("");
+                  setStep("transfer");
+                }}
+                disabled={amount < 1000}
               >
-                <span className="w-7 h-7 rounded flex items-center justify-center font-extrabold text-sm bg-[#FEE500] text-[#191919]">
-                  K
-                </span>
-                <span>카카오페이</span>
-              </button>
-              <button
-                className={cn(
-                  "flex items-center justify-center gap-2.5 py-4 rounded-lg border text-[15px] font-semibold transition-colors cursor-pointer",
-                  paymentMethod === "toss"
-                    ? "border-[#862633] bg-[#862633]/[0.04] text-[#862633]"
-                    : "border-border bg-background text-foreground hover:bg-muted/70"
-                )}
-                onClick={() => setPaymentMethod("toss")}
-              >
-                <span className="w-7 h-7 rounded flex items-center justify-center font-extrabold text-sm bg-[#0064FF] text-white">
-                  T
-                </span>
-                <span>토스페이먼츠</span>
-              </button>
-            </div>
-          </div>
+                다음
+              </Button>
 
-          {error && (
-            <div className="flex items-center gap-2 bg-destructive/5 text-destructive rounded-lg py-3 px-4 text-sm">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {error}
-            </div>
+              {error && (
+                <div className="flex items-center gap-2 bg-destructive/5 text-destructive rounded-lg py-3 px-4 text-sm">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  {error}
+                </div>
+              )}
+            </>
           )}
 
-          {/* Charge summary */}
-          <div>
-            <Separator className="mb-4" />
-            <div className="space-y-2 mb-5">
-              <div className="flex justify-between py-1 text-sm text-muted-foreground">
-                <span>충전 금액</span>
-                <span>{amount > 0 ? `${amount.toLocaleString()}원` : "-"}</span>
-              </div>
-              <div className="flex justify-between py-1 text-sm text-muted-foreground">
-                <span>결제 수단</span>
-                <span>{paymentMethod === "kakaopay" ? "카카오페이" : "토스페이먼츠"}</span>
-              </div>
-              <div className="flex justify-between py-1 text-base font-bold text-foreground">
-                <span>충전 후 포인트</span>
-                <span>
-                  {amount > 0
-                    ? `${((userProfile?.points ?? 0) + amount).toLocaleString()}P`
-                    : "-"}
-                </span>
-              </div>
-            </div>
-          </div>
+          {step === "transfer" && (
+            <>
+              {/* Transfer instructions */}
+              <div className="rounded-xl border-2 border-[#862633]/20 bg-[#862633]/[0.02] p-5 space-y-4">
+                <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                  <Info className="w-5 h-5 text-[#862633]" />
+                  송금 안내
+                </h3>
 
-          <Button
-            className={cn(
-              "w-full h-12 text-base font-bold",
-              paymentMethod === "kakaopay"
-                ? "bg-[#FEE500] text-[#191919] hover:bg-[#F5DC00]"
-                : "bg-[#0064FF] text-white hover:bg-[#0055DD]"
-            )}
-            onClick={handleCharge}
-            disabled={loading || amount < 1000}
-          >
-            {loading
-              ? "처리 중..."
-              : paymentMethod === "kakaopay"
-                ? "카카오페이로 충전하기"
-                : "토스페이먼츠로 충전하기"}
-          </Button>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">은행</span>
+                    <span className="font-semibold">{BANK_ACCOUNT.bank}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">계좌번호</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold font-mono">{BANK_ACCOUNT.number}</span>
+                      <button
+                        onClick={handleCopyAccount}
+                        className="text-xs text-[#862633] hover:underline cursor-pointer bg-transparent border-none flex items-center gap-1"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        {copied ? "복사됨" : "복사"}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">예금주</span>
+                    <span className="font-semibold">{BANK_ACCOUNT.holder}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">송금 금액</span>
+                    <span className="text-lg font-bold text-[#862633]">{transferAmount.toLocaleString()}원</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground text-right">
+                    (충전 {amount.toLocaleString()}원 + 부가세 {vat.toLocaleString()}원 + 수수료 {chargeFee.toLocaleString()}원)
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 text-amber-800 rounded-lg p-3.5 text-sm">
+                  <p className="font-semibold mb-1">송금 시 입금자명 규칙</p>
+                  <p className="text-amber-700">
+                    <span className="font-bold">이름 + 전화번호 뒷 4자리</span>로 입금해주세요.
+                  </p>
+                  <p className="text-amber-600 text-xs mt-1">
+                    예시: 홍길동1234
+                  </p>
+                </div>
+              </div>
+
+              {/* Sender info */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">
+                    입금자명
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="실명을 입력하세요"
+                    value={senderName}
+                    onChange={(e) => setSenderName(e.target.value)}
+                    className="h-11 text-[15px]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">
+                    전화번호 뒷 4자리
+                  </label>
+                  <Input
+                    type="text"
+                    placeholder="1234"
+                    value={senderPhone}
+                    onChange={(e) => setSenderPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))}
+                    maxLength={4}
+                    className="h-11 text-[15px]"
+                  />
+                </div>
+
+                {/* 현금영수증 */}
+                <div>
+                  <label className="block text-sm font-semibold text-foreground mb-2">
+                    현금영수증 발급 번호 <span className="text-muted-foreground font-normal">(선택)</span>
+                  </label>
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors cursor-pointer",
+                        receiptType === "phone"
+                          ? "border-[#862633] bg-[#862633]/[0.04] text-[#862633]"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted/70"
+                      )}
+                      onClick={() => setReceiptType("phone")}
+                    >
+                      휴대폰 번호
+                    </button>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex-1 py-2.5 rounded-lg border text-sm font-medium transition-colors cursor-pointer",
+                        receiptType === "business"
+                          ? "border-[#862633] bg-[#862633]/[0.04] text-[#862633]"
+                          : "border-border bg-background text-muted-foreground hover:bg-muted/70"
+                      )}
+                      onClick={() => setReceiptType("business")}
+                    >
+                      사업자 번호
+                    </button>
+                  </div>
+                  <Input
+                    type="text"
+                    placeholder={receiptType === "phone" ? "01012345678" : "000-00-00000"}
+                    value={receiptNumber}
+                    onChange={(e) => setReceiptNumber(e.target.value.replace(/[^\d-]/g, ""))}
+                    className="h-11 text-[15px]"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    현금영수증 발급을 원하시면 번호를 입력해주세요.
+                  </p>
+                </div>
+              </div>
+
+              {error && (
+                <div className="flex items-center gap-2 bg-destructive/5 text-destructive rounded-lg py-3 px-4 text-sm">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1 h-12 text-base font-bold"
+                  onClick={() => { setStep("select"); setError(""); }}
+                >
+                  이전
+                </Button>
+                <Button
+                  className="flex-1 h-12 text-base font-bold bg-[#862633] hover:bg-[#6e1f2b] text-white"
+                  onClick={handleConfirmTransfer}
+                  disabled={loading}
+                >
+                  {loading ? "처리 중..." : "송금을 완료했어요"}
+                </Button>
+              </div>
+            </>
+          )}
+
+          {step === "done" && (
+            <div className="text-center py-6 space-y-4">
+              <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto" />
+              <h3 className="text-xl font-bold text-foreground">충전 요청 완료</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                관리자가 입금을 확인한 후 포인트가 지급됩니다.<br />
+                보통 <span className="font-semibold text-foreground">1시간 이내</span>에 처리됩니다.
+              </p>
+              <div className="bg-muted/70 rounded-lg p-4 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">충전 포인트</span>
+                  <span className="font-semibold">{amount.toLocaleString()}P</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">송금 금액</span>
+                  <span className="font-semibold">{transferAmount.toLocaleString()}원</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">입금자명</span>
+                  <span className="font-semibold">{senderName}{senderPhone}</span>
+                </div>
+                {receiptNumber && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">현금영수증</span>
+                    <span className="font-semibold">{receiptType === "phone" ? "휴대폰" : "사업자"} · {receiptNumber}</span>
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => {
+                  setStep("select");
+                  setSelectedAmount(null);
+                  setSenderName("");
+                  setSenderPhone("");
+                  setReceiptNumber("");
+                }}
+              >
+                추가 충전하기
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

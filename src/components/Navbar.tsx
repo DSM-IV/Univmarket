@@ -29,31 +29,29 @@ export default function Navbar() {
     navigate("/");
   };
 
-  const closeMobile = () => setMobileOpen(false);
+  const scrollTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
+  const closeMobile = () => { setMobileOpen(false); scrollTop(); };
 
   return (
     <nav className="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-border">
       <div className="max-w-[1140px] mx-auto px-6 max-sm:px-4 h-[60px] flex items-center gap-5 max-sm:gap-2">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2.5 shrink-0" onClick={closeMobile}>
-          <span className="w-8 h-8 bg-primary text-white rounded-lg flex items-center justify-center font-extrabold text-base">
-            K
-          </span>
-          <span className="font-bold text-[17px] text-foreground tracking-tight hidden sm:inline">
-            KU market
-          </span>
+        <Link to="/" className="flex items-center shrink-0" onClick={() => { closeMobile(); scrollTop(); }}>
+          <img src="/logo.png" alt="UniFile" className="h-9" />
         </Link>
 
         {/* Desktop Nav Links */}
         <div className="hidden md:flex items-center gap-1 shrink-0 ml-auto">
           <Link
             to="/browse"
+            onClick={scrollTop}
             className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
           >
             자료 찾기
           </Link>
           <Link
             to="/upload"
+            onClick={scrollTop}
             className="px-3.5 py-1.5 rounded-lg text-sm font-semibold text-primary hover:bg-primary/5 transition-colors"
           >
             자료 판매
@@ -63,6 +61,7 @@ export default function Navbar() {
             <>
               <Link
                 to="/cart"
+                onClick={scrollTop}
                 className="relative p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex"
                 title="장바구니"
               >
@@ -75,12 +74,14 @@ export default function Navbar() {
               </Link>
               <Link
                 to="/charge"
+                onClick={scrollTop}
                 className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               >
                 {(userProfile?.points ?? 0).toLocaleString()}P
               </Link>
               <Link
                 to="/withdraw"
+                onClick={scrollTop}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors inline-flex items-center gap-1"
                 title="출금"
               >
@@ -90,6 +91,7 @@ export default function Navbar() {
               {userProfile?.role === "admin" && (
                 <Link
                   to="/admin"
+                  onClick={scrollTop}
                   className="px-3.5 py-1.5 rounded-lg text-sm font-semibold text-destructive hover:bg-destructive/5 transition-colors"
                 >
                   관리자
@@ -97,6 +99,7 @@ export default function Navbar() {
               )}
               <Link
                 to="/mypage"
+                onClick={scrollTop}
                 className="text-sm font-semibold text-foreground px-2 py-1.5 hover:text-primary transition-colors"
               >
                 마이페이지
@@ -112,7 +115,7 @@ export default function Navbar() {
             </>
           ) : (
             <Button variant="default" size="sm" className="rounded-full" asChild>
-              <Link to="/login">로그인</Link>
+              <Link to="/login" onClick={scrollTop}>로그인</Link>
             </Button>
           )}
         </div>

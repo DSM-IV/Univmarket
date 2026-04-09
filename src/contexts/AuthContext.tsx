@@ -7,8 +7,6 @@ import {
   updateProfile,
   sendEmailVerification,
   sendPasswordResetEmail,
-  GoogleAuthProvider,
-  signInWithPopup,
   setPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
@@ -23,9 +21,8 @@ interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string, nickname: string, university: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, nickname: string, university: string, identityVerified?: boolean, verifiedPhone?: string) => Promise<void>;
   logIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
-  logInWithGoogle: () => Promise<void>;
   logOut: () => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -37,16 +34,6 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
-}
-
-async function ensureUserDoc(user: User, university?: string, nickname?: string) {
-  const createUserProfile = httpsCallable(functions, "createUserProfile");
-  await createUserProfile({
-    displayName: user.displayName || "",
-    nickname: nickname || user.displayName || "",
-    email: user.email || "",
-    university: university || "",
-  });
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -79,20 +66,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snap) => {
       if (snap.exists()) {
         setUserProfile(snap.data() as UserProfile);
-      } else {
-        // 문서가 없으면 Cloud Function으로 생성
-        ensureUserDoc(user);
       }
       setLoading(false);
     });
 
+
     return unsubscribe;
   }, [user]);
 
-  async function signUp(email: string, password: string, name: string, nickname: string, university: string) {
+  async function signUp(email: string, password: string, name: string, nickname: string, university: string, identityVerified?: boolean, verifiedPhone?: string) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
-    await ensureUserDoc(cred.user, university, nickname);
+    const createUserProfile = httpsCallable(functions, "createUserProfile");
+    await createUserProfile({
+      displayName: name,
+      nickname: nickname,
+      email: email,
+      university: university,
+      identityVerified: identityVerified || false,
+      verifiedPhone: verifiedPhone || "",
+    });
     await sendEmailVerification(cred.user);
     await signOut(auth);
   }
@@ -114,12 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function logInWithGoogle() {
-    const provider = new GoogleAuthProvider();
-    const cred = await signInWithPopup(auth, provider);
-    await ensureUserDoc(cred.user);
-  }
-
   async function resetPassword(email: string) {
     await sendPasswordResetEmail(auth, email);
   }
@@ -129,7 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, signUp, logIn, logInWithGoogle, logOut, resendVerificationEmail, resetPassword }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, signUp, logIn, logOut, resendVerificationEmail, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

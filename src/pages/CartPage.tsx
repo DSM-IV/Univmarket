@@ -3,11 +3,13 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getCartItems, removeFromCart, type CartItem } from "../services/cartService";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { X, ShoppingCart, CheckCircle, AlertCircle } from "lucide-react";
+import { X, ShoppingCart, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
 
 export default function CartPage() {
   const { user, userProfile } = useAuth();
@@ -17,15 +19,28 @@ export default function CartPage() {
   const [buying, setBuying] = useState(false);
   const [error, setError] = useState("");
   const [successCount, setSuccessCount] = useState(0);
+  const [deletedItems, setDeletedItems] = useState<CartItem[]>([]);
+  const [removingDeleted, setRemovingDeleted] = useState(false);
 
   useEffect(() => {
     if (!user) {
       setLoading(false);
       return;
     }
-    getCartItems(user.uid).then((list) => {
-      setItems(list);
-      setSelected(new Set(list.map((i) => i.id)));
+    getCartItems(user.uid).then(async (list) => {
+      // 각 자료가 아직 존재하는지 확인
+      const checks = await Promise.all(
+        list.map(async (item) => {
+          const snap = await getDoc(doc(db, "materials", item.materialId));
+          return { item, exists: snap.exists() };
+        })
+      );
+      const valid = checks.filter((c) => c.exists).map((c) => c.item);
+      const removed = checks.filter((c) => !c.exists).map((c) => c.item);
+
+      setItems(valid);
+      setSelected(new Set(valid.map((i) => i.id)));
+      setDeletedItems(removed);
       setLoading(false);
     });
   }, [user]);
@@ -115,6 +130,17 @@ export default function CartPage() {
     setBuying(false);
   };
 
+  const handleRemoveDeleted = async () => {
+    setRemovingDeleted(true);
+    await Promise.all(deletedItems.map((item) => removeFromCart(item.id)));
+    setDeletedItems([]);
+    setRemovingDeleted(false);
+  };
+
+  const handleDismissDeleted = () => {
+    setDeletedItems([]);
+  };
+
   if (loading) {
     return (
       <div className="min-h-[calc(100vh-64px)] bg-muted/50 py-10 pb-20">
@@ -131,7 +157,49 @@ export default function CartPage() {
       <div className="mx-auto max-w-5xl px-6">
         <h1 className="text-2xl font-bold tracking-tight mb-7">장바구니</h1>
 
-        {items.length === 0 ? (
+        {deletedItems.length > 0 && (
+          <div className="mb-5 rounded-lg border border-amber-200 bg-amber-500/5 p-4">
+            <div className="flex items-start gap-3">
+              <Trash2 className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-amber-800 mb-2">
+                  삭제된 자료가 {deletedItems.length}건 있습니다
+                </p>
+                <ul className="space-y-1 mb-3">
+                  {deletedItems.map((item) => (
+                    <li key={item.id} className="text-[13px] text-amber-700 truncate">
+                      • {item.title}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[13px] text-amber-600 mb-3">
+                  판매자가 자료를 삭제하여 더 이상 구매할 수 없습니다. 장바구니에서 삭제하시겠습니까?
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="h-8 text-[13px]"
+                    onClick={handleRemoveDeleted}
+                    disabled={removingDeleted}
+                  >
+                    {removingDeleted ? "삭제 중..." : "장바구니에서 삭제"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[13px]"
+                    onClick={handleDismissDeleted}
+                  >
+                    나중에
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {items.length === 0 && deletedItems.length === 0 ? (
           <div className="text-center py-20 px-6">
             <ShoppingCart className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
             <p className="text-muted-foreground text-base mb-5 leading-relaxed">장바구니가 비어있습니다.</p>

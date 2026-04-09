@@ -5,7 +5,7 @@ import { db } from "../firebase";
 import MaterialCard from "../components/MaterialCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { categories, departments, convergenceMajors, microDegrees, exchangeCountries } from "../data/mockData";
+import { categories, departments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import { BookOpen, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,24 +24,84 @@ export default function BrowsePage() {
   );
   const initialDept = searchParams.get("department") || "";
   const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [selectedIsuType, setSelectedIsuType] = useState(""); // 전공, 학문의기초, 교양, 교직
+  const [selectedSubType, setSelectedSubType] = useState(""); // 이중전공, 전과
   const [selectedDepartment, setSelectedDepartment] = useState(initialDept);
+  const [selectedSubCategory, setSelectedSubCategory] = useState(""); // 학문의기초/교양/교직 하위분류
+  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedProfessor, setSelectedProfessor] = useState("");
+  const [selectedSemester, setSelectedSemester] = useState("");
   const [sortBy, setSortBy] = useState(initialSort);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStats>({});
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const showDepartmentFilter = selectedCategory === "수업" || selectedCategory === "이중전공 & 전과" || selectedCategory === "교환학생";
+  const showIsuFilter = selectedCategory === "수업";
+  const showSubTypeFilter = selectedCategory === "이중전공 & 전과";
+  const showDepartmentFilter =
+    (selectedCategory === "수업" && selectedIsuType === "전공") ||
+    (selectedCategory === "이중전공 & 전과" && selectedSubType) ||
+    selectedCategory === "교환학생";
+  const showSubCategoryFilter =
+    selectedCategory === "수업" &&
+    (selectedIsuType === "학문의기초" || selectedIsuType === "교양" || selectedIsuType === "교직");
+  const showCourseFilter =
+    selectedCategory === "수업" &&
+    ((selectedIsuType === "전공" && selectedDepartment && departmentCourses[selectedDepartment]) ||
+     (showSubCategoryFilter && selectedSubCategory && coursesByIsuCategory[selectedIsuType]?.[selectedSubCategory]));
+  const professorOptions = useMemo(() => {
+    if (!selectedCourse) return [];
+    if (selectedSemester && courseProfessorsBySemester[selectedSemester]?.[selectedCourse]) {
+      return courseProfessorsBySemester[selectedSemester][selectedCourse];
+    }
+    return courseProfessors[selectedCourse] || [];
+  }, [selectedCourse, selectedSemester]);
+  const showProfessorFilter = showCourseFilter && selectedCourse && professorOptions.length > 0;
+
+  const courseOptions = useMemo(() => {
+    let courses: string[] = [];
+    if (selectedIsuType === "전공" && selectedDepartment) {
+      courses = departmentCourses[selectedDepartment] || [];
+    } else if (showSubCategoryFilter && selectedSubCategory) {
+      courses = coursesByIsuCategory[selectedIsuType]?.[selectedSubCategory] || [];
+    }
+    if (selectedSemester && courses.length > 0) {
+      courses = courses.filter((c) => !courseSemesters[c] || courseSemesters[c].includes(selectedSemester));
+    }
+    return courses;
+  }, [selectedIsuType, selectedDepartment, selectedSubCategory, selectedSemester, showSubCategoryFilter]);
 
   useEffect(() => {
-    if (!showDepartmentFilter) {
-      setSelectedDepartment("");
-    }
-  }, [selectedCategory, showDepartmentFilter]);
+    setSelectedIsuType("");
+    setSelectedSubType("");
+    setSelectedDepartment("");
+    setSelectedSubCategory("");
+    setSelectedCourse("");
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    setSelectedDepartment("");
+    setSelectedSubCategory("");
+    setSelectedCourse("");
+  }, [selectedIsuType]);
+
+  useEffect(() => {
+    setSelectedDepartment("");
+  }, [selectedSubType]);
+
+  useEffect(() => {
+    setSelectedCourse("");
+    setSelectedProfessor("");
+  }, [selectedDepartment, selectedSubCategory, selectedSemester]);
+
+  useEffect(() => {
+    setSelectedProfessor("");
+  }, [selectedCourse]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedDepartment, searchQuery, sortBy]);
+  }, [selectedCategory, selectedIsuType, selectedDepartment, selectedSubCategory, selectedCourse, selectedProfessor, selectedSemester, searchQuery, sortBy]);
 
   useEffect(() => {
     async function fetchMaterials() {
@@ -58,7 +118,7 @@ export default function BrowsePage() {
         const stats = await fetchReviewStats(docs.map((d) => d.id));
         setReviewStats(stats);
       } catch (err) {
-        console.error("자료 불러오기 실패:", err);
+
       } finally {
         setLoading(false);
       }
@@ -67,7 +127,7 @@ export default function BrowsePage() {
   }, []);
 
   const filtered = useMemo(() => {
-    let result = materials.filter((m) => !(m as any).hidden);
+    let result = materials.filter((m) => !(m as any).hidden && (m as any).scanStatus !== "infected" && (m as any).scanStatus !== "scanning");
 
     if (selectedCategory !== "전체") {
       result = result.filter((m) => m.category === selectedCategory);
@@ -75,6 +135,18 @@ export default function BrowsePage() {
 
     if (selectedDepartment) {
       result = result.filter((m) => m.department === selectedDepartment);
+    }
+
+    if (selectedCourse) {
+      result = result.filter((m) => m.subject === selectedCourse);
+    }
+
+    if (selectedProfessor) {
+      result = result.filter((m) => (m.professor || "") === selectedProfessor);
+    }
+
+    if (selectedSemester) {
+      result = result.filter((m) => (m as any).semester === selectedSemester);
     }
 
     if (searchQuery.trim()) {
@@ -108,7 +180,7 @@ export default function BrowsePage() {
     }
 
     return result;
-  }, [materials, reviewStats, selectedCategory, selectedDepartment, searchQuery, sortBy]);
+  }, [materials, reviewStats, selectedCategory, selectedDepartment, selectedCourse, selectedProfessor, selectedSemester, searchQuery, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginatedItems = filtered.slice(
@@ -177,61 +249,148 @@ export default function BrowsePage() {
             ))}
           </div>
 
-          {showDepartmentFilter && (
-            <select
-              value={selectedDepartment}
-              onChange={(e) => setSelectedDepartment(e.target.value)}
-              className="h-9 px-3 rounded-lg border border-border bg-white text-sm text-foreground min-w-[180px] outline-none focus:border-primary transition-colors cursor-pointer"
-            >
-              {selectedCategory === "교환학생" ? (
-                <>
-                  <option value="">전체 국가</option>
-                  {Object.entries(exchangeCountries).map(([region, countries]) => (
-                    <optgroup key={region} label={region}>
-                      {countries.map((c) => (
-                        <option key={c} value={c}>{c}</option>
+          <div className="flex flex-wrap gap-2">
+            {/* 이수구분 선택 (수업 카테고리일 때) */}
+            {showIsuFilter && (
+              <select
+                value={selectedIsuType}
+                onChange={(e) => setSelectedIsuType(e.target.value)}
+                className="h-9 px-3 rounded-lg border border-border bg-white text-sm text-foreground max-w-[200px] outline-none focus:border-primary transition-colors cursor-pointer"
+              >
+                <option value="">이수구분 선택</option>
+                <option value="전공">전공</option>
+                <option value="학문의기초">학문의기초</option>
+                <option value="교양">교양</option>
+                <option value="교직">교직</option>
+              </select>
+            )}
+
+            {/* 이중전공/전과 → 유형 선택 */}
+            {showSubTypeFilter && (
+              <div className="flex gap-1.5">
+                {["이중전공", "전과"].map((type) => (
+                  <button
+                    key={type}
+                    className={cn(
+                      "px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors border",
+                      selectedSubType === type
+                        ? "bg-primary text-white border-primary"
+                        : "bg-white text-muted-foreground border-border hover:bg-accent hover:text-foreground"
+                    )}
+                    onClick={() => setSelectedSubType(selectedSubType === type ? "" : type)}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* 전공 → 학과 선택 */}
+            {showDepartmentFilter && (
+              <select
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className="h-9 px-3 rounded-lg border border-border bg-white text-sm text-foreground max-w-[200px] outline-none focus:border-primary transition-colors cursor-pointer"
+              >
+                {selectedCategory === "교환학생" ? (
+                  <>
+                    <option value="">전체 국가</option>
+                    {Object.entries(exchangeCountries).map(([region, countries]) => (
+                      <optgroup key={region} label={region}>
+                        {countries.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <option value="">전체 학과</option>
+                    <optgroup label="학과">
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>{dept}</option>
                       ))}
                     </optgroup>
-                  ))}
-                </>
-              ) : (
-                <>
-                  <option value="">전체 학과</option>
-                  <optgroup label="학과">
-                    {departments.map((dept) => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </optgroup>
-                  {selectedCategory === "이중전공 & 전과" && (
-                    <>
+                    {selectedCategory === "이중전공 & 전과" && (
                       <optgroup label="융합전공">
                         {convergenceMajors.map((m) => (
                           <option key={m} value={m}>{m}</option>
                         ))}
                       </optgroup>
-                      <optgroup label="마이크로디그리">
-                        {microDegrees.map((m) => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </optgroup>
-                    </>
-                  )}
-                </>
-              )}
-            </select>
-          )}
+                    )}
+                  </>
+                )}
+              </select>
+            )}
 
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="h-9 px-3 rounded-lg border border-border bg-white text-sm text-foreground outline-none focus:border-primary transition-colors cursor-pointer w-fit"
-          >
-            <option value="popular">인기순</option>
-            <option value="recent">최신순</option>
-            <option value="rating">평점순</option>
-            <option value="price-low">가격 낮은순</option>
-            <option value="price-high">가격 높은순</option>
-          </select>
+            {/* 학문의기초/교양/교직 → 하위분류 선택 */}
+            {showSubCategoryFilter && (
+              <select
+                value={selectedSubCategory}
+                onChange={(e) => setSelectedSubCategory(e.target.value)}
+                className="h-9 px-3 rounded-lg border border-border bg-white text-sm text-foreground max-w-[200px] outline-none focus:border-primary transition-colors cursor-pointer"
+              >
+                <option value="">전체 분류</option>
+                {Object.keys(coursesByIsuCategory[selectedIsuType] || {}).sort().map((sub) => (
+                  <option key={sub} value={sub}>{sub}</option>
+                ))}
+              </select>
+            )}
+
+            <select
+              value={selectedSemester}
+              onChange={(e) => setSelectedSemester(e.target.value)}
+              className="h-9 px-3 rounded-lg border border-border bg-white text-sm text-foreground outline-none focus:border-primary transition-colors cursor-pointer"
+            >
+              <option value="">전체 학기</option>
+              {Array.from({ length: 6 }, (_, i) => 2025 - i).map((year) => (
+                <optgroup key={year} label={`${year}학년도`}>
+                  <option value={`${year}-1`}>{year}학년도 1학기</option>
+                  <option value={`${year}-2`}>{year}학년도 2학기</option>
+                </optgroup>
+              ))}
+            </select>
+
+            {/* 과목 선택 */}
+            {showCourseFilter && (
+              <select
+                value={selectedCourse}
+                onChange={(e) => setSelectedCourse(e.target.value)}
+                className="h-9 px-3 rounded-lg border border-border bg-white text-sm text-foreground max-w-[200px] outline-none focus:border-primary transition-colors cursor-pointer"
+              >
+                <option value="">전체 과목</option>
+                {courseOptions.map((course) => (
+                  <option key={course} value={course}>{course}</option>
+                ))}
+              </select>
+            )}
+
+            {/* 교수 선택 */}
+            {showProfessorFilter && (
+              <select
+                value={selectedProfessor}
+                onChange={(e) => setSelectedProfessor(e.target.value)}
+                className="h-9 px-3 rounded-lg border border-border bg-white text-sm text-foreground max-w-[200px] outline-none focus:border-primary transition-colors cursor-pointer"
+              >
+                <option value="">전체 교수</option>
+                {professorOptions.map((prof) => (
+                  <option key={prof} value={prof}>{prof}</option>
+                ))}
+              </select>
+            )}
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="h-9 px-3 rounded-lg border border-border bg-white text-sm text-foreground outline-none focus:border-primary transition-colors cursor-pointer"
+            >
+              <option value="popular">인기순</option>
+              <option value="recent">최신순</option>
+              <option value="rating">평점순</option>
+              <option value="price-low">가격 낮은순</option>
+              <option value="price-high">가격 높은순</option>
+            </select>
+          </div>
         </div>
 
         {/* Scholarship Banner */}
@@ -243,13 +402,13 @@ export default function BrowsePage() {
             className="flex items-center gap-4 p-5 mb-7 bg-gradient-to-r from-primary to-primary-light rounded-xl text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(134,38,51,0.3)]"
           >
             <div className="shrink-0 w-11 h-11 bg-white/20 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-6 h-6" />
+              <BookOpen className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 flex flex-col gap-0.5">
-              <strong className="text-[15px] font-bold">KU 장학금 정보 모음</strong>
-              <span className="text-[13px] opacity-85">고려대학교 장학금 종류, 지원 자격, 신청 방법을 한눈에 확인하세요</span>
+              <strong className="text-[15px] font-bold text-white">KU 장학금 정보 모음</strong>
+              <span className="text-[13px] text-white/85">고려대학교 장학금 종류, 지원 자격, 신청 방법을 한눈에 확인하세요</span>
             </div>
-            <ChevronRight className="w-5 h-5 opacity-70 shrink-0" />
+            <ChevronRight className="w-5 h-5 text-white/70 shrink-0" />
           </a>
         )}
 

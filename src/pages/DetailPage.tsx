@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChevronLeft, ChevronRight, Download, ShoppingCart } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, ShoppingCart, GraduationCap } from "lucide-react";
 
 interface Review {
   id: string;
@@ -99,7 +99,7 @@ export default function DetailPage() {
           setAuthorSalesCount(totalSales);
         }
       } catch (err) {
-        console.error("자료 불러오기 실패:", err);
+
       } finally {
         setLoading(false);
       }
@@ -196,7 +196,7 @@ export default function DetailPage() {
       setReviewContent("");
       setEditingReview(false);
     } catch (err) {
-      console.error("후기 등록 실패:", err);
+
       alert("후기 등록에 실패했습니다.");
     } finally {
       setSubmittingReview(false);
@@ -212,7 +212,7 @@ export default function DetailPage() {
       setMyReview(null);
       setReviewContent("");
     } catch (err) {
-      console.error("후기 삭제 실패:", err);
+
     }
   };
 
@@ -241,7 +241,7 @@ export default function DetailPage() {
       document.body.removeChild(a);
     } catch (err) {
       alert("다운로드에 실패했습니다. 다시 시도해주세요.");
-      console.error("다운로드 실패:", err);
+
     } finally {
       setDownloading(false);
     }
@@ -276,6 +276,21 @@ export default function DetailPage() {
     return (
       <div className="text-center py-24 px-6">
         <h2 className="text-xl font-bold mb-3">자료를 찾을 수 없습니다</h2>
+        <Link to="/browse" className="text-primary font-medium hover:underline">둘러보기로 돌아가기</Link>
+      </div>
+    );
+  }
+
+  if ((material as any).copyrightDeleted) {
+    return (
+      <div className="text-center py-24 px-6">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 mb-5">
+          <svg className="w-8 h-8 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86l-8.6 14.86A1 1 0 002.56 20h18.88a1 1 0 00.87-1.28l-8.6-14.86a1 1 0 00-1.72 0z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold mb-2 text-foreground">저작권 침해로 인해 삭제된 자료입니다</h2>
+        <p className="text-sm text-muted-foreground mb-6">해당 자료는 저작권 침해 신고 접수 후 검토를 거쳐 삭제되었습니다.</p>
         <Link to="/browse" className="text-primary font-medium hover:underline">둘러보기로 돌아가기</Link>
       </div>
     );
@@ -318,7 +333,7 @@ export default function DetailPage() {
       }
       setEditing(false);
     } catch (err) {
-      console.error("자료 수정 실패:", err);
+
       alert("자료 수정에 실패했습니다.");
     } finally {
       setSaving(false);
@@ -333,7 +348,7 @@ export default function DetailPage() {
       await deleteDoc(doc(db, "materials", id));
       navigate("/mypage");
     } catch (err) {
-      console.error("자료 삭제 실패:", err);
+
       alert("자료 삭제에 실패했습니다.");
       setDeleting(false);
     }
@@ -356,7 +371,7 @@ export default function DetailPage() {
       });
       setInCart(true);
     } catch (err) {
-      console.error("장바구니 추가 실패:", err);
+
     } finally {
       setAddingToCart(false);
     }
@@ -566,12 +581,23 @@ export default function DetailPage() {
               </Card>
             ) : (
               <>
-                <div className="flex gap-2 mb-3">
+                <div className="flex gap-2 mb-3 flex-wrap">
                   <Badge variant="primary">{material.category}</Badge>
                   {material.department && (
                     <Badge variant="success">{material.department}</Badge>
                   )}
                   <Badge variant="secondary">{material.fileType}</Badge>
+                  {(material as any).gradeStatus === "verified" && (material as any).verifiedGrade && (
+                    <Badge className="bg-amber-500/15 text-amber-700 border-amber-400/40 font-extrabold gap-1 hover:bg-amber-500/20">
+                      <GraduationCap className="w-3 h-3" />
+                      성적 인증 {(material as any).verifiedGrade}
+                    </Badge>
+                  )}
+                  {(material as any).gradeStatus === "pending" && (material as any).gradeClaim && material.authorId === user?.uid && (
+                    <Badge className="bg-secondary text-muted-foreground hover:bg-secondary">
+                      성적 인증 심사 중 ({(material as any).gradeClaim})
+                    </Badge>
+                  )}
                 </div>
                 <h1 className="text-[26px] font-bold leading-[1.35] tracking-tight max-md:text-[22px]">{material.title}</h1>
                 <div className="flex items-center gap-2 text-muted-foreground text-sm mt-2">

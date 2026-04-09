@@ -7,9 +7,9 @@
   --color-background: #FFFFFF;
   --color-foreground: #191F28;
 
-  --color-primary: #862633;
-  --color-primary-light: #A83344;
-  --color-primary-dark: #6B1E29;
+  --color-primary: #1B3A5C;
+  --color-primary-light: #2E8BC0;
+  --color-primary-dark: #142D47;
   --color-primary-foreground: #FFFFFF;
 
   --color-secondary: #F2F4F6;
@@ -29,7 +29,7 @@
 
   --color-border: #E5E8EB;
   --color-input: #E5E8EB;
-  --color-ring: #862633;
+  --color-ring: #1B3A5C;
 
   --color-card: #FFFFFF;
   --color-card-foreground: #191F28;
@@ -107,16 +107,16 @@ a {
 }
 
 ::selection {
-  background: rgba(134, 38, 51, 0.15);
+  background: rgba(27, 58, 92, 0.15);
   color: var(--color-foreground);
 }
 
 /* Legacy CSS variable compat for pages not yet migrated */
 :root {
-  --primary: #862633;
-  --primary-light: #A83344;
-  --primary-dark: #6B1E29;
-  --primary-bg: rgba(134, 38, 51, 0.06);
+  --primary: #1B3A5C;
+  --primary-light: #2E8BC0;
+  --primary-dark: #142D47;
+  --primary-bg: rgba(27, 58, 92, 0.06);
   --bg: #FFFFFF;
   --bg-secondary: #F2F4F6;
   --bg-tertiary: #F7F8FA;
@@ -140,4 +140,84 @@ a {
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.1);
   --max-width: 1140px;
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 고려대학교 페이지 크림슨 테마 */
+.korea-univ-theme {
+  --color-primary: #862633;
+  --color-primary-light: #A83344;
+  --color-primary-dark: #6B1E29;
+  --color-ring: #862633;
+}
+
+/* 서울대학교 네이비 블루 테마 */
+.snu-theme {
+  --color-primary: #003458;
+  --color-primary-light: #0A4A75;
+  --color-primary-dark: #002440;
+  --color-ring: #003458;
+}
+
+/* 연세대학교 로얄 블루 테마 */
+.yonsei-theme {
+  --color-primary: #003876;
+  --color-primary-light: #0A4E93;
+  --color-primary-dark: #002B5C;
+  --color-ring: #003876;
+}
+
+/* 서강대학교 마룬 레드 테마 */
+.sogang-theme {
+  --color-primary: #9E1B32;
+  --color-primary-light: #B82A44;
+  --color-primary-dark: #7E1528;
+  --color-ring: #9E1B32;
+}
+
+/* 성균관대학교 그린 테마 */
+.skku-theme {
+  --color-primary: #004B49;
+  --color-primary-light: #0A6360;
+  --color-primary-dark: #003836;
+  --color-ring: #004B49;
+}
+
+/* 한양대학교 블루 테마 */
+.hanyang-theme {
+  --color-primary: #0E4A84;
+  --color-primary-light: #1A609E;
+  --color-primary-dark: #0A3868;
+  --color-ring: #0E4A84;
+}
+
+/* 중앙대학교 블루 테마 */
+.cau-theme {
+  --color-primary: #004C97;
+  --color-primary-light: #0A62B3;
+  --color-primary-dark: #003A75;
+  --color-ring: #004C97;
+}
+
+/* 경희대학교 브라운 레드 테마 */
+.khu-theme {
+  --color-primary: #7B2D26;
+  --color-primary-light: #963A32;
+  --color-primary-dark: #61231E;
+  --color-ring: #7B2D26;
+}
+
+/* 한국외대 블루 테마 */
+.hufs-theme {
+  --color-primary: #003478;
+  --color-primary-light: #0A4A95;
+  --color-primary-dark: #00275C;
+  --color-ring: #003478;
+}
+
+/* 서울시립대학교 블루 테마 */
+.uos-theme {
+  --color-primary: #003DA5;
+  --color-primary-light: #0A53C0;
+  --color-primary-dark: #002F82;
+  --color-ring: #003DA5;
 }
