@@ -861,6 +861,12 @@ export const requestVerification = onCall({ secrets: ALIGO_SECRETS }, async (req
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
+  // 서버 IP 확인
+  try {
+    const ipRes = await axios.get("https://api.ipify.org?format=json");
+    console.log("[SERVER_IP]", ipRes.data.ip);
+  } catch (e) {}
+
   // 알리고 알림톡 발송 (본인인증)
   try {
     if (ALIGO_API_KEY && ALIGO_SENDER_KEY) {
