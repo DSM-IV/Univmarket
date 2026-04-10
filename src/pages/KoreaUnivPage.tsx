@@ -398,7 +398,7 @@ export default function KoreaUnivPage() {
                     "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors border cursor-pointer",
                     active
                       ? "bg-[#862633] text-white border-[#862633]"
-                      : "bg-white text-[#862633] border-[#862633]/20 hover:bg-[#862633]/5"
+                      : "bg-white text-black border-[#862633]/20 hover:bg-[#862633]/5"
                   )}
                 >
                   <span>{cat.icon}</span>
@@ -550,7 +550,7 @@ export default function KoreaUnivPage() {
                         });
                         navigate(`/upload?${params.toString()}`);
                       }}
-                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-[#862633]/30 text-[#862633] hover:bg-[#862633]/5 transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-[#862633]/30 text-black hover:bg-[#862633]/5 transition-colors cursor-pointer"
                     >
                       <Upload className="w-4 h-4" />
                       이 과목 자료 업로드하기
