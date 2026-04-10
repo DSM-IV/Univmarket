@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { collection, getDocs, orderBy, query, limit, where } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { categories, departments, departmentCourses, courseProfessors } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
-import { ChevronRight, Hand, Plus, X, Bell, MessageSquarePlus } from "lucide-react";
+import { ChevronRight, Hand, Plus, X, Bell, MessageSquarePlus, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Material } from "../types";
 
@@ -24,11 +24,13 @@ interface MaterialRequest {
   needCount: number;
   needUsers: string[];
   status: string;
+  category?: string;
   createdAt: string;
 }
 
 export default function KoreaUnivPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [popularMaterials, setPopularMaterials] = useState<Material[]>([]);
   const [recentMaterials, setRecentMaterials] = useState<Material[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStats>({});
@@ -36,6 +38,7 @@ export default function KoreaUnivPage() {
 
   // 자료 요청 관련
   const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>([]);
+  const [selectedReqCategory, setSelectedReqCategory] = useState<string>("수업");
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [reqDept, setReqDept] = useState("");
   const [reqSubject, setReqSubject] = useState("");
@@ -43,6 +46,10 @@ export default function KoreaUnivPage() {
   const [reqLoading, setReqLoading] = useState(false);
   const [needLoading, setNeedLoading] = useState<string | null>(null);
   const [showNeedAlert, setShowNeedAlert] = useState(false);
+
+  const filteredRequests = materialRequests.filter(
+    (r) => (r.category || "수업") === selectedReqCategory
+  );
 
   const fetchRequests = async () => {
     try {
@@ -378,6 +385,29 @@ export default function KoreaUnivPage() {
             </div>
           )}
 
+          {/* 카테고리 탭 */}
+          <div className="flex flex-wrap gap-2 mb-5">
+            {categories.map((cat) => {
+              const active = selectedReqCategory === cat.name;
+              return (
+                <button
+                  key={cat.name}
+                  type="button"
+                  onClick={() => setSelectedReqCategory(cat.name)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-sm font-semibold transition-colors border cursor-pointer",
+                    active
+                      ? "bg-[#862633] text-white border-[#862633]"
+                      : "bg-white text-[#862633] border-[#862633]/20 hover:bg-[#862633]/5"
+                  )}
+                >
+                  <span>{cat.icon}</span>
+                  {cat.name}
+                </button>
+              );
+            })}
+          </div>
+
           {/* 요청 작성 폼 */}
           {showRequestForm && (
             <Card className="mb-6 border-[#862633]/20">
@@ -468,31 +498,28 @@ export default function KoreaUnivPage() {
           )}
 
           {/* 요청 목록 */}
-          {materialRequests.length === 0 ? (
+          {filteredRequests.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <MessageSquarePlus className="w-10 h-10 mx-auto mb-3 opacity-40" />
               <p className="text-sm">아직 요청이 없어요. 첫 번째 요청을 남겨보세요!</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
-              {materialRequests.map((req) => (
+              {filteredRequests.map((req) => (
                 <Card key={req.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-[15px] font-bold text-foreground truncate">{req.subject}</h4>
-                        {req.professor && (
-                          <p className="text-xs text-muted-foreground mt-0.5">{req.professor} 교수님</p>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground shrink-0">{req.nickname}</span>
+                    <div className="mb-3">
+                      <h4 className="text-[15px] font-bold text-foreground truncate">{req.subject}</h4>
+                      {req.professor && (
+                        <p className="text-xs text-muted-foreground mt-0.5">{req.professor} 교수님</p>
+                      )}
                     </div>
                     {req.description && (
                       <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">
                         {req.description}
                       </p>
                     )}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-3">
                       <button
                         className={cn(
                           "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer border-none",
@@ -513,6 +540,21 @@ export default function KoreaUnivPage() {
                         </Link>
                       )}
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const params = new URLSearchParams({
+                          category: req.category || "수업",
+                          subject: req.subject,
+                          professor: req.professor || "",
+                        });
+                        navigate(`/upload?${params.toString()}`);
+                      }}
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-[#862633]/30 text-[#862633] hover:bg-[#862633]/5 transition-colors cursor-pointer"
+                    >
+                      <Upload className="w-4 h-4" />
+                      이 과목 자료 업로드하기
+                    </button>
                   </CardContent>
                 </Card>
               ))}

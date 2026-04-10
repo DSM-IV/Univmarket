@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { categories, departments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 import { httpsCallable } from "firebase/functions";
@@ -49,6 +49,7 @@ interface PreviewImage {
 export default function UploadPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewInputRef = useRef<HTMLInputElement>(null);
   const gradeInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +77,38 @@ export default function UploadPage() {
     price: "",
     pages: "",
   });
+  const [prefilledFromRequest, setPrefilledFromRequest] = useState(false);
+
+  useEffect(() => {
+    const qpSubject = searchParams.get("subject");
+    const qpProfessor = searchParams.get("professor") || "";
+    const qpCategory = searchParams.get("category") || "수업";
+    if (!qpSubject) return;
+
+    let foundDept = "";
+    for (const dept of Object.keys(departmentCourses)) {
+      if (departmentCourses[dept].includes(qpSubject)) {
+        foundDept = dept;
+        break;
+      }
+    }
+
+    const subjectInList = !!foundDept;
+    const professorInList =
+      subjectInList && (courseProfessors[qpSubject] || []).includes(qpProfessor);
+
+    setFormData((prev) => ({
+      ...prev,
+      category: qpCategory,
+      department: foundDept,
+      subject: qpSubject,
+      professor: qpProfessor,
+    }));
+    setIsuType("전공");
+    setCustomSubject(!subjectInList);
+    setCustomProfessor(!!qpProfessor && !professorInList);
+    setPrefilledFromRequest(true);
+  }, [searchParams]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -465,6 +498,15 @@ export default function UploadPage() {
                 기본 정보
               </h2>
 
+              {prefilledFromRequest && (
+                <div className="mb-4 flex items-start gap-2 bg-[#862633]/5 border border-[#862633]/20 text-[#862633] rounded-lg py-3 px-4 text-sm">
+                  <Lightbulb className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>
+                    요청 게시판에서 넘어온 정보로 과목/교수가 미리 입력되었어요. 자유롭게 수정 가능합니다.
+                  </span>
+                </div>
+              )}
+
               <div className="mb-4">
                 <label htmlFor="title" className="block text-[13px] font-semibold mb-2 text-foreground">
                   자료 제목 *
@@ -706,7 +748,8 @@ export default function UploadPage() {
               {/* 과목명 — 학과/분류 선택 후 표시, 학기 선택 시 해당 학기 과목만 */}
               {formData.category === "수업" && (
                 (isuType === "전공" && formData.department) ||
-                ((isuType === "학문의기초" || isuType === "교양" || isuType === "교직") && subCategory)
+                ((isuType === "학문의기초" || isuType === "교양" || isuType === "교직") && subCategory) ||
+                (customSubject && prefilledFromRequest)
               ) && (
                 <div className="mb-4">
                   <label htmlFor="subject" className="block text-[13px] font-semibold mb-2 text-foreground">
