@@ -190,11 +190,11 @@ export default function KoreaUnivPage() {
           {/* UniFile → File in KU 애니메이션 */}
           <h1 className="text-[52px] font-extrabold leading-[1.25] text-foreground mb-3 max-sm:text-[34px]">
             <span className="inline-flex items-baseline">
-              {/* File: 블루 유지, 초기엔 오른쪽으로 이동 */}
+              {/* File: 검정, 초기엔 오른쪽으로 이동 */}
               <span
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
-                  color: "#2E8BC0",
+                  color: "#000000",
                   transform: transformed ? "translateX(0)" : "translateX(1.8em)",
                 }}
               >
@@ -209,7 +209,7 @@ export default function KoreaUnivPage() {
               <span
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
-                  color: "#1B3A5C",
+                  color: "#000000",
                   transform: transformed ? "translateX(0)" : "translateX(-0.25em)",
                 }}
               >
@@ -219,7 +219,7 @@ export default function KoreaUnivPage() {
               <span
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
-                  color: "#1B3A5C",
+                  color: "#000000",
                   transform: transformed ? "translateX(0)" : "translateX(-1.15em)",
                 }}
               >
@@ -241,11 +241,11 @@ export default function KoreaUnivPage() {
               >
                 K
               </span>
-              {/* U: 네이비 → 크림슨, 초기엔 맨 왼쪽으로 이동 */}
+              {/* U: 검정 → 크림슨, 초기엔 맨 왼쪽으로 이동 */}
               <span
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
-                  color: transformed ? "#862633" : "#1B3A5C",
+                  color: transformed ? "#862633" : "#000000",
                   transform: transformed ? "translateX(0)" : "translateX(-2.5em)",
                 }}
               >

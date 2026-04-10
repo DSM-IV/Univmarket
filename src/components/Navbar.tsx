@@ -108,7 +108,7 @@ export default function Navbar() {
                 variant="default"
                 size="sm"
                 onClick={handleLogout}
-                className="rounded-full"
+                className="rounded-full bg-[#862633] hover:bg-[#6e1f2b] text-white"
               >
                 로그아웃
               </Button>
@@ -202,7 +202,7 @@ export default function Navbar() {
                   variant="default"
                   size="sm"
                   onClick={() => { closeMobile(); handleLogout(); }}
-                  className="rounded-full w-full"
+                  className="rounded-full w-full bg-[#862633] hover:bg-[#6e1f2b] text-white"
                 >
                   로그아웃
                 </Button>
