@@ -56,6 +56,7 @@ export default function KoreaUnivPage() {
       const q = query(
         collection(db, "material_requests"),
         where("status", "==", "open"),
+        where("needCount", ">", 0),
         orderBy("needCount", "desc"),
         limit(20)
       );
