@@ -4,7 +4,7 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import axios from "axios";
 import cors from "cors";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, PutBucketCorsCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
@@ -46,6 +46,9 @@ function getR2Client() {
       accessKeyId: process.env.R2_ACCESS_KEY_ID!,
       secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
     },
+    // R2는 SDK v3의 기본 flexible checksum을 지원하지 않아 signed URL이 꼬임
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
   });
 }
 
@@ -207,6 +210,32 @@ export const verifyKakaoCode = onCall(async (request) => {
     name: session.name,
     phone: session.phone,
   };
+});
+
+// R2 버킷 CORS 설정 (관리자 전용, 일회성 실행용)
+export const setR2Cors = onCall({ secrets: R2_SECRETS }, async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  await verifyAdmin(uid);
+
+  const r2 = getR2Client();
+  const command = new PutBucketCorsCommand({
+    Bucket: process.env.R2_BUCKET_NAME!,
+    CORSConfiguration: {
+      CORSRules: [
+        {
+          AllowedOrigins: ["*"],
+          AllowedMethods: ["GET", "PUT", "HEAD"],
+          AllowedHeaders: ["*"],
+          ExposeHeaders: ["ETag"],
+          MaxAgeSeconds: 3600,
+        },
+      ],
+    },
+  });
+
+  await r2.send(command);
+  return { success: true, message: "R2 CORS 설정이 적용되었습니다." };
 });
 
 // R2 업로드 presigned URL 생성

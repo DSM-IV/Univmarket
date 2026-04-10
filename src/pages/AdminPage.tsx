@@ -440,8 +440,27 @@ export default function AdminPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-4xl px-4">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">관리자 페이지</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              if (!confirm("R2 버킷 CORS 설정을 적용할까요? (최초 1회만 실행)")) return;
+              try {
+                const fn = httpsCallable<Record<string, never>, { success: boolean; message: string }>(
+                  functions,
+                  "setR2Cors"
+                );
+                const res = await fn({});
+                alert(res.data.message || "R2 CORS 설정 완료");
+              } catch (e) {
+                alert("R2 CORS 설정 실패: " + (e as Error).message);
+              }
+            }}
+          >
+            R2 CORS 설정
+          </Button>
         </div>
 
         {/* Section Toggle */}
