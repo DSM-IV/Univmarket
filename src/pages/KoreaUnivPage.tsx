@@ -60,7 +60,9 @@ export default function KoreaUnivPage() {
           createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
         })) as MaterialRequest[]
       );
-    } catch {}
+    } catch (err) {
+      console.error("자료 요청 목록 조회 실패:", err);
+    }
   };
 
   const handleSubmitRequest = async () => {
