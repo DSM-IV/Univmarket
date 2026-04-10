@@ -220,7 +220,16 @@ export const getUploadUrl = onCall({ secrets: R2_SECRETS }, async (request) => {
   }
 
   const r2 = getR2Client();
-  const key = `materials/${uid}/${Date.now()}_${fileName}`;
+  // 파일명 정리: 확장자는 유지하고, 본문은 영숫자/하이픈/언더스코어만 남김
+  const lastDot = fileName.lastIndexOf(".");
+  const ext = lastDot >= 0 ? fileName.slice(lastDot + 1).toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+  const base = (lastDot >= 0 ? fileName.slice(0, lastDot) : fileName)
+    .replace(/[^a-zA-Z0-9-_]/g, "_")
+    .replace(/_{2,}/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 80) || "file";
+  const safeName = ext ? `${base}.${ext}` : base;
+  const key = `materials/${uid}/${Date.now()}_${safeName}`;
 
   const command = new PutObjectCommand({
     Bucket: process.env.R2_BUCKET_NAME!,
@@ -832,6 +841,85 @@ export const purchaseMaterial = onCall(async (request) => {
   });
 
   return { success: true };
+});
+
+// --- 클로즈드 베타 이벤트: 응모 ---
+const RAFFLE_POINTS_PER_TICKET = 1000;
+const RAFFLE_ALLOWED_PRODUCT_IDS = new Set(["ipad-air-4"]);
+
+export const enterRaffle = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  const { productId, quantity } = request.data || {};
+
+  if (typeof productId !== "string" || !RAFFLE_ALLOWED_PRODUCT_IDS.has(productId)) {
+    throw new HttpsError("invalid-argument", "잘못된 응모 상품입니다.");
+  }
+
+  const qty = Number(quantity);
+  if (!Number.isInteger(qty) || qty < 1 || qty > 100) {
+    throw new HttpsError("invalid-argument", "응모 수량은 1~100 사이여야 합니다.");
+  }
+
+  const pointsNeeded = qty * RAFFLE_POINTS_PER_TICKET;
+  const userRef = db.collection("users").doc(uid);
+  const entryRef = db.collection("raffle_entries").doc(`${uid}_${productId}`);
+
+  const result = await db.runTransaction(async (tx) => {
+    const userDoc = await tx.get(userRef);
+    if (!userDoc.exists) {
+      throw new HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
+    }
+
+    const userData = userDoc.data()!;
+    const currentPoints = Number(userData.points || 0);
+    if (currentPoints < pointsNeeded) {
+      throw new HttpsError("failed-precondition", "포인트가 부족합니다.");
+    }
+
+    const entryDoc = await tx.get(entryRef);
+    const currentCount = entryDoc.exists ? Number(entryDoc.data()!.count || 0) : 0;
+    const newPoints = currentPoints - pointsNeeded;
+    const newCount = currentCount + qty;
+
+    tx.update(userRef, {
+      points: newPoints,
+      totalSpent: admin.firestore.FieldValue.increment(pointsNeeded),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    tx.set(
+      entryRef,
+      {
+        uid,
+        productId,
+        count: newCount,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        ...(entryDoc.exists
+          ? {}
+          : { createdAt: admin.firestore.FieldValue.serverTimestamp() }),
+      },
+      { merge: true }
+    );
+
+    tx.create(db.collection("transactions").doc(), {
+      userId: uid,
+      type: "raffle_entry",
+      amount: -pointsNeeded,
+      balanceAfter: newPoints,
+      balanceType: "points",
+      description: `이벤트 응모권 ${qty}개 (${productId})`,
+      relatedProductId: productId,
+      quantity: qty,
+      status: "completed",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    return { success: true, newPoints, newCount };
+  });
+
+  return result;
 });
 
 // --- 본인인증 ---

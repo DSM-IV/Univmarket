@@ -638,7 +638,13 @@ export default function AdminPage() {
                         </div>
                         <span className={cn(
                           "text-lg font-extrabold",
-                          req.gradeClaim.startsWith("A") ? "text-amber-600" : req.gradeClaim.startsWith("B") ? "text-blue-600" : "text-green-600"
+                          req.gradeClaim === "P"
+                            ? "text-purple-600"
+                            : req.gradeClaim.startsWith("A")
+                              ? "text-amber-600"
+                              : req.gradeClaim.startsWith("B")
+                                ? "text-blue-600"
+                                : "text-green-600"
                         )}>
                           {req.gradeClaim}
                         </span>
@@ -687,7 +693,7 @@ export default function AdminPage() {
                           <Separator className="my-4" />
                           <div className="flex flex-wrap gap-2 items-center">
                             <span className="text-xs text-gray-500 mr-1">승인 성적:</span>
-                            {["A+", "A", "B+", "B", "C+", "C"].map((g) => (
+                            {["A+", "A", "B+", "B", "C+", "C", "P"].map((g) => (
                               <Button
                                 key={g}
                                 variant={g === req.gradeClaim ? "default" : "outline"}

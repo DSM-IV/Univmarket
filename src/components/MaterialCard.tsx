@@ -10,11 +10,13 @@ interface Props {
 }
 
 function GradeBadge({ grade }: { grade: string }) {
-  const colorClass = grade.startsWith("A")
-    ? "bg-amber-500/15 text-amber-700 border-amber-400/40"
-    : grade.startsWith("B")
-      ? "bg-blue-500/15 text-blue-700 border-blue-400/40"
-      : "bg-green-500/15 text-green-700 border-green-400/40";
+  const colorClass = grade === "P"
+    ? "bg-purple-500/15 text-purple-700 border-purple-400/40"
+    : grade.startsWith("A")
+      ? "bg-amber-500/15 text-amber-700 border-amber-400/40"
+      : grade.startsWith("B")
+        ? "bg-blue-500/15 text-blue-700 border-blue-400/40"
+        : "bg-green-500/15 text-green-700 border-green-400/40";
   return (
     <span className={`inline-flex items-center gap-0.5 text-[11px] font-extrabold px-1.5 py-0.5 rounded border ${colorClass}`}>
       {grade}

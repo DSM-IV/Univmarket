@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { categories, departments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
@@ -25,6 +25,7 @@ const ALLOWED_TYPES = [
 ];
 const MAX_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_PREVIEWS = 5;
+const MAX_FILES = 10;
 
 function getFileTypeLabel(file: File): string {
   const ext = file.name.split(".").pop()?.toUpperCase() || "";
@@ -53,7 +54,7 @@ export default function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewInputRef = useRef<HTMLInputElement>(null);
   const gradeInputRef = useRef<HTMLInputElement>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
@@ -65,6 +66,8 @@ export default function UploadPage() {
   const [customProfessor, setCustomProfessor] = useState(false);
   const [isuType, setIsuType] = useState(""); // 전공, 학문의기초, 교양, 교직
   const [subCategory, setSubCategory] = useState(""); // 학문의기초/교양/교직 하위분류
+  const [courseSearch, setCourseSearch] = useState("");
+  const [showCourseResults, setShowCourseResults] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -110,6 +113,53 @@ export default function UploadPage() {
     setPrefilledFromRequest(true);
   }, [searchParams]);
 
+  // 과목 검색 인덱스: (과목명, 이수구분, 학과/분류)
+  const courseIndex = useMemo(() => {
+    const list: Array<{ subject: string; isuType: string; dept: string }> = [];
+    for (const [dept, courses] of Object.entries(departmentCourses)) {
+      for (const c of courses) list.push({ subject: c, isuType: "전공", dept });
+    }
+    for (const [isu, subMap] of Object.entries(coursesByIsuCategory)) {
+      for (const [sub, courses] of Object.entries(subMap)) {
+        for (const c of courses) list.push({ subject: c, isuType: isu, dept: sub });
+      }
+    }
+    return list;
+  }, []);
+
+  const courseSearchResults = useMemo(() => {
+    const q = courseSearch.trim().toLowerCase();
+    if (!q) return [];
+    return courseIndex
+      .filter((item) => item.subject.toLowerCase().includes(q))
+      .slice(0, 30);
+  }, [courseSearch, courseIndex]);
+
+  const selectCourseFromSearch = (item: { subject: string; isuType: string; dept: string }) => {
+    setIsuType(item.isuType);
+    setCustomSubject(false);
+    setCustomProfessor(false);
+    if (item.isuType === "전공") {
+      setSubCategory("");
+      setFormData((prev) => ({
+        ...prev,
+        department: item.dept,
+        subject: item.subject,
+        professor: "",
+      }));
+    } else {
+      setSubCategory(item.dept);
+      setFormData((prev) => ({
+        ...prev,
+        department: "",
+        subject: item.subject,
+        professor: "",
+      }));
+    }
+    setCourseSearch("");
+    setShowCourseResults(false);
+  };
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -118,6 +168,8 @@ export default function UploadPage() {
       setCustomSubject(false);
       setIsuType("");
       setSubCategory("");
+      setCourseSearch("");
+      setShowCourseResults(false);
       setFormData({ ...formData, [name]: value, subType: "", subject: "", department: "" });
       return;
     } else if (name === "department") {
@@ -145,21 +197,46 @@ export default function UploadPage() {
     return null;
   };
 
-  const handleFile = async (f: File) => {
-    const err = validateFile(f);
-    if (err) {
-      setError(err);
-      return;
-    }
-    setError("");
-    setFile(f);
+  const addFiles = (incoming: File[]) => {
+    if (incoming.length === 0) return;
+    setFiles((prev) => {
+      const remaining = MAX_FILES - prev.length;
+      if (remaining <= 0) {
+        setError(`파일은 최대 ${MAX_FILES}개까지 업로드할 수 있습니다.`);
+        return prev;
+      }
+      const accepted: File[] = [];
+      for (const f of incoming) {
+        if (accepted.length >= remaining) break;
+        const err = validateFile(f);
+        if (err) {
+          setError(err);
+          continue;
+        }
+        // 중복 방지: 이름+크기 기준
+        if (prev.some((p) => p.name === f.name && p.size === f.size)) continue;
+        accepted.push(f);
+      }
+      if (accepted.length === 0) return prev;
+      setError("");
+      const next = [...prev, ...accepted];
+      if (incoming.length > remaining) {
+        setError(`파일은 최대 ${MAX_FILES}개까지 업로드할 수 있습니다.`);
+      }
+      return next;
+    });
+  };
+
+  const removeFile = (idx: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
     if (e.dataTransfer.files.length > 0) {
-      handleFile(e.dataTransfer.files[0]);
+      addFiles(Array.from(e.dataTransfer.files));
     }
   };
 
@@ -175,7 +252,7 @@ export default function UploadPage() {
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      handleFile(e.target.files[0]);
+      addFiles(Array.from(e.target.files));
     }
   };
 
@@ -241,7 +318,7 @@ export default function UploadPage() {
       }
     }
 
-    if (!file) {
+    if (files.length === 0) {
       setError("파일을 선택해주세요.");
       return;
     }
@@ -265,17 +342,44 @@ export default function UploadPage() {
         { uploadUrl: string; fileUrl: string; key: string }
       >(functions, "getUploadUrl");
 
-      // 자료 파일 업로드
-      const { data } = await getUploadUrl({
-        fileName: file.name,
-        contentType: file.type || "application/octet-stream",
-      });
-
-      await fetch(data.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type || "application/octet-stream" },
-        body: file,
-      });
+      // 자료 파일 업로드 (최대 10개)
+      const uploadedFiles: Array<{
+        fileUrl: string;
+        key: string;
+        name: string;
+        size: number;
+        type: string;
+      }> = [];
+      for (const f of files) {
+        const ct = f.type || "application/octet-stream";
+        let fdata: { uploadUrl: string; fileUrl: string; key: string };
+        try {
+          const res = await getUploadUrl({ fileName: f.name, contentType: ct });
+          fdata = res.data;
+        } catch (e) {
+          throw new Error(`업로드 URL 발급 실패 (${f.name}): ${(e as Error).message}`);
+        }
+        try {
+          const putRes = await fetch(fdata.uploadUrl, {
+            method: "PUT",
+            headers: { "Content-Type": ct },
+            body: f,
+          });
+          if (!putRes.ok) {
+            throw new Error(`HTTP ${putRes.status}`);
+          }
+        } catch (e) {
+          throw new Error(`파일 업로드 실패 (${f.name}): ${(e as Error).message}`);
+        }
+        uploadedFiles.push({
+          fileUrl: fdata.fileUrl,
+          key: fdata.key,
+          name: f.name,
+          size: f.size,
+          type: getFileTypeLabel(f),
+        });
+      }
+      const primaryFile = uploadedFiles[0];
 
       // 미리보기 이미지들 업로드
       const uploadedPreviewUrls: string[] = [];
@@ -320,12 +424,20 @@ export default function UploadPage() {
         subject: formData.subject,
         professor: formData.professor,
         price: parseInt(formData.price),
-        fileType: getFileTypeLabel(file),
+        fileType: primaryFile.type,
         pages: formData.pages ? parseInt(formData.pages) : 0,
-        fileUrl: data.fileUrl,
-        fileKey: data.key,
-        fileName: file.name,
-        fileSize: file.size,
+        // 레거시 호환: 첫 번째 파일을 단일 필드로 노출 (다운로드/스캔 경로용)
+        fileUrl: primaryFile.fileUrl,
+        fileKey: primaryFile.key,
+        fileName: primaryFile.name,
+        fileSize: primaryFile.size,
+        // 다중 파일 배열
+        fileUrls: uploadedFiles.map((f) => f.fileUrl),
+        fileKeys: uploadedFiles.map((f) => f.key),
+        fileNames: uploadedFiles.map((f) => f.name),
+        fileSizes: uploadedFiles.map((f) => f.size),
+        fileTypes: uploadedFiles.map((f) => f.type),
+        fileCount: uploadedFiles.length,
         thumbnail: uploadedPreviewUrls[0] || "",
         previewImages: uploadedPreviewUrls,
         author: userProfile?.nickname || user.displayName || user.email || "",
@@ -565,11 +677,93 @@ export default function UploadPage() {
                   </label>
                   <Input
                     type="text"
-                    value={file ? getFileTypeLabel(file) : "파일 업로드 시 자동 감지"}
+                    value={
+                      files.length === 0
+                        ? "파일 업로드 시 자동 감지"
+                        : files.length === 1
+                          ? getFileTypeLabel(files[0])
+                          : `${Array.from(new Set(files.map(getFileTypeLabel))).join(", ")} (${files.length}개)`
+                    }
                     disabled
                   />
                 </div>
               </div>
+
+              <div className="mb-4">
+                <label htmlFor="semester" className="block text-[13px] font-semibold mb-2 text-foreground">
+                  학기
+                </label>
+                <select
+                  id="semester"
+                  name="semester"
+                  value={formData.semester}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
+                >
+                  <option value="">학기를 선택하세요</option>
+                  {Array.from({ length: 6 }, (_, i) => 2025 - i).map((year) => (
+                    <optgroup key={year} label={`${year}학년도`}>
+                      <option value={`${year}-1`}>{year}학년도 1학기</option>
+                      <option value={`${year}-2`}>{year}학년도 2학기</option>
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              {/* 과목명 검색 — 클릭 시 이수구분/학과/과목명 자동 채움 */}
+              {formData.category === "수업" && (
+                <div className="mb-4">
+                  <label htmlFor="courseSearch" className="block text-[13px] font-semibold mb-2 text-foreground">
+                    과목명으로 빠르게 찾기
+                  </label>
+                  <div className="relative">
+                    <Input
+                      id="courseSearch"
+                      type="text"
+                      placeholder="과목명을 입력하세요 (예: 자료구조)"
+                      value={courseSearch}
+                      onChange={(e) => {
+                        setCourseSearch(e.target.value);
+                        setShowCourseResults(true);
+                      }}
+                      onFocus={() => setShowCourseResults(true)}
+                      onBlur={() => {
+                        // 클릭 이벤트가 먼저 처리되도록 지연
+                        setTimeout(() => setShowCourseResults(false), 150);
+                      }}
+                      autoComplete="off"
+                    />
+                    {showCourseResults && courseSearchResults.length > 0 && (
+                      <div className="absolute z-20 left-0 right-0 mt-1 max-h-72 overflow-auto rounded-lg border border-border bg-background shadow-lg">
+                        {courseSearchResults.map((item, idx) => (
+                          <button
+                            key={`${item.subject}-${item.isuType}-${item.dept}-${idx}`}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              selectCourseFromSearch(item);
+                            }}
+                            className="w-full text-left px-4 py-2.5 hover:bg-accent transition-colors border-b border-border last:border-b-0"
+                          >
+                            <div className="text-sm font-medium text-foreground">{item.subject}</div>
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {item.isuType} · {item.dept}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {showCourseResults && courseSearch.trim() && courseSearchResults.length === 0 && (
+                      <div className="absolute z-20 left-0 right-0 mt-1 rounded-lg border border-border bg-background shadow-lg px-4 py-3 text-xs text-muted-foreground">
+                        일치하는 과목이 없습니다. 아래에서 직접 선택해주세요.
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    검색 결과를 클릭하면 이수구분·학과·과목명이 자동으로 입력됩니다.
+                  </p>
+                </div>
+              )}
 
               {/* 이수구분 선택 (수업 카테고리) */}
               {formData.category === "수업" && (
@@ -724,27 +918,6 @@ export default function UploadPage() {
                 </div>
               )}
 
-              <div className="mb-4">
-                <label htmlFor="semester" className="block text-[13px] font-semibold mb-2 text-foreground">
-                  학기
-                </label>
-                <select
-                  id="semester"
-                  name="semester"
-                  value={formData.semester}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
-                >
-                  <option value="">학기를 선택하세요</option>
-                  {Array.from({ length: 6 }, (_, i) => 2025 - i).map((year) => (
-                    <optgroup key={year} label={`${year}학년도`}>
-                      <option value={`${year}-1`}>{year}학년도 1학기</option>
-                      <option value={`${year}-2`}>{year}학년도 2학기</option>
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-
               {/* 과목명 — 학과/분류 선택 후 표시, 학기 선택 시 해당 학기 과목만 */}
               {formData.category === "수업" && (
                 (isuType === "전공" && formData.department) ||
@@ -774,14 +947,21 @@ export default function UploadPage() {
                       className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
                     >
                       <option value="">과목을 선택하세요</option>
-                      {(isuType === "전공"
-                        ? departmentCourses[formData.department] || []
-                        : coursesByIsuCategory[isuType]?.[subCategory] || []
-                      ).filter((course) =>
-                        !formData.semester || !courseSemesters[course] || courseSemesters[course].includes(formData.semester)
-                      ).map((course) => (
-                        <option key={course} value={course}>{course}</option>
-                      ))}
+                      {(() => {
+                        const base = (isuType === "전공"
+                          ? departmentCourses[formData.department] || []
+                          : coursesByIsuCategory[isuType]?.[subCategory] || []
+                        ).filter((course) =>
+                          !formData.semester || !courseSemesters[course] || courseSemesters[course].includes(formData.semester)
+                        );
+                        // 검색으로 선택한 과목이 학기 필터에 걸러져도 항상 노출되도록 보정
+                        const list = formData.subject && !base.includes(formData.subject)
+                          ? [formData.subject, ...base]
+                          : base;
+                        return list.map((course) => (
+                          <option key={course} value={course}>{course}</option>
+                        ));
+                      })()}
                       <option value="__custom__">기타 (직접 입력)</option>
                     </select>
                   ) : (
@@ -818,7 +998,7 @@ export default function UploadPage() {
                   </label>
                   {!customSubject && !customProfessor && (
                     (formData.semester && courseProfessorsBySemester[formData.semester]?.[formData.subject]) ||
-                    (!formData.semester && courseProfessors[formData.subject])
+                    courseProfessors[formData.subject]
                   ) ? (
                     <select
                       id="professor"
@@ -835,8 +1015,8 @@ export default function UploadPage() {
                       className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
                     >
                       <option value="">교수를 선택하세요</option>
-                      {(formData.semester
-                        ? courseProfessorsBySemester[formData.semester]?.[formData.subject] || []
+                      {((formData.semester && courseProfessorsBySemester[formData.semester]?.[formData.subject])
+                        ? courseProfessorsBySemester[formData.semester][formData.subject]
                         : courseProfessors[formData.subject] || []
                       ).map((prof) => (
                         <option key={prof} value={prof}>{prof}</option>
@@ -914,58 +1094,70 @@ export default function UploadPage() {
               {/* 파일 업로드 영역 */}
               <div className="mb-4">
                 <label className="block text-[13px] font-semibold mb-2 text-foreground">
-                  파일 업로드 *
+                  파일 업로드 * ({files.length}/{MAX_FILES})
                 </label>
-                <div
-                  className={cn(
-                    "border-2 border-dashed rounded-lg py-11 px-5 text-center cursor-pointer transition-colors bg-muted",
-                    dragActive && "border-[#862633] bg-[#862633]/5",
-                    !dragActive && !file && "border-border hover:border-[#862633]/40 hover:bg-[#862633]/5",
-                    file && "border-solid border-green-500 bg-green-500/5"
-                  )}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.ppt,.pptx,.doc,.docx,.hwp"
-                    onChange={handleFileInput}
-                    hidden
-                  />
-                  {file ? (
-                    <div className="flex flex-col items-center gap-1.5">
-                      <div className="w-[42px] h-[42px] bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mb-1">
-                        <CheckCircle className="w-5 h-5" />
-                      </div>
-                      <p className="font-bold text-foreground text-[15px] break-all">{file.name}</p>
-                      <p className="text-[13px] text-muted-foreground">
-                        {getFileTypeLabel(file)} · {formatFileSize(file.size)}
-                      </p>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="mt-2.5 text-[13px] text-muted-foreground hover:text-[#862633] hover:bg-[#862633]/5"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFile(null);
-                          if (fileInputRef.current) fileInputRef.current.value = "";
-                        }}
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.ppt,.pptx,.doc,.docx,.hwp"
+                  multiple
+                  onChange={handleFileInput}
+                  hidden
+                />
+
+                {files.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    {files.map((f, idx) => (
+                      <div
+                        key={`${f.name}-${f.size}-${idx}`}
+                        className="flex items-center gap-3 rounded-lg border border-green-500/30 bg-green-500/5 px-4 py-3"
                       >
-                        파일 변경
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <Upload className="w-10 h-10 mx-auto mb-2.5 text-muted-foreground/60" strokeWidth={1.5} />
-                      <p className="text-sm text-muted-foreground">파일을 드래그하거나 클릭하여 업로드</p>
-                      <p className="text-xs text-muted-foreground/60 mt-1.5">PDF, PPT, DOCX, HWP (최대 50MB)</p>
-                    </>
-                  )}
-                </div>
+                        <div className="w-8 h-8 shrink-0 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center">
+                          <CheckCircle className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[14px] font-bold text-foreground truncate">{f.name}</p>
+                          <p className="text-[12px] text-muted-foreground">
+                            {getFileTypeLabel(f)} · {formatFileSize(f.size)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full bg-black/5 text-muted-foreground hover:bg-red-500 hover:text-white transition-colors"
+                          onClick={() => removeFile(idx)}
+                          aria-label="파일 삭제"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {files.length < MAX_FILES && (
+                  <div
+                    className={cn(
+                      "border-2 border-dashed rounded-lg py-11 px-5 text-center cursor-pointer transition-colors bg-muted",
+                      dragActive && "border-[#862633] bg-[#862633]/5",
+                      !dragActive && "border-border hover:border-[#862633]/40 hover:bg-[#862633]/5"
+                    )}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload className="w-10 h-10 mx-auto mb-2.5 text-muted-foreground/60" strokeWidth={1.5} />
+                    <p className="text-sm text-muted-foreground">
+                      {files.length === 0
+                        ? "파일을 드래그하거나 클릭하여 업로드"
+                        : "파일을 더 추가하려면 드래그하거나 클릭하세요"}
+                    </p>
+                    <p className="text-xs text-muted-foreground/60 mt-1.5">
+                      PDF, PPT, DOCX, HWP (파일당 최대 50MB, 최대 {MAX_FILES}개)
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* 미리보기 이미지 */}
@@ -1044,18 +1236,20 @@ export default function UploadPage() {
                   취득 성적
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {["A+", "A", "B+", "B", "C+", "C"].map((grade) => (
+                  {["A+", "A", "B+", "B", "C+", "C", "P"].map((grade) => (
                     <button
                       key={grade}
                       type="button"
                       className={cn(
                         "px-4 py-2 rounded-lg border text-sm font-bold transition-colors cursor-pointer",
                         gradeClaim === grade
-                          ? grade.startsWith("A")
-                            ? "border-amber-500 bg-amber-500/10 text-amber-700"
-                            : grade.startsWith("B")
-                              ? "border-blue-500 bg-blue-500/10 text-blue-700"
-                              : "border-green-500 bg-green-500/10 text-green-700"
+                          ? grade === "P"
+                            ? "border-purple-500 bg-purple-500/10 text-purple-700"
+                            : grade.startsWith("A")
+                              ? "border-amber-500 bg-amber-500/10 text-amber-700"
+                              : grade.startsWith("B")
+                                ? "border-blue-500 bg-blue-500/10 text-blue-700"
+                                : "border-green-500 bg-green-500/10 text-green-700"
                           : "border-border bg-background text-muted-foreground hover:bg-muted/70"
                       )}
                       onClick={() => setGradeClaim(gradeClaim === grade ? "" : grade)}

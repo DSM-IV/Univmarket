@@ -588,7 +588,16 @@ export default function DetailPage() {
                   )}
                   <Badge variant="secondary">{material.fileType}</Badge>
                   {(material as any).gradeStatus === "verified" && (material as any).verifiedGrade && (
-                    <Badge className="bg-amber-500/15 text-amber-700 border-amber-400/40 font-extrabold gap-1 hover:bg-amber-500/20">
+                    <Badge className={cn(
+                      "font-extrabold gap-1",
+                      (material as any).verifiedGrade === "P"
+                        ? "bg-purple-500/15 text-purple-700 border-purple-400/40 hover:bg-purple-500/20"
+                        : (material as any).verifiedGrade.startsWith("A")
+                          ? "bg-amber-500/15 text-amber-700 border-amber-400/40 hover:bg-amber-500/20"
+                          : (material as any).verifiedGrade.startsWith("B")
+                            ? "bg-blue-500/15 text-blue-700 border-blue-400/40 hover:bg-blue-500/20"
+                            : "bg-green-500/15 text-green-700 border-green-400/40 hover:bg-green-500/20"
+                    )}>
                       <GraduationCap className="w-3 h-3" />
                       성적 인증 {(material as any).verifiedGrade}
                     </Badge>

@@ -190,11 +190,11 @@ export default function KoreaUnivPage() {
           {/* UniFile → File in KU 애니메이션 */}
           <h1 className="text-[52px] font-extrabold leading-[1.25] text-foreground mb-3 max-sm:text-[34px]">
             <span className="inline-flex items-baseline">
-              {/* File: 파랑 → 검정, 초기엔 오른쪽으로 이동 */}
+              {/* File: 파랑 유지, 초기엔 오른쪽으로 이동 */}
               <span
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
-                  color: transformed ? "#000000" : "#2E8BC0",
+                  color: "#2E8BC0",
                   transform: transformed ? "translateX(0)" : "translateX(1.8em)",
                 }}
               >
@@ -205,21 +205,21 @@ export default function KoreaUnivPage() {
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{ width: transformed ? "0.3em" : "0" }}
               />
-              {/* i: 네이비 → 검정, 초기엔 n 뒤로 이동 (ni 순서) */}
+              {/* i: 네이비 유지, 초기엔 n 뒤로 이동 (ni 순서) */}
               <span
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
-                  color: transformed ? "#000000" : "#1B3A5C",
+                  color: "#1B3A5C",
                   transform: transformed ? "translateX(0)" : "translateX(-0.25em)",
                 }}
               >
                 i
               </span>
-              {/* n: 네이비 → 검정, 초기엔 i 앞으로 이동 (ni 순서) */}
+              {/* n: 네이비 유지, 초기엔 i 앞으로 이동 (ni 순서) */}
               <span
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
-                  color: transformed ? "#000000" : "#1B3A5C",
+                  color: "#1B3A5C",
                   transform: transformed ? "translateX(0)" : "translateX(-1.15em)",
                 }}
               >
@@ -377,7 +377,7 @@ export default function KoreaUnivPage() {
             {user && (
               <Button
                 size="sm"
-                className="bg-[#862633] hover:bg-[#6e1f2b] text-white shrink-0"
+                className="bg-[#862633] hover:bg-[#6B1E29] text-white shrink-0"
                 onClick={() => setShowRequestForm((v) => !v)}
               >
                 <Plus className="w-4 h-4 mr-1" />
@@ -489,7 +489,7 @@ export default function KoreaUnivPage() {
                   return null;
                 })()}
                 <Button
-                  className="w-full bg-[#862633] hover:bg-[#6e1f2b] text-white"
+                  className="w-full bg-[#862633] hover:bg-[#6B1E29] text-white"
                   onClick={handleSubmitRequest}
                   disabled={reqLoading || !reqSubject.trim()}
                 >
@@ -580,7 +580,7 @@ export default function KoreaUnivPage() {
             내 공부자료로<br />수익을 만들어 보세요
           </h2>
           <p className="text-base text-muted-foreground mb-9">
-            노트, 족보, 레포트 등 어떤 자료든 판매할 수 있어요
+            노트, 자소서, 레포트 등 어떤 자료든 판매할 수 있어요
           </p>
           <Button size="xl" asChild>
             <Link to="/upload">지금 시작하기</Link>
