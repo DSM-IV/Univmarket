@@ -42,6 +42,21 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
+// R2 키에 안전한 파일명으로 정리 (한글/공백/괄호 등 제거)
+function sanitizeFileName(name: string): string {
+  const lastDot = name.lastIndexOf(".");
+  const rawExt = lastDot >= 0 ? name.slice(lastDot + 1) : "";
+  const ext = rawExt.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const rawBase = lastDot >= 0 ? name.slice(0, lastDot) : name;
+  const base =
+    rawBase
+      .replace(/[^a-zA-Z0-9-_]/g, "_")
+      .replace(/_{2,}/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 80) || "file";
+  return ext ? `${base}.${ext}` : base;
+}
+
 interface PreviewImage {
   file: File;
   url: string;
@@ -352,9 +367,10 @@ export default function UploadPage() {
       }> = [];
       for (const f of files) {
         const ct = f.type || "application/octet-stream";
+        const safeName = sanitizeFileName(f.name);
         let fdata: { uploadUrl: string; fileUrl: string; key: string };
         try {
-          const res = await getUploadUrl({ fileName: f.name, contentType: ct });
+          const res = await getUploadUrl({ fileName: safeName, contentType: ct });
           fdata = res.data;
         } catch (e) {
           throw new Error(`업로드 URL 발급 실패 (${f.name}): ${(e as Error).message}`);
@@ -374,7 +390,7 @@ export default function UploadPage() {
         uploadedFiles.push({
           fileUrl: fdata.fileUrl,
           key: fdata.key,
-          name: f.name,
+          name: f.name, // 원본 파일명은 Firestore/표시용으로 유지
           size: f.size,
           type: getFileTypeLabel(f),
         });
@@ -385,32 +401,40 @@ export default function UploadPage() {
       const uploadedPreviewUrls: string[] = [];
       for (let i = 0; i < previewImages.length; i++) {
         const img = previewImages[i].file;
-        const imgName = `preview_${Date.now()}_${i}.${img.name.split(".").pop()}`;
+        const imgExt = (img.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+        const imgName = `preview_${Date.now()}_${i}.${imgExt}`;
         const { data: imgData } = await getUploadUrl({
           fileName: imgName,
           contentType: img.type,
         });
-        await fetch(imgData.uploadUrl, {
+        const imgPut = await fetch(imgData.uploadUrl, {
           method: "PUT",
           headers: { "Content-Type": img.type },
           body: img,
         });
+        if (!imgPut.ok) {
+          throw new Error(`미리보기 이미지 업로드 실패: HTTP ${imgPut.status}`);
+        }
         uploadedPreviewUrls.push(imgData.fileUrl);
       }
 
       // 성적증명서 이미지 업로드
       let gradeImageUrl = "";
       if (gradeImage && gradeClaim) {
-        const gradeFileName = `grade_${Date.now()}.${gradeImage.file.name.split(".").pop()}`;
+        const gradeExt = (gradeImage.file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+        const gradeFileName = `grade_${Date.now()}.${gradeExt}`;
         const { data: gradeData } = await getUploadUrl({
           fileName: gradeFileName,
           contentType: gradeImage.file.type,
         });
-        await fetch(gradeData.uploadUrl, {
+        const gradePut = await fetch(gradeData.uploadUrl, {
           method: "PUT",
           headers: { "Content-Type": gradeImage.file.type },
           body: gradeImage.file,
         });
+        if (!gradePut.ok) {
+          throw new Error(`성적증명서 업로드 실패: HTTP ${gradePut.status}`);
+        }
         gradeImageUrl = gradeData.fileUrl;
       }
 
