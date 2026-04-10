@@ -14,6 +14,9 @@ import { ChevronRight, Hand, Plus, X, Bell, MessageSquarePlus, Upload } from "lu
 import { cn } from "@/lib/utils";
 import type { Material } from "../types";
 
+// 앱 출시 후 공개 예정
+const SHOW_MATERIAL_REQUESTS = false;
+
 interface MaterialRequest {
   id: string;
   userId: string;
@@ -140,7 +143,7 @@ export default function KoreaUnivPage() {
   }, []);
 
   useEffect(() => {
-    fetchRequests();
+    if (SHOW_MATERIAL_REQUESTS) fetchRequests();
   }, []);
 
   useEffect(() => {
@@ -358,6 +361,7 @@ export default function KoreaUnivPage() {
       )}
 
       {/* 이 자료가 필요해요 */}
+      {SHOW_MATERIAL_REQUESTS && (
       <section className="py-16 bg-muted max-sm:py-12">
         <div className="max-w-[1140px] mx-auto px-6">
           <div className="flex items-end justify-between mb-8">
@@ -567,6 +571,7 @@ export default function KoreaUnivPage() {
           )}
         </div>
       </section>
+      )}
 
       {/* CTA */}
       <section className="py-24 bg-white max-sm:py-16">
