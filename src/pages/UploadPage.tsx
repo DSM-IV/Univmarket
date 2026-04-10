@@ -376,16 +376,22 @@ export default function UploadPage() {
           throw new Error(`업로드 URL 발급 실패 (${f.name}): ${(e as Error).message}`);
         }
         try {
+          console.log("[upload] PUT →", fdata.uploadUrl.split("?")[0], "ct=", ct, "size=", f.size);
           const putRes = await fetch(fdata.uploadUrl, {
             method: "PUT",
             headers: { "Content-Type": ct },
             body: f,
           });
           if (!putRes.ok) {
-            throw new Error(`HTTP ${putRes.status}`);
+            const text = await putRes.text().catch(() => "");
+            console.error("[upload] PUT failed", putRes.status, text);
+            throw new Error(`HTTP ${putRes.status} ${text.slice(0, 200)}`);
           }
+          console.log("[upload] PUT ok", putRes.status);
         } catch (e) {
-          throw new Error(`파일 업로드 실패 (${f.name}): ${(e as Error).message}`);
+          console.error("[upload] PUT exception", e);
+          const msg = (e as Error).message || String(e);
+          throw new Error(`파일 업로드 실패 (${f.name}): ${msg} — R2 CORS 설정이 안 돼 있을 수 있습니다. 브라우저 개발자도구 콘솔을 확인하세요.`);
         }
         uploadedFiles.push({
           fileUrl: fdata.fileUrl,
