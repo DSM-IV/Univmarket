@@ -190,11 +190,11 @@ export default function KoreaUnivPage() {
           {/* UniFile → File in KU 애니메이션 */}
           <h1 className="text-[52px] font-extrabold leading-[1.25] text-foreground mb-3 max-sm:text-[34px]">
             <span className="inline-flex items-baseline">
-              {/* File: 검정, 초기엔 오른쪽으로 이동 */}
+              {/* File: 파랑 → 검정, 초기엔 오른쪽으로 이동 */}
               <span
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
-                  color: "#000000",
+                  color: transformed ? "#000000" : "#2E8BC0",
                   transform: transformed ? "translateX(0)" : "translateX(1.8em)",
                 }}
               >
@@ -205,21 +205,21 @@ export default function KoreaUnivPage() {
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{ width: transformed ? "0.3em" : "0" }}
               />
-              {/* i: 초기엔 n 뒤로 이동 (ni 순서) */}
+              {/* i: 네이비 → 검정, 초기엔 n 뒤로 이동 (ni 순서) */}
               <span
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
-                  color: "#000000",
+                  color: transformed ? "#000000" : "#1B3A5C",
                   transform: transformed ? "translateX(0)" : "translateX(-0.25em)",
                 }}
               >
                 i
               </span>
-              {/* n: 초기엔 i 앞으로 이동 (ni 순서) */}
+              {/* n: 네이비 → 검정, 초기엔 i 앞으로 이동 (ni 순서) */}
               <span
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
-                  color: "#000000",
+                  color: transformed ? "#000000" : "#1B3A5C",
                   transform: transformed ? "translateX(0)" : "translateX(-1.15em)",
                 }}
               >
@@ -241,11 +241,11 @@ export default function KoreaUnivPage() {
               >
                 K
               </span>
-              {/* U: 검정 → 크림슨, 초기엔 맨 왼쪽으로 이동 */}
+              {/* U: 네이비 → 크림슨, 초기엔 맨 왼쪽으로 이동 */}
               <span
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
-                  color: transformed ? "#862633" : "#000000",
+                  color: transformed ? "#862633" : "#1B3A5C",
                   transform: transformed ? "translateX(0)" : "translateX(-2.5em)",
                 }}
               >
