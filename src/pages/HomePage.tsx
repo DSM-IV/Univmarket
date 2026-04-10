@@ -93,7 +93,7 @@ export default function HomePage() {
         <div className="max-w-[720px] mx-auto">
           <h1 className="text-[52px] font-extrabold leading-[1.25] tracking-[-0.04em] text-foreground mb-5 max-sm:text-[34px]">
             대학생을 위한<br />
-            <span className="bg-gradient-to-r from-[#1B3A5C] to-[#2E8BC0] bg-clip-text text-transparent">공부자료 플랫폼</span>
+            <span className="bg-gradient-to-r from-[#862633] to-[#A83344] bg-clip-text text-transparent">공부자료 플랫폼</span>
           </h1>
           <p className="text-lg text-muted-foreground mb-10 max-sm:text-[15px] max-sm:mb-8">
             고려대학교 학생들을 위한 클로즈드 베타 서비스입니다.
@@ -108,11 +108,11 @@ export default function HomePage() {
                 placeholder="전체 대학에서 검색하기"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-16 pl-14 pr-32 rounded-2xl border-2 border-border bg-white text-lg placeholder:text-muted-foreground focus:outline-none focus:border-[#1B3A5C] transition-colors max-sm:h-14 max-sm:text-base max-sm:pr-24"
+                className="w-full h-16 pl-14 pr-32 rounded-2xl border-2 border-border bg-white text-lg placeholder:text-muted-foreground focus:outline-none focus:border-[#862633] transition-colors max-sm:h-14 max-sm:text-base max-sm:pr-24"
               />
               <button
                 type="submit"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-xl px-6 h-11 bg-gradient-to-r from-[#1B3A5C] to-[#2E8BC0] !text-white font-semibold text-sm hover:opacity-90 transition-opacity max-sm:px-4"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-xl px-6 h-11 bg-gradient-to-r from-[#862633] to-[#A83344] !text-white font-semibold text-sm hover:opacity-90 transition-opacity max-sm:px-4"
               >
                 검색
               </button>
@@ -166,7 +166,7 @@ export default function HomePage() {
           </p>
           <Link
             to="/upload"
-            className="inline-flex items-center justify-center h-14 px-10 rounded-xl bg-gradient-to-r from-[#1B3A5C] to-[#2E8BC0] !text-white font-bold text-base hover:opacity-90 transition-opacity"
+            className="inline-flex items-center justify-center h-14 px-10 rounded-xl bg-gradient-to-r from-[#862633] to-[#A83344] !text-white font-bold text-base hover:opacity-90 transition-opacity"
           >
             지금 시작하기
           </Link>

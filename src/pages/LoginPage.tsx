@@ -229,7 +229,7 @@ export default function LoginPage() {
                   </div>
                   <button
                     type="submit"
-                    className="w-full h-12 text-base font-bold mt-3 rounded-lg bg-gradient-to-r from-[#1B3A5C] to-[#2E8BC0] !text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="w-full h-12 text-base font-bold mt-3 rounded-lg bg-gradient-to-r from-[#862633] to-[#A83344] !text-white hover:opacity-90 transition-opacity disabled:opacity-50"
                     disabled={loading}
                   >
                     {loading ? "처리 중..." : "재설정 링크 보내기"}
@@ -384,7 +384,7 @@ export default function LoginPage() {
                             setAgreeTerms(e.target.checked);
                             setAgreePrivacy(e.target.checked);
                           }}
-                          className="w-4 h-4 mt-0.5 shrink-0 accent-[#1B3A5C]"
+                          className="w-4 h-4 mt-0.5 shrink-0 accent-[#862633]"
                         />
                         <span className="text-sm font-bold text-foreground">전체 동의</span>
                       </label>
@@ -396,7 +396,7 @@ export default function LoginPage() {
                                 type="checkbox"
                                 checked={agreeTerms}
                                 onChange={(e) => setAgreeTerms(e.target.checked)}
-                                className="w-4 h-4 mt-0.5 shrink-0 accent-[#1B3A5C]"
+                                className="w-4 h-4 mt-0.5 shrink-0 accent-[#862633]"
                               />
                               <span className="text-sm text-foreground">
                                 <span className="text-destructive font-bold">[필수]</span>{" "}
@@ -423,7 +423,7 @@ export default function LoginPage() {
                               <p><strong>제 14 조 (자료대금 및 수수료)</strong> 회사는 구매회원이 지급한 자료대금 중 수수료 및 제세공과금을 제외한 나머지 금액을 판매회원의 계정에 적립합니다.</p>
                               <p><strong>제 19 조 (계약의 해지)</strong> 이용계약이 해지된 경우, 회원이 등록한 자료는 삭제되며, 보유한 포인트 기타 혜택은 모두 소멸합니다.</p>
                               <p className="text-[11px] pt-1 border-t border-border">
-                                <Link to="/terms" target="_blank" className="text-[#2E8BC0] hover:underline">전문 보기 →</Link>
+                                <Link to="/terms" target="_blank" className="text-[#862633] hover:underline">전문 보기 →</Link>
                               </p>
                             </div>
                           )}
@@ -435,7 +435,7 @@ export default function LoginPage() {
                                 type="checkbox"
                                 checked={agreePrivacy}
                                 onChange={(e) => setAgreePrivacy(e.target.checked)}
-                                className="w-4 h-4 mt-0.5 shrink-0 accent-[#1B3A5C]"
+                                className="w-4 h-4 mt-0.5 shrink-0 accent-[#862633]"
                               />
                               <span className="text-sm text-foreground">
                                 <span className="text-destructive font-bold">[필수]</span>{" "}
@@ -461,7 +461,7 @@ export default function LoginPage() {
                               <p><strong>동의 철회</strong> 회원탈퇴를 통해 언제든지 동의를 철회할 수 있으며, 탈퇴 후 90일간 재가입 방지를 위해 정보를 보존한 후 삭제합니다.</p>
                               <p><strong>기술적 보호 대책</strong> 비밀번호 암호화, 해킹 대비 백업 및 백신 운영, 암호화 통신을 통해 개인정보를 보호합니다.</p>
                               <p className="text-[11px] pt-1 border-t border-border">
-                                <Link to="/privacy" target="_blank" className="text-[#2E8BC0] hover:underline">전문 보기 →</Link>
+                                <Link to="/privacy" target="_blank" className="text-[#862633] hover:underline">전문 보기 →</Link>
                               </p>
                             </div>
                           )}
@@ -472,7 +472,7 @@ export default function LoginPage() {
 
                   <button
                     type="submit"
-                    className="w-full h-12 text-base font-bold mt-3 rounded-lg bg-gradient-to-r from-[#1B3A5C] to-[#2E8BC0] !text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="w-full h-12 text-base font-bold mt-3 rounded-lg bg-gradient-to-r from-[#862633] to-[#A83344] !text-white hover:opacity-90 transition-opacity disabled:opacity-50"
                     disabled={loading || (!isSignUp && lockoutRemaining > 0)}
                   >
                     {loading
@@ -491,7 +491,7 @@ export default function LoginPage() {
           <p className="text-center text-sm text-muted-foreground">
             {isSignUp ? "이미 계정이 있나요?" : "계정이 없나요?"}{" "}
             <button
-              className="bg-transparent text-[#1B3A5C] font-bold text-sm border-none cursor-pointer transition-colors hover:text-[#2E8BC0]"
+              className="bg-transparent text-[#862633] font-bold text-sm border-none cursor-pointer transition-colors hover:text-[#A83344]"
               onClick={() => { setIsSignUp(!isSignUp); setError(""); setSignUpSuccess(false); setShowResend(false); setAgreeTerms(false); setAgreePrivacy(false); setShowTerms(false); setShowPrivacy(false); setSelectedUniversity("고려대학교(서울)"); }}
             >
               {isSignUp ? "로그인" : "회원가입"}

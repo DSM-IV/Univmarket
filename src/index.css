@@ -7,9 +7,9 @@
   --color-background: #FFFFFF;
   --color-foreground: #191F28;
 
-  --color-primary: #1B3A5C;
-  --color-primary-light: #2E8BC0;
-  --color-primary-dark: #142D47;
+  --color-primary: #862633;
+  --color-primary-light: #A83344;
+  --color-primary-dark: #6B1E29;
   --color-primary-foreground: #FFFFFF;
 
   --color-secondary: #F2F4F6;
@@ -29,7 +29,7 @@
 
   --color-border: #E5E8EB;
   --color-input: #E5E8EB;
-  --color-ring: #1B3A5C;
+  --color-ring: #862633;
 
   --color-card: #FFFFFF;
   --color-card-foreground: #191F28;
@@ -107,16 +107,16 @@ a {
 }
 
 ::selection {
-  background: rgba(27, 58, 92, 0.15);
+  background: rgba(134, 38, 51, 0.15);
   color: var(--color-foreground);
 }
 
 /* Legacy CSS variable compat for pages not yet migrated */
 :root {
-  --primary: #1B3A5C;
-  --primary-light: #2E8BC0;
-  --primary-dark: #142D47;
-  --primary-bg: rgba(27, 58, 92, 0.06);
+  --primary: #862633;
+  --primary-light: #A83344;
+  --primary-dark: #6B1E29;
+  --primary-bg: rgba(134, 38, 51, 0.06);
   --bg: #FFFFFF;
   --bg-secondary: #F2F4F6;
   --bg-tertiary: #F7F8FA;
