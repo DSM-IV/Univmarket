@@ -108,18 +108,22 @@ export default function KoreaUnivPage() {
     if (!user) return;
     setNeedLoading(requestId);
     try {
-      const fn = httpsCallable<{ requestId: string }, { added: boolean }>(functions, "toggleNeedRequest");
+      const fn = httpsCallable<{ requestId: string }, { added: boolean; deleted?: boolean }>(functions, "toggleNeedRequest");
       const { data } = await fn({ requestId });
-      // 로컬 상태 업데이트
-      setMaterialRequests((prev) =>
-        prev.map((r) => {
-          if (r.id !== requestId) return r;
-          const newNeedUsers = data.added
-            ? [...r.needUsers, user.uid]
-            : r.needUsers.filter((u) => u !== user.uid);
-          return { ...r, needCount: newNeedUsers.length, needUsers: newNeedUsers };
-        })
-      );
+      if (data.deleted) {
+        // 공감자 0이면 요청 자체가 삭제됨 → 목록에서 제거
+        setMaterialRequests((prev) => prev.filter((r) => r.id !== requestId));
+      } else {
+        setMaterialRequests((prev) =>
+          prev.map((r) => {
+            if (r.id !== requestId) return r;
+            const newNeedUsers = data.added
+              ? [...r.needUsers, user.uid]
+              : r.needUsers.filter((u) => u !== user.uid);
+            return { ...r, needCount: newNeedUsers.length, needUsers: newNeedUsers };
+          })
+        );
+      }
       if (data.added) {
         setShowNeedAlert(true);
         setTimeout(() => setShowNeedAlert(false), 3000);

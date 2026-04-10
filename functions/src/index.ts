@@ -1890,17 +1890,23 @@ export const toggleNeedRequest = onCall(async (request) => {
 
   if (needUsers.includes(uid)) {
     // 이미 눌렀으면 취소
+    const remaining = needUsers.filter((u) => u !== uid);
+    if (remaining.length === 0) {
+      // 공감자 0이면 요청 삭제
+      await reqRef.delete();
+      return { success: true, added: false, deleted: true };
+    }
     await reqRef.update({
       needUsers: admin.firestore.FieldValue.arrayRemove(uid),
       needCount: admin.firestore.FieldValue.increment(-1),
     });
-    return { success: true, added: false };
+    return { success: true, added: false, deleted: false };
   } else {
     await reqRef.update({
       needUsers: admin.firestore.FieldValue.arrayUnion(uid),
       needCount: admin.firestore.FieldValue.increment(1),
     });
-    return { success: true, added: true };
+    return { success: true, added: true, deleted: false };
   }
 });
 
