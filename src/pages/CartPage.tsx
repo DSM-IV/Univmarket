@@ -21,6 +21,7 @@ export default function CartPage() {
   const [successCount, setSuccessCount] = useState(0);
   const [deletedItems, setDeletedItems] = useState<CartItem[]>([]);
   const [removingDeleted, setRemovingDeleted] = useState(false);
+  const [agreedToRefundPolicy, setAgreedToRefundPolicy] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -325,10 +326,29 @@ export default function CartPage() {
                     </div>
                   )}
 
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4 text-[13px] leading-relaxed text-amber-900">
+                    <p className="font-semibold mb-1.5">환불 정책 안내</p>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li>구매 후 <span className="font-semibold">24시간 이내에 다운로드하지 않으면 자동으로 환불</span>됩니다.</li>
+                      <li>한 번이라도 <span className="font-semibold">다운로드한 이후에는 환불이 불가능</span>합니다.</li>
+                    </ul>
+                    <label className="flex items-start gap-2 mt-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 w-4 h-4 accent-amber-600 cursor-pointer"
+                        checked={agreedToRefundPolicy}
+                        onChange={(e) => setAgreedToRefundPolicy(e.target.checked)}
+                      />
+                      <span className="text-[13px] font-medium text-amber-900">
+                        위 환불 정책을 이해하며 동의했습니다.
+                      </span>
+                    </label>
+                  </div>
+
                   <Button
                     className="w-full mt-4 h-12 text-base font-bold"
                     onClick={handleBuySelected}
-                    disabled={buying || selectedItems.length === 0}
+                    disabled={buying || selectedItems.length === 0 || !agreedToRefundPolicy}
                   >
                     {buying ? "구매 중..." : `${selectedItems.length}건 구매하기`}
                   </Button>
