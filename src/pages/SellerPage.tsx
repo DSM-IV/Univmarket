@@ -94,7 +94,7 @@ export default function SellerPage() {
                 key={m.id}
                 material={m}
                 rating={reviewStats[m.id]?.avgRating}
-                reviewCount={reviewStats[m.id]?.count}
+                reviewCount={reviewStats[m.id]?.reviewCount}
               />
             ))}
           </div>
