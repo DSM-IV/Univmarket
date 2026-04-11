@@ -1870,14 +1870,13 @@ export const submitChargeRequest = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-  const { amount, transferAmount, vat, fee, senderName, senderPhone, receiptNumber, receiptType } = request.data;
+  const { amount, senderName, senderPhone, receiptNumber, receiptType } = request.data;
   if (!amount || amount < 1000) throw new HttpsError("invalid-argument", "최소 충전 금액은 1,000원입니다.");
   if (!senderName || !senderPhone) throw new HttpsError("invalid-argument", "입금자 정보가 누락되었습니다.");
 
   // 서버에서 재계산하여 검증
   const serverVat = Math.ceil(amount * 0.10);
-  const serverFee = Math.ceil(amount * 0.10);
-  const serverTransferAmount = amount + serverVat + serverFee;
+  const serverTransferAmount = amount + serverVat;
 
   const userDoc = await db.collection("users").doc(uid).get();
   const email = userDoc.data()?.email || "";
@@ -1888,7 +1887,7 @@ export const submitChargeRequest = onCall(async (request) => {
     amount,
     transferAmount: serverTransferAmount,
     vat: serverVat,
-    fee: serverFee,
+    fee: 0,
     senderName,
     senderPhone,
     receiptNumber: receiptNumber || "",

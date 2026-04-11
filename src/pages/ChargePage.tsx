@@ -12,13 +12,11 @@ import { AlertCircle, CheckCircle2, Copy, Info } from "lucide-react";
 
 const PRESET_AMOUNTS = [1000, 3000, 5000, 10000, 30000, 50000];
 const VAT_RATE = 0.10; // 부가세 10%
-const CHARGE_FEE_RATE = 0.10; // 수수료 10%
 
 function calcChargeDetails(amount: number) {
   const vat = Math.ceil(amount * VAT_RATE);
-  const fee = Math.ceil(amount * CHARGE_FEE_RATE);
-  const transferAmount = amount + vat + fee;
-  return { vat, fee, transferAmount };
+  const transferAmount = amount + vat;
+  return { vat, transferAmount };
 }
 
 const BANK_ACCOUNT = {
@@ -60,7 +58,7 @@ export default function ChargePage() {
   }
 
   const amount = selectedAmount || 0;
-  const { vat, fee: chargeFee, transferAmount } = calcChargeDetails(amount);
+  const { vat, transferAmount } = calcChargeDetails(amount);
 
   const handleCopyAccount = async () => {
     try {
@@ -87,9 +85,6 @@ export default function ChargePage() {
       const fn = httpsCallable(functions, "submitChargeRequest");
       await fn({
         amount,
-        transferAmount,
-        vat,
-        fee: chargeFee,
         senderName: senderName.trim(),
         senderPhone: senderPhone.trim(),
         receiptNumber: receiptNumber.trim() || "",
@@ -161,10 +156,6 @@ export default function ChargePage() {
                       <div className="flex justify-between py-1 text-sm text-muted-foreground">
                         <span>부가세 (10%)</span>
                         <span>+{vat.toLocaleString()}원</span>
-                      </div>
-                      <div className="flex justify-between py-1 text-sm text-muted-foreground">
-                        <span>수수료 (10%)</span>
-                        <span>+{chargeFee.toLocaleString()}원</span>
                       </div>
                       <Separator />
                       <div className="flex justify-between py-1 text-base font-bold text-[#862633]">
@@ -245,7 +236,7 @@ export default function ChargePage() {
                     <span className="text-lg font-bold text-[#862633]">{transferAmount.toLocaleString()}원</span>
                   </div>
                   <div className="text-xs text-muted-foreground text-right">
-                    (충전 {amount.toLocaleString()}원 + 부가세 {vat.toLocaleString()}원 + 수수료 {chargeFee.toLocaleString()}원)
+                    (충전 {amount.toLocaleString()}원 + 부가세 {vat.toLocaleString()}원)
                   </div>
                 </div>
 
@@ -426,7 +417,7 @@ export default function ChargePage() {
               영업일 기준 1~3일 이내에 입금됩니다.
             </li>
             <li>
-              • 충전 시 부과된 <span className="font-semibold text-foreground">부가세(10%)·수수료(10%)</span>는
+              • 충전 시 부과된 <span className="font-semibold text-foreground">부가세(10%)</span>는
               사용 내역이 없을 경우에 한해 함께 환불됩니다.
             </li>
           </ul>
