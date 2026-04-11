@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Download, FileText, Upload, ShoppingBag, RotateCcw, AlertTriangle } from "lucide-react";
+import { Download, FileText, Upload, ShoppingBag, RotateCcw, AlertTriangle, Pencil, Check, X } from "lucide-react";
 
 type Tab = "uploaded" | "purchased";
 
@@ -33,6 +33,51 @@ export default function MyPage() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [refunding, setRefunding] = useState<string | null>(null);
+  const [editingNickname, setEditingNickname] = useState(false);
+  const [nicknameDraft, setNicknameDraft] = useState("");
+  const [savingNickname, setSavingNickname] = useState(false);
+  const [nicknameError, setNicknameError] = useState("");
+
+  const startEditNickname = () => {
+    setNicknameDraft(userProfile?.nickname || "");
+    setNicknameError("");
+    setEditingNickname(true);
+  };
+
+  const cancelEditNickname = () => {
+    setEditingNickname(false);
+    setNicknameError("");
+  };
+
+  const saveNickname = async () => {
+    const trimmed = nicknameDraft.trim();
+    if (trimmed.length < 2 || trimmed.length > 16) {
+      setNicknameError("닉네임은 2~16자여야 합니다.");
+      return;
+    }
+    if (!/^[\p{L}\p{N}_.-]+$/u.test(trimmed)) {
+      setNicknameError("한글/영문/숫자/._- 만 사용할 수 있습니다.");
+      return;
+    }
+    if (trimmed === (userProfile?.nickname || "")) {
+      setEditingNickname(false);
+      return;
+    }
+    setSavingNickname(true);
+    setNicknameError("");
+    try {
+      const fn = httpsCallable<{ nickname: string }, { success: boolean }>(
+        functions,
+        "updateNickname"
+      );
+      await fn({ nickname: trimmed });
+      setEditingNickname(false);
+    } catch (e) {
+      setNicknameError((e as Error).message || "변경에 실패했습니다.");
+    } finally {
+      setSavingNickname(false);
+    }
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -189,12 +234,64 @@ export default function MyPage() {
         <Card className="mb-6">
           <CardContent className="flex flex-col items-center gap-5 p-6 max-sm:p-4 sm:flex-row sm:items-start">
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#862633] text-2xl font-bold text-white">
-              {(user.displayName || user.email || "U").charAt(0).toUpperCase()}
+              {(userProfile?.nickname || user.displayName || user.email || "U").charAt(0).toUpperCase()}
             </div>
-            <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-xl font-bold text-gray-900">
-                {user.displayName || user.email}
-              </h1>
+            <div className="flex-1 min-w-0 text-center sm:text-left">
+              {editingNickname ? (
+                <div className="flex flex-col items-center gap-1.5 sm:items-start">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      value={nicknameDraft}
+                      onChange={(e) => setNicknameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveNickname();
+                        if (e.key === "Escape") cancelEditNickname();
+                      }}
+                      disabled={savingNickname}
+                      autoFocus
+                      maxLength={16}
+                      placeholder="닉네임"
+                      className="h-9 rounded-md border border-gray-300 bg-white px-3 text-base sm:text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#862633] w-44"
+                    />
+                    <button
+                      type="button"
+                      onClick={saveNickname}
+                      disabled={savingNickname}
+                      className="flex h-9 w-9 items-center justify-center rounded-md bg-[#862633] text-white hover:bg-[#A83344] transition-colors disabled:opacity-50 border-none cursor-pointer"
+                      aria-label="저장"
+                    >
+                      <Check className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelEditNickname}
+                      disabled={savingNickname}
+                      className="flex h-9 w-9 items-center justify-center rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50 border-none cursor-pointer"
+                      aria-label="취소"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  {nicknameError && (
+                    <p className="text-xs text-red-600">{nicknameError}</p>
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 justify-center sm:justify-start">
+                  <h1 className="text-xl font-bold text-gray-900 truncate">
+                    {userProfile?.nickname || user.displayName || user.email}
+                  </h1>
+                  <button
+                    type="button"
+                    onClick={startEditNickname}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors border-none cursor-pointer"
+                    aria-label="닉네임 변경"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
               <p className="mt-0.5 text-sm text-gray-500">
                 {userProfile?.university || ""}
               </p>

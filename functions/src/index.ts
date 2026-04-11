@@ -81,6 +81,41 @@ export const createUserProfile = onCall(async (request) => {
   return { success: true };
 });
 
+// 닉네임 변경 (마이페이지)
+export const updateNickname = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  const raw = request.data?.nickname;
+  if (typeof raw !== "string") {
+    throw new HttpsError("invalid-argument", "닉네임 형식이 올바르지 않습니다.");
+  }
+  const nickname = raw.trim();
+  if (nickname.length < 2 || nickname.length > 16) {
+    throw new HttpsError("invalid-argument", "닉네임은 2~16자여야 합니다.");
+  }
+  if (!/^[\p{L}\p{N}_.-]+$/u.test(nickname)) {
+    throw new HttpsError("invalid-argument", "닉네임에 사용할 수 없는 문자가 포함되어 있습니다.");
+  }
+
+  const userRef = db.collection("users").doc(uid);
+  const snap = await userRef.get();
+  if (!snap.exists) {
+    throw new HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
+  }
+
+  if ((snap.data()?.nickname || "") === nickname) {
+    return { success: true, nickname };
+  }
+
+  await userRef.update({
+    nickname,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { success: true, nickname };
+});
+
 // 카카오톡 인증번호 발송 (회원가입용 - 인증 불필요)
 const ALIGO_SECRETS = ["ALIGO_API_KEY", "ALIGO_USER_ID", "ALIGO_SENDER_KEY", "ALIGO_SENDER_NUMBER"];
 
