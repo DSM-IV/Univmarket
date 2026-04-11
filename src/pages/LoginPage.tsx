@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import TermsContent from "@/components/legal/TermsContent";
+import PrivacyContent from "@/components/legal/PrivacyContent";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 60_000; // 1분
@@ -38,6 +40,8 @@ export default function LoginPage() {
   const [agreePrivacy, setAgreePrivacy] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showFullTerms, setShowFullTerms] = useState(false);
+  const [showFullPrivacy, setShowFullPrivacy] = useState(false);
 
   const { logIn, signUp, resetPassword } = useAuth();
   const navigate = useNavigate();
@@ -423,7 +427,13 @@ export default function LoginPage() {
                               <p><strong>제 14 조 (자료대금 및 수수료)</strong> 회사는 구매회원이 지급한 자료대금 중 수수료 및 제세공과금을 제외한 나머지 금액을 판매회원의 계정에 적립합니다.</p>
                               <p><strong>제 19 조 (계약의 해지)</strong> 이용계약이 해지된 경우, 회원이 등록한 자료는 삭제되며, 보유한 포인트 기타 혜택은 모두 소멸합니다.</p>
                               <p className="text-[11px] pt-1 border-t border-border">
-                                <Link to="/terms" target="_blank" className="text-[#862633] hover:underline">전문 보기 →</Link>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowFullTerms(true)}
+                                  className="bg-transparent border-none p-0 cursor-pointer text-[#862633] hover:underline text-[11px]"
+                                >
+                                  전문 보기 →
+                                </button>
                               </p>
                             </div>
                           )}
@@ -461,7 +471,13 @@ export default function LoginPage() {
                               <p><strong>동의 철회</strong> 회원탈퇴를 통해 언제든지 동의를 철회할 수 있으며, 탈퇴 후 90일간 재가입 방지를 위해 정보를 보존한 후 삭제합니다.</p>
                               <p><strong>기술적 보호 대책</strong> 비밀번호 암호화, 해킹 대비 백업 및 백신 운영, 암호화 통신을 통해 개인정보를 보호합니다.</p>
                               <p className="text-[11px] pt-1 border-t border-border">
-                                <Link to="/privacy" target="_blank" className="text-[#862633] hover:underline">전문 보기 →</Link>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowFullPrivacy(true)}
+                                  className="bg-transparent border-none p-0 cursor-pointer text-[#862633] hover:underline text-[11px]"
+                                >
+                                  전문 보기 →
+                                </button>
                               </p>
                             </div>
                           )}
@@ -499,6 +515,43 @@ export default function LoginPage() {
           </p>
         </CardFooter>
       </Card>
+
+      {(showFullTerms || showFullPrivacy) && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[300] p-4"
+          onClick={() => { setShowFullTerms(false); setShowFullPrivacy(false); }}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+              <h2 className="text-lg font-bold text-gray-900">
+                {showFullTerms ? "이용약관 전문" : "개인정보처리방침 전문"}
+              </h2>
+              <button
+                type="button"
+                onClick={() => { setShowFullTerms(false); setShowFullPrivacy(false); }}
+                className="bg-transparent border-none p-1 cursor-pointer text-muted-foreground hover:text-foreground transition-colors rounded"
+                aria-label="닫기"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              {showFullTerms ? <TermsContent /> : <PrivacyContent />}
+            </div>
+            <div className="px-6 py-4 border-t border-border flex justify-end">
+              <Button
+                variant="secondary"
+                onClick={() => { setShowFullTerms(false); setShowFullPrivacy(false); }}
+              >
+                닫기
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
