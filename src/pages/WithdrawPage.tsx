@@ -8,11 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { Wallet, AlertCircle, CheckCircle, ArrowLeft, ShieldCheck, User } from "lucide-react";
+import { Wallet, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
 
 const AMOUNTS = [5000, 10000, 30000, 50000, 100000];
 const MIN_WITHDRAW = 5000;
-const FEE = 500;
+const FEE = 1000;
 const TAX_THRESHOLD = 125000;
 const TAX_RATE = 0.088;
 const PLATFORM_COMMISSION_RATE = 0.10; // 10% (원래 40%에서 할인)
@@ -38,16 +38,6 @@ export default function WithdrawPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-
-  // 본인인증 상태
-  const isVerified = userProfile?.identityVerified === true;
-  const [verifyName, setVerifyName] = useState("");
-  const [verifyBirth, setVerifyBirth] = useState("");
-  const [verifyPhone, setVerifyPhone] = useState("");
-  const [verifyCode, setVerifyCode] = useState("");
-  const [codeSent, setCodeSent] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [verifyError, setVerifyError] = useState("");
 
   if (authLoading) {
     return (
@@ -101,170 +91,6 @@ export default function WithdrawPage() {
       setProcessing(false);
     }
   };
-
-  const handleSendCode = async () => {
-    setVerifyError("");
-    setVerifying(true);
-    try {
-      const fn = httpsCallable(functions, "requestVerification");
-      await fn({
-        name: verifyName,
-        birth: verifyBirth,
-        phone: verifyPhone,
-      });
-      setCodeSent(true);
-    } catch (err: unknown) {
-      setVerifyError((err as { message?: string }).message || "인증 요청에 실패했습니다.");
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  const handleVerifyIdentity = async () => {
-    setVerifyError("");
-    if (!verifyCode.trim()) { setVerifyError("인증번호를 입력해주세요."); return; }
-    if (verifyCode.length < 6) { setVerifyError("인증번호 6자리를 입력해주세요."); return; }
-
-    setVerifying(true);
-    try {
-      const fn = httpsCallable(functions, "confirmVerification");
-      await fn({ code: verifyCode });
-    } catch (err: unknown) {
-      setVerifyError((err as { message?: string }).message || "본인인증에 실패했습니다.");
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  if (!isVerified) {
-    return (
-      <div className="py-10 pb-20 max-sm:py-6 max-sm:pb-16">
-        <div className="max-w-[520px] mx-auto px-6 max-sm:px-4">
-          <Link
-            to="/mypage"
-            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            마이페이지
-          </Link>
-
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-primary" />
-            </div>
-            <h1 className="text-[26px] font-extrabold tracking-tight">본인인증</h1>
-          </div>
-          <p className="text-[15px] text-muted-foreground mb-8">
-            최초 출금 시 1회 본인인증이 필요합니다
-          </p>
-
-          <Card className="mb-5">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2 mb-5">
-                <User className="w-4 h-4 text-muted-foreground" />
-                <h2 className="text-[15px] font-bold">본인 정보 입력</h2>
-              </div>
-              <div className="flex flex-col gap-3">
-                <div>
-                  <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">이름 (실명)</label>
-                  <Input
-                    type="text"
-                    placeholder="홍길동"
-                    value={verifyName}
-                    onChange={(e) => setVerifyName(e.target.value)}
-                    className="h-11"
-                    disabled={codeSent}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">생년월일 (6자리)</label>
-                  <Input
-                    type="text"
-                    placeholder="990101"
-                    maxLength={6}
-                    value={verifyBirth}
-                    onChange={(e) => setVerifyBirth(e.target.value.replace(/\D/g, ""))}
-                    className="h-11"
-                    disabled={codeSent}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">휴대폰 번호</label>
-                  <div className="flex gap-2">
-                    <Input
-                      type="tel"
-                      placeholder="01012345678"
-                      value={verifyPhone}
-                      onChange={(e) => setVerifyPhone(e.target.value.replace(/\D/g, ""))}
-                      className="h-11 flex-1"
-                      disabled={codeSent}
-                    />
-                    <Button
-                      type="button"
-                      variant={codeSent ? "outline" : "primary"}
-                      className="h-11 shrink-0 px-4"
-                      onClick={handleSendCode}
-                      disabled={codeSent || verifying}
-                    >
-                      {verifying && !codeSent ? "발송 중..." : codeSent ? "발송완료" : "인증요청"}
-                    </Button>
-                  </div>
-                </div>
-
-                {codeSent && (
-                  <div>
-                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">인증번호 (6자리)</label>
-                    <Input
-                      type="text"
-                      placeholder="인증번호 6자리 입력"
-                      maxLength={6}
-                      value={verifyCode}
-                      onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ""))}
-                      className="h-11"
-                    />
-                    <p className="text-xs text-muted-foreground mt-1.5">
-                      입력하신 휴대폰으로 인증번호가 발송되었습니다.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {verifyError && (
-            <div className="flex items-center gap-2 p-3 mb-5 bg-destructive/5 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
-              <p className="text-sm text-destructive">{verifyError}</p>
-            </div>
-          )}
-
-          {codeSent && (
-            <Button
-              type="button"
-              variant="primary"
-              className="w-full h-12 text-base font-bold"
-              onClick={handleVerifyIdentity}
-              disabled={verifying || verifyCode.length < 6}
-            >
-              {verifying ? "인증 확인 중..." : "본인인증 완료"}
-            </Button>
-          )}
-
-          <Card className="mt-8">
-            <CardContent className="p-5">
-              <h2 className="text-[15px] font-bold mb-3">본인인증 안내</h2>
-              <ul className="text-[13px] text-muted-foreground space-y-2 ml-1">
-                <li>• 출금 신청 시 <span className="font-semibold text-foreground">최초 1회</span>에 한해 본인인증을 진행합니다.</li>
-                <li>• 본인 명의의 휴대폰으로만 인증이 가능합니다.</li>
-                <li>• 입력하신 정보는 본인 확인 목적으로만 사용되며 안전하게 보호됩니다.</li>
-                <li>• 마지막 출금일로부터 <span className="font-semibold text-foreground">5년 경과 시</span> 재인증이 필요합니다.</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
 
   if (success) {
     return (
@@ -517,7 +343,6 @@ export default function WithdrawPage() {
             <ul className="text-[13px] text-muted-foreground space-y-2 ml-1">
               <li>• 수익금(판매수익)은 반드시 <span className="font-semibold text-foreground">본인 명의 계좌</span>로만 신청 가능하며, 신청한 다음 영업일에 입금됩니다. (은행 영업일 기준)</li>
               <li>• 계좌번호를 잘못 입력하여 출금된 경우 책임지지 않습니다.</li>
-              <li>• 출금 신청 시 최초 1회에 한해 실명확인을 진행합니다. (단, 마지막 출금일로부터 5년 경과 시 재확인 필요)</li>
               <li>• CMA통장 및 가상계좌는 거래시간 제한으로 출금 오류가 발생할 수 있으니, 가급적 <span className="font-semibold text-foreground">입출금이 자유로운 보통예금통장</span>으로 신청해주세요.</li>
             </ul>
           </CardContent>
@@ -555,7 +380,7 @@ export default function WithdrawPage() {
 
             <ul className="text-[13px] text-muted-foreground space-y-2 ml-1 mb-5">
               <li>• 수익금 출금 시 <span className="font-semibold text-foreground">플랫폼 수수료 10%</span>가 차감됩니다. (정상 수수료 40%에서 할인 적용)</li>
-              <li>• 최소 출금 금액은 <span className="font-semibold text-foreground">5,000원</span>이며, 출금처리수수료 <span className="font-semibold text-foreground">500원</span>이 추가로 부과됩니다.</li>
+              <li>• 최소 출금 금액은 <span className="font-semibold text-foreground">5,000원</span>이며, 출금처리수수료 <span className="font-semibold text-foreground">1,000원</span>이 추가로 부과됩니다.</li>
               <li>• 신청금액이 <span className="font-semibold text-foreground">건별 125,000원 초과</span> 시 기타소득세와 주민세(8.8%)가 포함된 금액이 수익금 계정에서 출금 처리됩니다.</li>
               <li>• 신청금액이 <span className="font-semibold text-foreground">연간 누적 7,500,000원 초과</span> 시 사업소득세와 주민세(3.3%)가 포함된 금액이 수익금 계정에서 출금 처리됩니다.</li>
             </ul>
@@ -574,7 +399,7 @@ export default function WithdrawPage() {
                 <div className="mt-3 p-3 rounded-lg bg-muted/50">
                   <p className="text-[12px] text-muted-foreground font-semibold mb-1">출금 예시</p>
                   <p className="text-[12px] text-muted-foreground leading-relaxed">
-                    200,000원 출금 시 → 플랫폼 수수료 20,000원(10%) + 세금 포함 219,298원(8.8%) + 출금수수료 500원 = 총 239,798원 차감
+                    200,000원 출금 시 → 플랫폼 수수료 20,000원(10%) + 세금 포함 219,299원(8.8%) + 출금수수료 1,000원 = 총 240,299원 차감
                   </p>
                 </div>
                 <div className="mt-3">
@@ -609,7 +434,7 @@ export default function WithdrawPage() {
                 <div className="mt-3 p-3 rounded-lg bg-muted/50">
                   <p className="text-[12px] text-muted-foreground font-semibold mb-1">출금 예시</p>
                   <p className="text-[12px] text-muted-foreground leading-relaxed">
-                    50,000원 출금 시 → 플랫폼 수수료 5,000원(10%) + 세금 포함 51,705원(3.3%) + 출금수수료 500원 = 총 57,205원 차감
+                    50,000원 출금 시 → 플랫폼 수수료 5,000원(10%) + 세금 포함 51,707원(3.3%) + 출금수수료 1,000원 = 총 57,707원 차감
                   </p>
                 </div>
               </div>
