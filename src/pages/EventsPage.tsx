@@ -21,7 +21,7 @@ const events: EventItem[] = [
       "중간고사 시즌을 맞아 진행하는 특별 이벤트입니다. 지금 참여하고 특별한 혜택을 받아보세요!",
     period: "2026.04.10 ~ 별도 공지 시까지",
     status: "ongoing",
-    image: "/event-popup.png",
+    image: "/midterm-event.png",
     link: "/events/closed-beta-raffle",
   },
 ];

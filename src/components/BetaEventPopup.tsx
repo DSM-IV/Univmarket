@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 
 const STORAGE_KEY = "betaEventPopupHiddenUntil";
 const EVENT_LINK = "/events";
-const IMAGE_SRC = "/event-popup.png";
+const IMAGE_SRC = "/midterm-event.png";
 
 export default function BetaEventPopup() {
   const [open, setOpen] = useState(false);
