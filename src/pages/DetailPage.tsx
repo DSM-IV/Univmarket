@@ -967,9 +967,17 @@ export default function DetailPage() {
                 <p className="text-[13px] text-muted-foreground">{owned ? "파일을 다운로드할 수 있습니다" : "구매 후 즉시 다운로드 가능"}</p>
                 <p className="text-[13px] text-muted-foreground">포인트로 결제됩니다</p>
               </div>
+              {owned && material.authorId !== user?.uid && (
+                <Link
+                  to={`/report?type=defect&materialId=${material.id}&title=${encodeURIComponent(material.title)}`}
+                  className="block text-center py-2 mt-3 text-[13px] text-amber-700 font-medium transition-colors hover:text-amber-900"
+                >
+                  자료 하자 신고
+                </Link>
+              )}
               <Link
                 to={`/report?materialId=${material.id}&title=${encodeURIComponent(material.title)}`}
-                className="block text-center py-2 mt-3 text-[13px] text-muted-foreground transition-colors hover:text-destructive"
+                className="block text-center py-2 mt-1 text-[13px] text-muted-foreground transition-colors hover:text-destructive"
               >
                 저작권 침해 신고
               </Link>

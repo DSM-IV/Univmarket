@@ -15,6 +15,7 @@ interface Report {
   id: string;
   materialId: string;
   materialTitle: string;
+  type?: "copyright" | "defect";
   reason: string;
   originalSource: string;
   description: string;
@@ -22,6 +23,7 @@ interface Report {
   isRightsHolder: boolean;
   reporterId: string | null;
   reporterName: string;
+  purchaseId?: string | null;
   status: string;
   createdAt: string;
 }
@@ -155,6 +157,39 @@ export default function AdminPage() {
         handleDeleteMaterial(report, reason);
         return;
       }
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleApproveDefect = async (report: Report) => {
+    if (
+      !confirm(
+        `"${report.materialTitle}" 자료의 하자 신고를 승인합니다.\n\n` +
+          `- 해당 자료의 환불되지 않은 모든 구매 건에 대해 포인트가 환불됩니다.\n` +
+          `- 판매자의 수익금에서 동일 금액이 회수됩니다.\n` +
+          `- 자료가 완전히 삭제됩니다 (복구 불가).\n\n계속하시겠습니까?`
+      )
+    )
+      return;
+
+    setActionLoading(report.id);
+    try {
+      const fn = httpsCallable<
+        { reportId: string },
+        { success: boolean; refundedCount: number }
+      >(functions, "approveDefectReport");
+      const result = await fn({ reportId: report.id });
+      alert(`처리 완료: ${result.data.refundedCount}건의 구매가 환불되었습니다.`);
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === report.id ? { ...r, status: "resolved" } : r
+        )
+      );
+    } catch (e) {
+      alert(
+        "하자 승인 처리에 실패했습니다.\n" + ((e as Error).message || "")
+      );
     } finally {
       setActionLoading(null);
     }
@@ -904,6 +939,16 @@ export default function AdminPage() {
                             ? "처리 완료"
                             : "기각"}
                       </Badge>
+                      <Badge
+                        className={cn(
+                          "font-bold",
+                          (report.type || "copyright") === "defect"
+                            ? "bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100"
+                            : "bg-red-100 text-red-800 border-red-200 hover:bg-red-100"
+                        )}
+                      >
+                        {(report.type || "copyright") === "defect" ? "자료 하자" : "저작권 침해"}
+                      </Badge>
                       <span className="text-xs text-gray-400">
                         {formatDate(report.createdAt)}
                       </span>
@@ -959,6 +1004,18 @@ export default function AdminPage() {
                     <>
                       <Separator className="my-4" />
                       <div className="flex flex-wrap gap-2">
+                        {(report.type || "copyright") === "defect" ? (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="bg-amber-600 hover:bg-amber-700"
+                            onClick={() => handleApproveDefect(report)}
+                            disabled={actionLoading === report.id}
+                          >
+                            <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
+                            {actionLoading === report.id ? "처리 중..." : "하자 인정 & 환불"}
+                          </Button>
+                        ) : null}
                         <Button
                           variant="destructive"
                           size="sm"
@@ -968,16 +1025,18 @@ export default function AdminPage() {
                           <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                           {actionLoading === report.id ? "처리 중..." : "자료 삭제"}
                         </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="bg-orange-600 hover:bg-orange-700"
-                          onClick={() => handleDeleteMaterial(report, "copyright")}
-                          disabled={actionLoading === report.id}
-                        >
-                          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                          저작권 침해 삭제
-                        </Button>
+                        {(report.type || "copyright") !== "defect" && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="bg-orange-600 hover:bg-orange-700"
+                            onClick={() => handleDeleteMaterial(report, "copyright")}
+                            disabled={actionLoading === report.id}
+                          >
+                            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                            저작권 침해 삭제
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"

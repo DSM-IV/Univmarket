@@ -1204,7 +1204,9 @@ export const submitReport = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-  const { materialId, materialTitle, reason, originalSource, description, contactEmail, isRightsHolder } = request.data;
+  const { materialId, materialTitle, reason, originalSource, description, contactEmail, isRightsHolder, type } = request.data;
+
+  const reportType: "copyright" | "defect" = type === "defect" ? "defect" : "copyright";
 
   if (!materialId || !reason || !description?.trim()) {
     throw new HttpsError("invalid-argument", "필수 정보가 누락되었습니다.");
@@ -1214,6 +1216,24 @@ export const submitReport = onCall(async (request) => {
   const materialDoc = await db.collection("materials").doc(materialId).get();
   if (!materialDoc.exists) {
     throw new HttpsError("not-found", "해당 자료를 찾을 수 없습니다.");
+  }
+
+  // 자료 하자 신고는 해당 자료 구매자만 가능 (판매자 본인 신고 불가)
+  let purchaseId: string | null = null;
+  if (reportType === "defect") {
+    if (materialDoc.data()!.authorId === uid) {
+      throw new HttpsError("failed-precondition", "본인 자료에는 하자 신고를 할 수 없습니다.");
+    }
+    const purchasesSnap = await db
+      .collection("purchases")
+      .where("buyerId", "==", uid)
+      .where("materialId", "==", materialId)
+      .get();
+    const active = purchasesSnap.docs.find((d) => d.data().refunded !== true);
+    if (!active) {
+      throw new HttpsError("failed-precondition", "구매한 자료만 하자 신고를 할 수 있습니다.");
+    }
+    purchaseId = active.id;
   }
 
   // rate limiting: 동일 사용자 1시간 내 최대 5건
@@ -1228,16 +1248,16 @@ export const submitReport = onCall(async (request) => {
     throw new HttpsError("resource-exhausted", "단시간에 너무 많은 신고를 제출했습니다. 1시간 후 다시 시도해주세요.");
   }
 
-  // 동일 자료 중복 신고 방지
+  // 동일 자료 중복 신고 방지 (유형별)
   const duplicateReport = await db
     .collection("reports")
     .where("reporterId", "==", uid)
     .where("materialId", "==", materialId)
     .where("status", "==", "pending")
-    .limit(1)
+    .limit(5)
     .get();
 
-  if (!duplicateReport.empty) {
+  if (duplicateReport.docs.some((d) => (d.data().type || "copyright") === reportType)) {
     throw new HttpsError("already-exists", "이미 해당 자료에 대한 신고가 접수되어 처리 대기 중입니다.");
   }
 
@@ -1247,6 +1267,7 @@ export const submitReport = onCall(async (request) => {
   await db.collection("reports").add({
     materialId,
     materialTitle: materialTitle || materialDoc.data()!.title,
+    type: reportType,
     reason,
     originalSource: originalSource || "",
     description: description.trim(),
@@ -1254,6 +1275,7 @@ export const submitReport = onCall(async (request) => {
     isRightsHolder: isRightsHolder || false,
     reporterId: uid,
     reporterName,
+    purchaseId: purchaseId || null,
     status: "pending",
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
@@ -1505,6 +1527,202 @@ export const adminDeleteMaterial = onCall(
     await writeAdminLog(uid, "delete_material", { materialId, reportId, reason, r2Deleted });
 
     return { success: true, r2Deleted };
+  }
+);
+
+// 자료 하자 신고 승인 (관리자): 전원 환불 + 자료 삭제
+export const approveDefectReport = onCall(
+  { secrets: R2_SECRETS },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+    await verifyAdmin(uid);
+
+    const { reportId } = request.data;
+    if (!reportId) {
+      throw new HttpsError("invalid-argument", "신고 ID가 필요합니다.");
+    }
+
+    const reportRef = db.collection("reports").doc(reportId);
+    const reportDoc = await reportRef.get();
+    if (!reportDoc.exists) {
+      throw new HttpsError("not-found", "신고를 찾을 수 없습니다.");
+    }
+    const report = reportDoc.data()!;
+    if ((report.type || "copyright") !== "defect") {
+      throw new HttpsError("failed-precondition", "자료 하자 신고가 아닙니다.");
+    }
+    if (report.status !== "pending") {
+      throw new HttpsError("failed-precondition", "이미 처리된 신고입니다.");
+    }
+
+    const materialId = report.materialId as string;
+    const materialRef = db.collection("materials").doc(materialId);
+    const materialDoc = await materialRef.get();
+    if (!materialDoc.exists) {
+      throw new HttpsError("not-found", "자료를 찾을 수 없습니다.");
+    }
+    const material = materialDoc.data()!;
+    const sellerId = material.authorId as string;
+    const materialTitle = material.title as string | undefined;
+
+    // 환불 대상: 아직 환불되지 않은 모든 구매 건
+    const purchasesSnap = await db
+      .collection("purchases")
+      .where("materialId", "==", materialId)
+      .get();
+    const targets = purchasesSnap.docs.filter((d) => d.data().refunded !== true);
+
+    if (targets.length > 400) {
+      throw new HttpsError("failed-precondition", "환불 대상 구매가 너무 많습니다. 수동 처리가 필요합니다.");
+    }
+
+    // 트랜잭션: 모든 환불을 원자적으로 처리
+    await db.runTransaction(async (tx) => {
+      const sellerRef = db.collection("users").doc(sellerId);
+      const sellerDoc = await tx.get(sellerRef);
+      let sellerEarnings = sellerDoc.exists ? (sellerDoc.data()!.earnings || 0) : 0;
+      let sellerPendingEarnings = sellerDoc.exists ? (sellerDoc.data()!.pendingEarnings || 0) : 0;
+
+      // 구매자 문서들을 먼저 모두 읽음 (트랜잭션 규칙: read 먼저, write 나중)
+      const buyerReads = await Promise.all(
+        targets.map(async (purchaseDoc) => {
+          const purchase = purchaseDoc.data();
+          const buyerRef = db.collection("users").doc(purchase.buyerId);
+          const buyerDoc = await tx.get(buyerRef);
+          return { purchaseDoc, purchase, buyerRef, buyerDoc };
+        })
+      );
+
+      let totalRefunded = 0;
+
+      for (const { purchaseDoc, purchase, buyerRef, buyerDoc } of buyerReads) {
+        const price = purchase.price as number;
+        const buyerId = purchase.buyerId as string;
+        const buyerPoints = buyerDoc.exists ? (buyerDoc.data()!.points || 0) : 0;
+
+        // 보류 수익금 → 정산된 수익금 순서로 차감
+        const fromPending = Math.min(sellerPendingEarnings, price);
+        const fromEarnings = price - fromPending;
+
+        if (fromEarnings > sellerEarnings) {
+          // 판매자 잔액 부족: 정지된 수익금까지 최대한 차감 (음수 허용하지 않음)
+          // 여기서는 안전하게 실패 처리
+          throw new HttpsError(
+            "failed-precondition",
+            "판매자 수익금이 부족하여 모든 구매자에게 환불할 수 없습니다. 판매자 정지 후 수동 정산이 필요합니다."
+          );
+        }
+
+        sellerPendingEarnings -= fromPending;
+        sellerEarnings -= fromEarnings;
+        totalRefunded += price;
+
+        // 구매자 포인트 복구
+        tx.update(buyerRef, {
+          points: buyerPoints + price,
+          totalSpent: admin.firestore.FieldValue.increment(-price),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // 구매 기록에 환불 표시
+        tx.update(purchaseDoc.ref, {
+          refunded: true,
+          refundedAt: admin.firestore.FieldValue.serverTimestamp(),
+          refundReason: "defect_approved",
+        });
+
+        // 환불 거래 내역 (구매자)
+        tx.create(db.collection("transactions").doc(), {
+          userId: buyerId,
+          type: "refund",
+          amount: price,
+          balanceAfter: buyerPoints + price,
+          balanceType: "points",
+          description: `자료 하자 승인 환불${materialTitle ? ` ("${materialTitle}")` : ""}`,
+          relatedMaterialId: materialId,
+          relatedUserId: sellerId,
+          status: "completed",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // 환불 거래 내역 (판매자)
+        tx.create(db.collection("transactions").doc(), {
+          userId: sellerId,
+          type: "refund",
+          amount: -price,
+          balanceAfter: sellerEarnings + sellerPendingEarnings,
+          balanceType: "earnings",
+          description: `자료 하자 승인 환불 (판매자 회수${materialTitle ? ` / "${materialTitle}"` : ""})`,
+          relatedMaterialId: materialId,
+          relatedUserId: buyerId,
+          status: "completed",
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      // 판매자 잔액 반영
+      if (totalRefunded > 0) {
+        tx.update(sellerRef, {
+          earnings: sellerEarnings,
+          pendingEarnings: sellerPendingEarnings,
+          totalEarned: admin.firestore.FieldValue.increment(-totalRefunded),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+
+      // 신고 상태 업데이트
+      tx.update(reportRef, {
+        status: "resolved",
+        resolution: "defect_refunded",
+        refundedCount: targets.length,
+        refundedTotal: totalRefunded,
+        resolvedBy: uid,
+        resolvedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    });
+
+    // R2 파일 삭제 (최대 3회 재시도)
+    const { fileKey } = material;
+    let r2Deleted = false;
+    if (fileKey) {
+      const r2 = getR2Client();
+      const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          await r2.send(
+            new DeleteObjectCommand({
+              Bucket: process.env.R2_BUCKET_NAME!,
+              Key: fileKey,
+            })
+          );
+          r2Deleted = true;
+          break;
+        } catch (err) {
+          if (attempt === 2) {
+            await db.collection("failed_deletions").add({
+              fileKey,
+              materialId,
+              error: String(err),
+              deletedBy: uid,
+              createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+          }
+        }
+      }
+    }
+
+    // 자료 완전 삭제
+    await materialRef.delete();
+
+    await writeAdminLog(uid, "approve_defect_report", {
+      reportId,
+      materialId,
+      refundedCount: targets.length,
+      r2Deleted,
+    });
+
+    return { success: true, refundedCount: targets.length, r2Deleted };
   }
 );
 

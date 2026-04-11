@@ -678,6 +678,14 @@ export default function UploadPage() {
                   required
                   className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors resize-y focus:bg-muted focus:ring-2 focus:ring-[#862633]/30 placeholder:text-muted-foreground"
                 />
+                <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] text-amber-800 leading-relaxed">
+                  <span className="font-bold shrink-0">⚠️ 주의</span>
+                  <span>
+                    자료 <span className="font-semibold">설명과 실제 내용이 다른 경우</span> 구매자의
+                    하자 신고 접수 시 관리자 검토 후 <span className="font-semibold">지급된 포인트가 회수되고 자료가 삭제</span>될 수 있습니다.
+                    반복 적발 시 계정 제재가 이루어질 수 있으니 설명을 정확히 작성해 주세요.
+                  </span>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
