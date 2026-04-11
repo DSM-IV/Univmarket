@@ -18,8 +18,8 @@ const POINTS_PER_TICKET = 1000;
 const products: RaffleProduct[] = [
   {
     id: "ipad-air-4",
-    name: "iPad Air (4세대)",
-    subtitle: "Apple iPad Air 4th Generation",
+    name: "iPad Air 5세대 (11형)",
+    subtitle: "Apple iPad Air 5th Generation 11-inch",
     image: "/products/ipad-air-4.png",
   },
 ];
