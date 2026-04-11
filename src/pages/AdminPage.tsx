@@ -447,39 +447,6 @@ export default function AdminPage() {
           <h1 className="text-2xl font-bold text-gray-900">관리자 페이지</h1>
         </div>
 
-        {/* R2 CORS 설정 배너 (파일 업로드용 필수 세팅) */}
-        <div className="mb-5 rounded-xl border-2 border-yellow-400 bg-yellow-50 p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex-1">
-              <p className="text-sm font-bold text-yellow-900">⚙️ R2 버킷 CORS 설정 (파일 업로드가 안 될 때)</p>
-              <p className="mt-1 text-xs text-yellow-800">
-                아래 버튼을 한 번만 클릭하면 R2 버킷에 CORS 정책이 자동 적용되어
-                브라우저에서 파일을 직접 업로드할 수 있게 됩니다.
-              </p>
-            </div>
-            <Button
-              size="sm"
-              className="shrink-0 bg-yellow-500 hover:bg-yellow-600 text-white font-bold"
-              onClick={async () => {
-                if (!confirm("R2 버킷 CORS 설정을 적용할까요? (최초 1회만 실행)")) return;
-                try {
-                  const fn = httpsCallable<Record<string, never>, { success: boolean; message: string }>(
-                    functions,
-                    "setR2Cors"
-                  );
-                  const res = await fn({});
-                  alert(res.data.message || "R2 CORS 설정 완료");
-                } catch (e) {
-                  console.error("[admin] setR2Cors error", e);
-                  alert("R2 CORS 설정 실패: " + (e as Error).message);
-                }
-              }}
-            >
-              R2 CORS 설정 적용
-            </Button>
-          </div>
-        </div>
-
         {/* Section Toggle */}
         <div className="mb-5 flex gap-2">
           <Button
