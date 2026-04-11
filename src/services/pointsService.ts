@@ -21,22 +21,28 @@ export async function chargeWithKakaopay(amount: number): Promise<string> {
   return result.data.redirectUrl;
 }
 
-export async function chargeWithTossReady(amount: number): Promise<string> {
-  const fn = httpsCallable<{ amount: number }, { orderId: string }>(
-    functions,
-    "tossReady"
-  );
+export async function chargeWithTossReady(
+  amount: number
+): Promise<{ orderId: string; paymentAmount: number; vat: number }> {
+  const fn = httpsCallable<
+    { amount: number },
+    { orderId: string; paymentAmount: number; vat: number }
+  >(functions, "tossReady");
   const result = await fn({ amount });
-  return result.data.orderId;
+  return result.data;
 }
 
 export async function chargeWithTossApprove(
   paymentKey: string,
   orderId: string,
   amount: number
-): Promise<void> {
-  const fn = httpsCallable(functions, "tossApprove");
-  await fn({ paymentKey, orderId, amount });
+): Promise<{ pointAmount: number }> {
+  const fn = httpsCallable<
+    { paymentKey: string; orderId: string; amount: number },
+    { success: boolean; pointAmount: number }
+  >(functions, "tossApprove");
+  const result = await fn({ paymentKey, orderId, amount });
+  return { pointAmount: result.data.pointAmount };
 }
 
 export async function purchaseMaterial(

@@ -678,23 +678,26 @@ export const tossReady = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-  const { amount } = request.data;
-  if (!amount || !Number.isInteger(amount) || amount < MIN_CHARGE_AMOUNT || amount > MAX_CHARGE_AMOUNT) {
+  const { amount: pointAmount } = request.data;
+  if (!pointAmount || !Number.isInteger(pointAmount) || pointAmount < MIN_CHARGE_AMOUNT || pointAmount > MAX_CHARGE_AMOUNT) {
     throw new HttpsError("invalid-argument", `충전 금액은 ${MIN_CHARGE_AMOUNT.toLocaleString()}원~${MAX_CHARGE_AMOUNT.toLocaleString()}원이어야 합니다.`);
   }
 
+  const vat = Math.ceil(pointAmount * 0.1);
+  const paymentAmount = pointAmount + vat;
   const orderId = `unifile_${uid}_${Date.now()}`;
 
-  // 토스 결제 세션 저장
+  // 토스 결제 세션 저장 (pointAmount = 포인트로 적립될 금액, paymentAmount = 실제 결제 금액)
   await db.collection("toss_sessions").doc(orderId).set({
     userId: uid,
-    amount,
+    pointAmount,
+    vat,
+    paymentAmount,
     status: "ready",
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // 토스페이먼츠는 클라이언트에서 SDK로 결제창을 띄우므로 orderId만 반환
-  return { orderId };
+  return { orderId, paymentAmount, vat };
 });
 
 // 토스페이먼츠 결제 승인
@@ -717,16 +720,18 @@ export const tossApprove = onCall(async (request) => {
 
   const session = sessionDoc.data()!;
   if (session.status === "approved") {
-    return { success: true }; // 이미 처리 완료된 결제
+    return { success: true, pointAmount: session.pointAmount };
   }
   if (session.status !== "ready") {
     throw new HttpsError("failed-precondition", "이미 처리되었거나 만료된 결제입니다.");
   }
-  if (session.userId !== uid || session.amount !== amount) {
+  if (session.userId !== uid || session.paymentAmount !== amount) {
     throw new HttpsError("permission-denied", "결제 정보가 일치하지 않습니다.");
   }
 
-  // 토스페이먼츠 ���제 승인 API 호출
+  const pointAmount = session.pointAmount as number;
+
+  // 토스페이먼츠 결제 승인 API 호출
   const authHeader = Buffer.from(`${TOSS_SECRET_KEY}:`).toString("base64");
 
   try {
@@ -741,19 +746,19 @@ export const tossApprove = onCall(async (request) => {
       }
     );
 
-    // Firestore 트랜잭션으로 포인트 충전
+    // Firestore 트랜잭션으로 포인트 충전 (포인트는 pointAmount만 적립)
     await db.runTransaction(async (tx) => {
       const userRef = db.collection("users").doc(uid);
       const userDoc = await tx.get(userRef);
 
       const currentPoints = userDoc.exists ? userDoc.data()!.points || 0 : 0;
-      const newPoints = currentPoints + amount;
+      const newPoints = currentPoints + pointAmount;
 
       tx.set(
         userRef,
         {
           points: newPoints,
-          totalEarned: admin.firestore.FieldValue.increment(amount),
+          totalEarned: admin.firestore.FieldValue.increment(pointAmount),
           updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         },
         { merge: true }
@@ -762,19 +767,20 @@ export const tossApprove = onCall(async (request) => {
       tx.create(db.collection("transactions").doc(), {
         userId: uid,
         type: "charge",
-        amount,
+        amount: pointAmount,
         balanceAfter: newPoints,
         balanceType: "points",
-        description: `포인트 충전 ${amount.toLocaleString()}P (토스)`,
+        description: `포인트 충전 ${pointAmount.toLocaleString()}P (토스 / 결제 ${amount.toLocaleString()}원, VAT 포함)`,
         status: "completed",
         tossPaymentKey: paymentKey,
+        tossPaymentAmount: amount,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
       tx.update(sessionRef, { status: "approved", paymentKey });
     });
 
-    return { success: true };
+    return { success: true, pointAmount };
   } catch (err) {
     await sessionRef.update({ status: "failed" });
     const message = axios.isAxiosError(err)
