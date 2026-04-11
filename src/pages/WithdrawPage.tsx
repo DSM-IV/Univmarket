@@ -21,11 +21,11 @@ function calcWithdrawDetails(amount: number) {
   const fee = FEE;
   const commission = Math.ceil(amount * PLATFORM_COMMISSION_RATE);
   const taxable = amount > TAX_THRESHOLD;
-  // 세금 포함 금액 = 출금액 / (1 - 세율)  →  세금 = 총액 - 출금액
-  const grossAmount = taxable ? Math.ceil(amount / (1 - TAX_RATE)) : amount;
-  const tax = grossAmount - amount;
-  const totalDeduction = grossAmount + fee + commission;
-  return { fee, commission, tax, grossAmount, totalDeduction, taxable };
+  // 입력 금액 = 수익금에서 차감되는 금액. 입력 금액에서 수수료·세금을 빼고 남은 금액이 입금됨
+  const tax = taxable ? Math.ceil(amount * TAX_RATE) : 0;
+  const totalDeduction = amount;
+  const received = Math.max(0, amount - commission - tax - fee);
+  return { fee, commission, tax, totalDeduction, received, taxable };
 }
 
 export default function WithdrawPage() {
@@ -53,8 +53,11 @@ export default function WithdrawPage() {
 
   const earnings = userProfile?.earnings ?? 0;
   const withdrawAmount = selectedAmount ?? (customAmount ? parseInt(customAmount) : 0);
-  const { fee, commission, tax, totalDeduction, taxable } = calcWithdrawDetails(withdrawAmount);
-  const isValidAmount = withdrawAmount >= MIN_WITHDRAW && totalDeduction <= earnings;
+  const { fee, commission, tax, totalDeduction, received, taxable } = calcWithdrawDetails(withdrawAmount);
+  const isValidAmount =
+    withdrawAmount >= MIN_WITHDRAW &&
+    totalDeduction <= earnings &&
+    received > 0;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,7 +68,11 @@ export default function WithdrawPage() {
       return;
     }
     if (totalDeduction > earnings) {
-      setError(`수수료·세금 포함 ${totalDeduction.toLocaleString()}원이 필요합니다. 수익금이 부족합니다.`);
+      setError(`${totalDeduction.toLocaleString()}원이 필요합니다. 수익금이 부족합니다.`);
+      return;
+    }
+    if (received <= 0) {
+      setError("수수료·세금을 빼면 실수령액이 남지 않습니다. 더 큰 금액으로 신청해주세요.");
       return;
     }
     if (!bankName.trim() || !accountNumber.trim() || !accountHolder.trim()) {
@@ -101,11 +108,12 @@ export default function WithdrawPage() {
               <CheckCircle className="w-7 h-7 text-success" />
             </div>
             <h2 className="text-xl font-bold tracking-tight">출금 신청 완료</h2>
+            <p className="text-xs text-muted-foreground mt-1">입금 예정 금액</p>
             <p className="text-2xl font-extrabold text-primary tracking-tight">
-              {withdrawAmount.toLocaleString()}원
+              {received.toLocaleString()}원
             </p>
             <p className="text-xs text-muted-foreground">
-              (플랫폼 수수료·출금수수료·세금 포함 총 {totalDeduction.toLocaleString()}원 수익금에서 차감)
+              (신청 금액 {withdrawAmount.toLocaleString()}원 − 플랫폼 수수료·세금·출금수수료)
             </p>
             <p className="text-sm text-muted-foreground">
               {bankName} {accountNumber} ({accountHolder})
@@ -264,7 +272,7 @@ export default function WithdrawPage() {
             <Card className="mb-5">
               <CardContent className="p-5">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-muted-foreground">출금 금액</span>
+                  <span className="text-muted-foreground">출금 신청 금액</span>
                   <span className="font-semibold">{withdrawAmount.toLocaleString()}원</span>
                 </div>
                 <div className="flex justify-between items-center text-sm mb-2">
@@ -275,34 +283,39 @@ export default function WithdrawPage() {
                       <span className="text-[11px] font-bold text-red-600">→ 10%</span>
                     </span>
                   </span>
-                  <span className="font-semibold text-amber-600">+{commission.toLocaleString()}원</span>
+                  <span className="font-semibold text-muted-foreground">−{commission.toLocaleString()}원</span>
                 </div>
                 {taxable && (
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="text-muted-foreground">세금 (8.8%)</span>
-                    <span className="font-semibold text-amber-600">+{tax.toLocaleString()}원</span>
+                    <span className="text-muted-foreground">원천징수 세금 (8.8%)</span>
+                    <span className="font-semibold text-muted-foreground">−{tax.toLocaleString()}원</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-muted-foreground">출금처리수수료</span>
-                  <span className="font-semibold text-amber-600">+{fee.toLocaleString()}원</span>
+                  <span className="font-semibold text-muted-foreground">−{fee.toLocaleString()}원</span>
                 </div>
                 <Separator className="my-3" />
-                <div className="flex justify-between text-sm mb-2">
-                  <span className="font-semibold">총 차감 금액</span>
-                  <span className={cn("font-bold text-base", !isValidAmount ? "text-destructive" : "text-primary")}>
-                    {totalDeduction.toLocaleString()}원
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-semibold">실수령액 (입금액)</span>
+                  <span className={cn("font-extrabold text-lg tracking-tight", !isValidAmount ? "text-destructive" : "text-primary")}>
+                    {received.toLocaleString()}원
                   </span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">출금 후 수익금 잔액</span>
-                  <span className={cn("font-semibold", !isValidAmount && "text-destructive")}>
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>출금 후 수익금 잔액</span>
+                  <span className={cn(!isValidAmount && "text-destructive")}>
                     {(earnings - totalDeduction).toLocaleString()}원
                   </span>
                 </div>
-                {!isValidAmount && withdrawAmount >= MIN_WITHDRAW && (
+                {withdrawAmount >= MIN_WITHDRAW && totalDeduction > earnings && (
                   <p className="text-xs text-destructive mt-2">
-                    수수료·세금 포함 시 보유 수익금이 부족합니다.
+                    보유 수익금이 부족합니다.
+                  </p>
+                )}
+                {withdrawAmount >= MIN_WITHDRAW && received <= 0 && totalDeduction <= earnings && (
+                  <p className="text-xs text-destructive mt-2">
+                    수수료·세금을 빼면 실수령액이 남지 않습니다. 더 큰 금액으로 신청해주세요.
                   </p>
                 )}
               </CardContent>
@@ -361,10 +374,11 @@ export default function WithdrawPage() {
             </div>
 
             <ul className="text-[13px] text-muted-foreground space-y-2 ml-1 mb-5">
-              <li>• 수익금 출금 시 <span className="font-semibold text-foreground">플랫폼 수수료 10%</span>가 차감됩니다. (정상 수수료 40%에서 할인 적용)</li>
-              <li>• 최소 출금 금액은 <span className="font-semibold text-foreground">5,000원</span>이며, 출금처리수수료 <span className="font-semibold text-foreground">1,000원</span>이 추가로 부과됩니다.</li>
-              <li>• 신청금액이 <span className="font-semibold text-foreground">건별 125,000원 초과</span> 시 기타소득세와 주민세(8.8%)가 포함된 금액이 수익금 계정에서 출금 처리됩니다.</li>
-              <li>• 신청금액이 <span className="font-semibold text-foreground">연간 누적 7,500,000원 초과</span> 시 사업소득세와 주민세(3.3%)가 포함된 금액이 수익금 계정에서 출금 처리됩니다.</li>
+              <li>• 출금 신청 금액은 <span className="font-semibold text-foreground">수익금에서 그대로 차감</span>되며, 입력한 금액에서 아래 수수료·세금을 <span className="font-semibold text-foreground">뺀 금액이 입금</span>됩니다.</li>
+              <li>• 수익금 출금 시 <span className="font-semibold text-foreground">플랫폼 수수료 10%</span>가 신청금액에서 차감됩니다. (정상 수수료 40%에서 할인 적용)</li>
+              <li>• 최소 출금 금액은 <span className="font-semibold text-foreground">5,000원</span>이며, 출금처리수수료 <span className="font-semibold text-foreground">1,000원</span>이 신청금액에서 차감됩니다.</li>
+              <li>• 신청금액이 <span className="font-semibold text-foreground">건별 125,000원 초과</span> 시 기타소득세와 주민세(8.8%)가 추가로 원천징수됩니다.</li>
+              <li>• 신청금액이 <span className="font-semibold text-foreground">연간 누적 7,500,000원 초과</span> 시 사업소득으로 분류되어 사업소득세와 주민세(3.3%)가 원천징수됩니다.</li>
             </ul>
 
             <div className="space-y-4">
@@ -375,13 +389,17 @@ export default function WithdrawPage() {
                   <span className="text-sm font-semibold">건별 125,000원 초과 시</span>
                 </div>
                 <ul className="text-[13px] text-muted-foreground space-y-1.5 ml-1">
-                  <li>• 출금 신청금액이 건별 125,000원을 초과할 경우 기타소득으로 국세청에 통보되며, 기타소득세율(8.8%)이 포함된 금액이 수익금 계정에서 출금됩니다.</li>
-                  <li>• 125,000원 이하 출금 시에는 세금이 부과되지 않습니다.</li>
+                  <li>• 출금 신청금액이 건별 125,000원을 초과하면 기타소득으로 국세청에 통보되며, 기타소득세(8.8%)가 신청금액에서 원천징수됩니다.</li>
+                  <li>• 125,000원 이하 출금 시에는 세금이 부과되지 않습니다 (과세 최저한).</li>
                 </ul>
                 <div className="mt-3 p-3 rounded-lg bg-muted/50">
-                  <p className="text-[12px] text-muted-foreground font-semibold mb-1">출금 예시</p>
+                  <p className="text-[12px] text-muted-foreground font-semibold mb-1">출금 예시 (신청 금액 200,000원)</p>
                   <p className="text-[12px] text-muted-foreground leading-relaxed">
-                    200,000원 출금 시 → 플랫폼 수수료 20,000원(10%) + 세금 포함 219,299원(8.8%) + 출금수수료 1,000원 = 총 240,299원 차감
+                    수익금 차감 200,000원<br />
+                    − 플랫폼 수수료 20,000원 (10%)<br />
+                    − 기타소득세 17,600원 (8.8%)<br />
+                    − 출금처리수수료 1,000원<br />
+                    = <span className="font-semibold text-foreground">실수령 161,400원</span>
                   </p>
                 </div>
                 <div className="mt-3">
@@ -411,12 +429,16 @@ export default function WithdrawPage() {
                 </div>
                 <ul className="text-[13px] text-muted-foreground space-y-1.5 ml-1">
                   <li>• 출금 신청금액이 연간 누적 7,500,000원을 초과하는 경우 계속적·반복적 판매 활동으로 보아 사업소득으로 국세청에 통보됩니다.</li>
-                  <li>• 이후 출금 신청금액과 상관없이 사업소득 세율(3.3%)이 포함된 금액이 수익금 계정에서 출금 처리됩니다.</li>
+                  <li>• 이후 출금 금액과 상관없이 사업소득세(3.3%)가 신청금액에서 원천징수됩니다.</li>
                 </ul>
                 <div className="mt-3 p-3 rounded-lg bg-muted/50">
-                  <p className="text-[12px] text-muted-foreground font-semibold mb-1">출금 예시</p>
+                  <p className="text-[12px] text-muted-foreground font-semibold mb-1">출금 예시 (신청 금액 50,000원)</p>
                   <p className="text-[12px] text-muted-foreground leading-relaxed">
-                    50,000원 출금 시 → 플랫폼 수수료 5,000원(10%) + 세금 포함 51,707원(3.3%) + 출금수수료 1,000원 = 총 57,707원 차감
+                    수익금 차감 50,000원<br />
+                    − 플랫폼 수수료 5,000원 (10%)<br />
+                    − 사업소득세 1,650원 (3.3%)<br />
+                    − 출금처리수수료 1,000원<br />
+                    = <span className="font-semibold text-foreground">실수령 42,350원</span>
                   </p>
                 </div>
               </div>

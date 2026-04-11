@@ -1126,20 +1126,22 @@ export const requestWithdraw = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "계좌 정보를 모두 입력해주세요.");
   }
 
-  // 본인인증 확인
+  // 사용자 존재 확인 (본인인증은 현재 플랫폼 정책으로 출금 페이지에서 해제)
   const userDoc = await db.collection("users").doc(uid).get();
   if (!userDoc.exists) throw new HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
-  if (!userDoc.data()!.identityVerified) {
-    throw new HttpsError("failed-precondition", "본인인증이 필요합니다.");
-  }
 
   // 수수료·세금 계산 (서버에서 재계산)
+  // 입력 금액이 수익금에서 차감되는 기준 금액. 실수령 = 입력 금액 - 수수료 - 세금 - 출금수수료
   const fee = WITHDRAW_FEE;
   const commission = Math.ceil(amount * PLATFORM_COMMISSION_RATE); // 플랫폼 수수료 10%
   const taxable = amount > WITHDRAW_TAX_THRESHOLD;
-  const grossAmount = taxable ? Math.ceil(amount / (1 - WITHDRAW_TAX_RATE)) : amount;
-  const tax = grossAmount - amount;
-  const totalDeduction = grossAmount + fee + commission;
+  const tax = taxable ? Math.ceil(amount * WITHDRAW_TAX_RATE) : 0;
+  const totalDeduction = amount; // 수익금에서 차감되는 금액
+  const received = amount - commission - tax - fee; // 실수령 금액
+
+  if (received <= 0) {
+    throw new HttpsError("failed-precondition", "수수료·세금을 빼면 실수령액이 남지 않습니다. 더 큰 금액으로 신청해주세요.");
+  }
 
   // Firestore 트랜잭션으로 수익금 차감 + 출금 기록
   let balanceAfter = 0;
@@ -1149,11 +1151,11 @@ export const requestWithdraw = onCall(async (request) => {
     if (!snap.exists) throw new HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
 
     const currentEarnings = snap.data()!.earnings || 0;
-    if (currentEarnings < totalDeduction) {
-      throw new HttpsError("failed-precondition", `수수료·세금 포함 ${totalDeduction.toLocaleString()}원이 필요합니다. 수익금이 부족합니다.`);
+    if (currentEarnings < amount) {
+      throw new HttpsError("failed-precondition", `${amount.toLocaleString()}원이 필요합니다. 수익금이 부족합니다.`);
     }
 
-    balanceAfter = currentEarnings - totalDeduction;
+    balanceAfter = currentEarnings - amount;
 
     tx.update(userRef, {
       earnings: balanceAfter,
@@ -1175,9 +1177,10 @@ export const requestWithdraw = onCall(async (request) => {
       commission,
       tax,
       totalDeduction,
+      received,
       balanceAfter,
       balanceType: "earnings",
-      description: `수익금 출금 신청 (${bankName.trim()} ${maskedAccount})`,
+      description: `수익금 출금 신청 (${bankName.trim()} ${maskedAccount}, 실수령 ${received.toLocaleString()}원)`,
       bankName: bankName.trim(),
       accountNumber: maskedAccount,
       accountHolder: accountHolder.trim(),
@@ -1195,7 +1198,7 @@ export const requestWithdraw = onCall(async (request) => {
     });
   });
 
-  return { success: true, balanceAfter, totalDeduction, fee, commission, tax };
+  return { success: true, balanceAfter, totalDeduction, received, fee, commission, tax };
 });
 
 // --- 신고 ---
