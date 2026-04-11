@@ -361,7 +361,7 @@ export default function PrivacyPage() {
             </p>
             <div className="my-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm not-prose">
               <p className="font-semibold text-gray-900">고객센터</p>
-              <p className="mt-1 text-gray-600">이메일: support@unifile.com</p>
+              <p className="mt-1 text-gray-600">이메일: unifileservice@gmail.com</p>
               <p className="mt-0.5 text-gray-600">고객센터를 이용한 상담은 접수 후 24시간 내에 성실하게 답변 드리겠습니다.</p>
             </div>
             <p>
@@ -387,7 +387,7 @@ export default function PrivacyPage() {
             </p>
             <div className="my-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm not-prose">
               <p className="font-semibold text-gray-900">개인정보관리책임자</p>
-              <p className="mt-1 text-gray-600">이메일: privacy@unifile.com</p>
+              <p className="mt-1 text-gray-600">이메일: unifileservice@gmail.com</p>
               <p className="mt-0.5 text-gray-600">개인정보 관련 문의사항에 신속하고 성실하게 답변해 드리고 있습니다.</p>
             </div>
           </section>
