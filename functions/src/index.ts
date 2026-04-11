@@ -1533,6 +1533,59 @@ export const adminDeleteMaterial = onCall(
   }
 );
 
+// 관리자 수익금 지급/회수
+export const adminGrantEarnings = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  await verifyAdmin(uid);
+
+  const { targetUserId, amount, reason } = request.data;
+  if (!targetUserId || typeof targetUserId !== "string") {
+    throw new HttpsError("invalid-argument", "대상 사용자 ID가 필요합니다.");
+  }
+  if (!Number.isInteger(amount) || amount === 0 || Math.abs(amount) > 10_000_000) {
+    throw new HttpsError("invalid-argument", "지급 금액은 0이 아닌 정수여야 하며, 절대값 1,000만원 이하여야 합니다.");
+  }
+
+  const targetRef = db.collection("users").doc(targetUserId);
+  let balanceAfter = 0;
+
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(targetRef);
+    if (!snap.exists) {
+      throw new HttpsError("not-found", "대상 사용자를 찾을 수 없습니다.");
+    }
+    const currentEarnings = (snap.data()!.earnings as number) || 0;
+    const newEarnings = currentEarnings + amount;
+    if (newEarnings < 0) {
+      throw new HttpsError("failed-precondition", `차감 후 수익금이 음수가 됩니다. (현재 잔액 ${currentEarnings.toLocaleString()}원)`);
+    }
+    balanceAfter = newEarnings;
+
+    tx.update(targetRef, {
+      earnings: newEarnings,
+      totalEarned: admin.firestore.FieldValue.increment(amount > 0 ? amount : 0),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    tx.create(db.collection("transactions").doc(), {
+      userId: targetUserId,
+      type: "admin_grant",
+      amount,
+      balanceAfter,
+      balanceType: "earnings",
+      description: `관리자 수익금 ${amount > 0 ? "지급" : "회수"}${reason ? ` (${reason})` : ""}`,
+      grantedBy: uid,
+      status: "completed",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  });
+
+  await writeAdminLog(uid, "grant_earnings", { targetUserId, amount, reason: reason || "", balanceAfter });
+
+  return { success: true, balanceAfter };
+});
+
 // 자료 하자 신고 승인 (관리자): 전원 환불 + 자료 삭제
 export const approveDefectReport = onCall(
   { secrets: R2_SECRETS },
