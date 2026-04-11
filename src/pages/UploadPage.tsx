@@ -717,7 +717,7 @@ export default function UploadPage() {
                     type="text"
                     value={
                       files.length === 0
-                        ? "파일 업로드 시 자동 감지"
+                        ? ""
                         : files.length === 1
                           ? getFileTypeLabel(files[0])
                           : `${Array.from(new Set(files.map(getFileTypeLabel))).join(", ")} (${files.length}개)`
