@@ -12,7 +12,7 @@ import { Wallet, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
 
 const AMOUNTS = [5000, 10000, 30000, 50000, 100000];
 const MIN_WITHDRAW = 5000;
-const FEE = 1000;
+const FEE = 500;
 const TAX_THRESHOLD = 125000;
 const TAX_RATE = 0.088;
 const PLATFORM_COMMISSION_RATE = 0.10; // 10% (원래 40%에서 할인)
@@ -376,7 +376,7 @@ export default function WithdrawPage() {
             <ul className="text-[13px] text-muted-foreground space-y-2 ml-1 mb-5">
               <li>• 출금 신청 금액은 <span className="font-semibold text-foreground">수익금에서 그대로 차감</span>되며, 입력한 금액에서 아래 수수료·세금을 <span className="font-semibold text-foreground">뺀 금액이 입금</span>됩니다.</li>
               <li>• 수익금 출금 시 <span className="font-semibold text-foreground">플랫폼 수수료 10%</span>가 신청금액에서 차감됩니다. (정상 수수료 40%에서 할인 적용)</li>
-              <li>• 최소 출금 금액은 <span className="font-semibold text-foreground">5,000원</span>이며, 출금처리수수료 <span className="font-semibold text-foreground">1,000원</span>이 신청금액에서 차감됩니다.</li>
+              <li>• 최소 출금 금액은 <span className="font-semibold text-foreground">5,000원</span>이며, 출금처리수수료 <span className="font-semibold text-foreground">500원</span>이 신청금액에서 차감됩니다.</li>
               <li>• 신청금액이 <span className="font-semibold text-foreground">건별 125,000원 초과</span> 시 기타소득세와 주민세(8.8%)가 추가로 원천징수됩니다.</li>
               <li>• 신청금액이 <span className="font-semibold text-foreground">연간 누적 7,500,000원 초과</span> 시 사업소득으로 분류되어 사업소득세와 주민세(3.3%)가 원천징수됩니다.</li>
             </ul>
@@ -398,8 +398,8 @@ export default function WithdrawPage() {
                     수익금 차감 200,000원<br />
                     − 플랫폼 수수료 20,000원 (10%)<br />
                     − 기타소득세 17,600원 (8.8%)<br />
-                    − 출금처리수수료 1,000원<br />
-                    = <span className="font-semibold text-foreground">실수령 161,400원</span>
+                    − 출금처리수수료 500원<br />
+                    = <span className="font-semibold text-foreground">실수령 161,900원</span>
                   </p>
                 </div>
                 <div className="mt-3">
@@ -437,8 +437,8 @@ export default function WithdrawPage() {
                     수익금 차감 50,000원<br />
                     − 플랫폼 수수료 5,000원 (10%)<br />
                     − 사업소득세 1,650원 (3.3%)<br />
-                    − 출금처리수수료 1,000원<br />
-                    = <span className="font-semibold text-foreground">실수령 42,350원</span>
+                    − 출금처리수수료 500원<br />
+                    = <span className="font-semibold text-foreground">실수령 42,850원</span>
                   </p>
                 </div>
               </div>

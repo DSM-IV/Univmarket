@@ -274,13 +274,25 @@ export const setR2Cors = onCall({ secrets: R2_SECRETS }, async (request) => {
 });
 
 // R2 업로드 presigned URL 생성
+// 업로드 파일 크기 상한 (R2 비용 보호 + 클라 검증 우회 차단)
+const MAX_UPLOAD_BYTES = 60 * 1024 * 1024; // 60MB (자료 파일 50MB + 여유)
+
 export const getUploadUrl = onCall({ secrets: R2_SECRETS }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-  const { fileName, contentType } = request.data;
+  const { fileName, contentType, fileSize } = request.data;
   if (!fileName || !contentType) {
     throw new HttpsError("invalid-argument", "파일 정보가 누락되었습니다.");
+  }
+  if (typeof fileSize !== "number" || !Number.isFinite(fileSize) || fileSize <= 0) {
+    throw new HttpsError("invalid-argument", "파일 크기가 유효하지 않습니다.");
+  }
+  if (fileSize > MAX_UPLOAD_BYTES) {
+    throw new HttpsError(
+      "invalid-argument",
+      `파일 크기가 너무 큽니다. (최대 ${Math.floor(MAX_UPLOAD_BYTES / 1024 / 1024)}MB)`
+    );
   }
 
   const r2 = getR2Client();
@@ -299,6 +311,7 @@ export const getUploadUrl = onCall({ secrets: R2_SECRETS }, async (request) => {
     Bucket: process.env.R2_BUCKET_NAME!,
     Key: key,
     ContentType: contentType,
+    ContentLength: fileSize, // 서명에 길이 바인딩 → 다른 크기 PUT 거부
   });
 
   const uploadUrl = await getSignedUrl(r2, command, { expiresIn: 600 }); // 10분
@@ -356,15 +369,15 @@ export const getDownloadUrl = onCall({ secrets: R2_SECRETS }, async (request) =>
     throw new HttpsError("invalid-argument", "자료 ID가 누락되었습니다.");
   }
 
-  // 구매 확인
+  // 구매 확인 (환불되지 않은 가장 최근 구매를 사용)
   const purchases = await db
     .collection("purchases")
     .where("buyerId", "==", uid)
     .where("materialId", "==", materialId)
-    .limit(1)
     .get();
 
-  let isBuyer = !purchases.empty;
+  const validPurchaseDoc = purchases.docs.find((d) => d.data().refunded !== true);
+  let isBuyer = !!validPurchaseDoc;
 
   if (!isBuyer) {
     // 판매자 본인인지 확인
@@ -377,6 +390,15 @@ export const getDownloadUrl = onCall({ secrets: R2_SECRETS }, async (request) =>
   const materialDoc = await db.collection("materials").doc(materialId).get();
   if (!materialDoc.exists) {
     throw new HttpsError("not-found", "자료를 찾을 수 없습니다.");
+  }
+
+  // 구매자가 다운로드 URL을 발급받는 즉시 환불 차단을 위해 표시
+  // (워터마크 실패 fallback 경로에서도 표시되어야 하므로 분기 전에 수행)
+  if (validPurchaseDoc) {
+    await validPurchaseDoc.ref.update({
+      downloaded: true,
+      downloadedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
   }
 
   const r2 = getR2Client();
@@ -397,7 +419,7 @@ export const getDownloadUrl = onCall({ secrets: R2_SECRETS }, async (request) =>
       // 구매자 정보 가져오기
       const userDoc = await db.collection("users").doc(uid).get();
       const nickname = userDoc.exists ? (userDoc.data()!.nickname || uid) : uid;
-      const purchaseId = purchases.empty ? "owner" : purchases.docs[0].id;
+      const purchaseId = validPurchaseDoc ? validPurchaseDoc.id : "owner";
       const watermarkText = `Licensed to ${nickname} (${purchaseId})`;
 
       // 워터마크 삽입
@@ -2143,6 +2165,65 @@ export const refundPurchase = onCall(async (request) => {
   });
 
   return { success: true };
+});
+
+// 리뷰 작성 (실제 구매자만, 환불된 구매는 제외)
+export const submitReview = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  const { materialId, rating, content } = request.data || {};
+  if (!materialId || typeof materialId !== "string") {
+    throw new HttpsError("invalid-argument", "자료 ID가 누락되었습니다.");
+  }
+  if (typeof rating !== "number" || !Number.isFinite(rating) || rating < 1 || rating > 5) {
+    throw new HttpsError("invalid-argument", "별점은 1~5 사이여야 합니다.");
+  }
+  if (typeof content !== "string") {
+    throw new HttpsError("invalid-argument", "후기 내용이 누락되었습니다.");
+  }
+  const trimmed = content.trim();
+  if (trimmed.length === 0 || trimmed.length > 1000) {
+    throw new HttpsError("invalid-argument", "후기는 1~1000자 사이여야 합니다.");
+  }
+
+  // 환불되지 않은 실제 구매가 있는지 확인
+  const purchases = await db
+    .collection("purchases")
+    .where("buyerId", "==", uid)
+    .where("materialId", "==", materialId)
+    .get();
+  const hasValidPurchase = purchases.docs.some((d) => d.data().refunded !== true);
+  if (!hasValidPurchase) {
+    throw new HttpsError("permission-denied", "구매한 자료에만 후기를 작성할 수 있습니다.");
+  }
+
+  // 중복 작성 방지
+  const existing = await db
+    .collection("reviews")
+    .where("materialId", "==", materialId)
+    .where("userId", "==", uid)
+    .limit(1)
+    .get();
+  if (!existing.empty) {
+    throw new HttpsError("already-exists", "이미 후기를 작성하셨습니다.");
+  }
+
+  // 사용자 닉네임 조회
+  const userDoc = await db.collection("users").doc(uid).get();
+  const userName = (userDoc.exists && (userDoc.data()!.nickname || userDoc.data()!.email)) || "익명";
+
+  const reviewRef = db.collection("reviews").doc();
+  await reviewRef.set({
+    userId: uid,
+    userName,
+    materialId,
+    rating,
+    content: trimmed,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  return { success: true, reviewId: reviewRef.id };
 });
 
 // 포인트 충전 요청 (계좌이체)

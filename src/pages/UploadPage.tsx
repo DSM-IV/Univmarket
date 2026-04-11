@@ -343,6 +343,13 @@ export default function UploadPage() {
       return;
     }
 
+    // 가격 검증 (정수, 0~500,000)
+    const priceInt = parseInt(formData.price);
+    if (!Number.isInteger(priceInt) || priceInt < 0 || priceInt > 500000) {
+      setError("판매 가격은 0원 이상 500,000원 이하의 정수여야 합니다.");
+      return;
+    }
+
     if (gradeClaim && !gradeImage) {
       setError("성적을 선택하셨다면 성적증명서 캡처를 첨부해주세요.");
       return;
@@ -353,7 +360,7 @@ export default function UploadPage() {
 
     try {
       const getUploadUrl = httpsCallable<
-        { fileName: string; contentType: string },
+        { fileName: string; contentType: string; fileSize: number },
         { uploadUrl: string; fileUrl: string; key: string }
       >(functions, "getUploadUrl");
 
@@ -370,7 +377,7 @@ export default function UploadPage() {
         const safeName = sanitizeFileName(f.name);
         let fdata: { uploadUrl: string; fileUrl: string; key: string };
         try {
-          const res = await getUploadUrl({ fileName: safeName, contentType: ct });
+          const res = await getUploadUrl({ fileName: safeName, contentType: ct, fileSize: f.size });
           fdata = res.data;
         } catch (e) {
           throw new Error(`업로드 URL 발급 실패 (${f.name}): ${(e as Error).message}`);
@@ -412,6 +419,7 @@ export default function UploadPage() {
         const { data: imgData } = await getUploadUrl({
           fileName: imgName,
           contentType: img.type,
+          fileSize: img.size,
         });
         const imgPut = await fetch(imgData.uploadUrl, {
           method: "PUT",
@@ -432,6 +440,7 @@ export default function UploadPage() {
         const { data: gradeData } = await getUploadUrl({
           fileName: gradeFileName,
           contentType: gradeImage.file.type,
+          fileSize: gradeImage.file.size,
         });
         const gradePut = await fetch(gradeData.uploadUrl, {
           method: "PUT",
@@ -453,7 +462,7 @@ export default function UploadPage() {
         semester: formData.semester || "",
         subject: formData.subject,
         professor: formData.professor,
-        price: parseInt(formData.price),
+        price: priceInt,
         fileType: primaryFile.type,
         pages: formData.pages ? parseInt(formData.pages) : 0,
         // 레거시 호환: 첫 번째 파일을 단일 필드로 노출 (다운로드/스캔 경로용)
@@ -1108,6 +1117,8 @@ export default function UploadPage() {
                     name="price"
                     placeholder="예: 3000"
                     min={0}
+                    max={500000}
+                    step={1}
                     value={formData.price}
                     onChange={handleChange}
                     required

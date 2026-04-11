@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   doc, getDoc, collection, query, where, orderBy,
-  getDocs, addDoc, serverTimestamp, updateDoc, deleteDoc,
+  getDocs, updateDoc, deleteDoc,
 } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { db, functions } from "../firebase";
@@ -163,32 +163,30 @@ export default function DetailPage() {
           content: reviewContent.trim(),
         });
       } else {
-        // 서버에서 한번 더 중복 확인
-        const existingQuery = query(
-          collection(db, "reviews"),
-          where("materialId", "==", id),
-          where("userId", "==", user.uid)
-        );
-        const existingSnap = await getDocs(existingQuery);
-        if (!existingSnap.empty) {
-          alert("이미 후기를 작성하셨습니다.");
-          setMyReview({
-            id: existingSnap.docs[0].id,
-            ...existingSnap.docs[0].data(),
-            createdAt: existingSnap.docs[0].data().createdAt?.toDate?.()?.toISOString?.() || "",
-          } as Review);
+        // 구매자 검증을 포함한 서버 함수 호출
+        const submitReviewFn = httpsCallable<
+          { materialId: string; rating: number; content: string },
+          { success: boolean; reviewId: string }
+        >(functions, "submitReview");
+        try {
+          await submitReviewFn({
+            materialId: id,
+            rating: reviewRating,
+            content: reviewContent.trim(),
+          });
+        } catch (e) {
+          const code = (e as { code?: string }).code || "";
+          const msg = (e as Error).message || "후기 등록에 실패했습니다.";
+          if (code.includes("permission-denied")) {
+            alert("구매한 자료에만 후기를 작성할 수 있습니다.");
+          } else if (code.includes("already-exists")) {
+            alert("이미 후기를 작성하셨습니다.");
+          } else {
+            alert(msg);
+          }
           setSubmittingReview(false);
           return;
         }
-
-        await addDoc(collection(db, "reviews"), {
-          userId: user.uid,
-          userName: user.displayName || user.email || "익명",
-          materialId: id,
-          rating: reviewRating,
-          content: reviewContent.trim(),
-          createdAt: serverTimestamp(),
-        });
       }
       // 새로고침
       const q = query(
@@ -324,12 +322,17 @@ export default function DetailPage() {
 
   const handleSaveEdit = async () => {
     if (!material || !id) return;
+    const priceInt = Math.floor(Number(editPrice));
+    if (!Number.isInteger(priceInt) || priceInt < 0 || priceInt > 500000) {
+      alert("가격은 0원 이상 500,000원 이하의 정수여야 합니다.");
+      return;
+    }
     setSaving(true);
     try {
       await updateDoc(doc(db, "materials", id), {
         title: editTitle.trim(),
         description: editDescription.trim(),
-        price: editPrice,
+        price: priceInt,
         subject: editSubject.trim(),
         professor: editProfessor.trim(),
         department: (material.category === "수업" || material.category === "이중전공 & 전과" || material.category === "교환학생") ? editDepartment : "",

@@ -26,7 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.onMaterialCreated = exports.toggleNeedRequest = exports.submitMaterialRequest = exports.rejectChargeRequest = exports.approveChargeRequest = exports.getChargeRequests = exports.submitChargeRequest = exports.refundPurchase = exports.settlePendingPoints = exports.cleanupExpiredSessions = exports.migratePurchasesSettled = exports.adminUnsuspendUser = exports.adminSuspendUser = exports.adminBanUser = exports.adminDeleteMaterial = exports.updateReportStatus = exports.getReports = exports.rejectWithdrawal = exports.completeWithdrawal = exports.getWithdrawals = exports.submitReport = exports.requestWithdraw = exports.confirmVerification = exports.requestVerification = exports.purchaseMaterial = exports.tossApprove = exports.tossReady = exports.kakaopayApprove = exports.kakaopayReady = exports.scanFile = exports.getDownloadUrl = exports.getUploadUrl = exports.verifyKakaoCode = exports.sendKakaoVerification = exports.createUserProfile = void 0;
+exports.onMaterialCreated = exports.toggleNeedRequest = exports.submitMaterialRequest = exports.rejectChargeRequest = exports.approveChargeRequest = exports.getChargeRequests = exports.submitChargeRequest = exports.submitReview = exports.refundPurchase = exports.settlePendingPoints = exports.cleanupExpiredSessions = exports.migratePurchasesSettled = exports.adminUnsuspendUser = exports.adminSuspendUser = exports.adminBanUser = exports.approveDefectReport = exports.adminGrantEarnings = exports.adminDeleteMaterial = exports.updateReportStatus = exports.getReports = exports.rejectWithdrawal = exports.completeWithdrawal = exports.getWithdrawals = exports.submitReport = exports.requestWithdraw = exports.confirmVerification = exports.requestVerification = exports.enterRaffle = exports.purchaseMaterial = exports.tossApprove = exports.tossReady = exports.kakaopayApprove = exports.kakaopayReady = exports.scanFile = exports.getDownloadUrl = exports.getUploadUrl = exports.setR2Cors = exports.verifyKakaoCode = exports.sendKakaoVerification = exports.updateNickname = exports.createUserProfile = void 0;
 const admin = __importStar(require("firebase-admin"));
 const https_1 = require("firebase-functions/v2/https");
 const scheduler_1 = require("firebase-functions/v2/scheduler");
@@ -39,9 +39,10 @@ const pdf_lib_1 = require("pdf-lib");
 admin.initializeApp();
 const db = admin.firestore();
 // 프로덕션 배포 전 반드시 Firebase 환경변수 설정 필요:
-// firebase functions:secrets:set KAKAO_ALIMTALK_API_KEY
-// firebase functions:secrets:set KAKAO_ALIMTALK_SENDER_KEY
-// firebase functions:secrets:set KAKAO_ALIMTALK_TEMPLATE_CODE
+// firebase functions:secrets:set ALIGO_API_KEY
+// firebase functions:secrets:set ALIGO_USER_ID
+// firebase functions:secrets:set ALIGO_SENDER_KEY
+// firebase functions:secrets:set ALIGO_SENDER_NUMBER
 // firebase functions:secrets:set KAKAOPAY_CID
 // firebase functions:secrets:set KAKAOPAY_SECRET_KEY
 // firebase functions:secrets:set TOSS_SECRET_KEY
@@ -51,7 +52,6 @@ const ALIGO_API_KEY = process.env.ALIGO_API_KEY || "";
 const ALIGO_USER_ID = process.env.ALIGO_USER_ID || "";
 const ALIGO_SENDER_KEY = process.env.ALIGO_SENDER_KEY || "";
 const ALIGO_SENDER_NUMBER = process.env.ALIGO_SENDER_NUMBER || "";
-const ALIGO_SECRETS = ["ALIGO_API_KEY", "ALIGO_USER_ID", "ALIGO_SENDER_KEY", "ALIGO_SENDER_NUMBER"];
 const KAKAOPAY_CID = process.env.KAKAOPAY_CID || "TC0ONETIME";
 const KAKAOPAY_SECRET_KEY = process.env.KAKAOPAY_SECRET_KEY || "";
 const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY || "";
@@ -68,6 +68,9 @@ function getR2Client() {
             accessKeyId: process.env.R2_ACCESS_KEY_ID,
             secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
         },
+        // R2는 SDK v3의 기본 flexible checksum을 지원하지 않아 signed URL이 꼬임
+        requestChecksumCalculation: "WHEN_REQUIRED",
+        responseChecksumValidation: "WHEN_REQUIRED",
     });
 }
 // 회원가입 시 유저 문서 생성
@@ -96,7 +99,38 @@ exports.createUserProfile = (0, https_1.onCall)(async (request) => {
     });
     return { success: true };
 });
+// 닉네임 변경 (마이페이지)
+exports.updateNickname = (0, https_1.onCall)(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid)
+        throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
+    const raw = request.data?.nickname;
+    if (typeof raw !== "string") {
+        throw new https_1.HttpsError("invalid-argument", "닉네임 형식이 올바르지 않습니다.");
+    }
+    const nickname = raw.trim();
+    if (nickname.length < 2 || nickname.length > 16) {
+        throw new https_1.HttpsError("invalid-argument", "닉네임은 2~16자여야 합니다.");
+    }
+    if (!/^[\p{L}\p{N}_.-]+$/u.test(nickname)) {
+        throw new https_1.HttpsError("invalid-argument", "닉네임에 사용할 수 없는 문자가 포함되어 있습니다.");
+    }
+    const userRef = db.collection("users").doc(uid);
+    const snap = await userRef.get();
+    if (!snap.exists) {
+        throw new https_1.HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
+    }
+    if ((snap.data()?.nickname || "") === nickname) {
+        return { success: true, nickname };
+    }
+    await userRef.update({
+        nickname,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return { success: true, nickname };
+});
 // 카카오톡 인증번호 발송 (회원가입용 - 인증 불필요)
+const ALIGO_SECRETS = ["ALIGO_API_KEY", "ALIGO_USER_ID", "ALIGO_SENDER_KEY", "ALIGO_SENDER_NUMBER"];
 exports.sendKakaoVerification = (0, https_1.onCall)({ secrets: ALIGO_SECRETS }, async (request) => {
     const { name, phone } = request.data;
     if (!name?.trim()) {
@@ -140,10 +174,14 @@ exports.sendKakaoVerification = (0, https_1.onCall)({ secrets: ALIGO_SECRETS }, 
             formData.append("sender", ALIGO_SENDER_NUMBER);
             formData.append("receiver_1", cleanPhone);
             formData.append("subject_1", "본인인증");
-            formData.append("message_1", `유니파일 본인인증번호\n\n[${code}]\n\n타인에게 노출되지 않도록 유의해주세요.`);
-            await axios_1.default.post("https://kakaoapi.aligo.in/akv10/alimtalk/send/", formData.toString(), {
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            formData.append("message_1", "유니파일 본인인증번호\n\n[" + code + "]\n\n타인에게 노출되지 않도록 유의해주세요.");
+            const res = await axios_1.default.post("https://kakaoapi.aligo.in/akv10/alimtalk/send/", formData, {
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
             });
+            console.log("[ALIGO] 응답:", JSON.stringify(res.data));
+            console.log("[ALIGO] 보낸메시지:", formData.get("message_1"));
         }
         else {
             console.log(`[DEV] 알림톡 인증번호 for ${cleanPhone}: ${code}`);
@@ -201,21 +239,63 @@ exports.verifyKakaoCode = (0, https_1.onCall)(async (request) => {
         phone: session.phone,
     };
 });
+// R2 버킷 CORS 설정 (관리자 전용, 일회성 실행용)
+exports.setR2Cors = (0, https_1.onCall)({ secrets: R2_SECRETS }, async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid)
+        throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
+    await verifyAdmin(uid);
+    const r2 = getR2Client();
+    const command = new client_s3_1.PutBucketCorsCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        CORSConfiguration: {
+            CORSRules: [
+                {
+                    AllowedOrigins: ["*"],
+                    AllowedMethods: ["GET", "PUT", "HEAD"],
+                    AllowedHeaders: ["*"],
+                    ExposeHeaders: ["ETag"],
+                    MaxAgeSeconds: 3600,
+                },
+            ],
+        },
+    });
+    await r2.send(command);
+    return { success: true, message: "R2 CORS 설정이 적용되었습니다." };
+});
 // R2 업로드 presigned URL 생성
+// 업로드 파일 크기 상한 (R2 비용 보호 + 클라 검증 우회 차단)
+const MAX_UPLOAD_BYTES = 60 * 1024 * 1024; // 60MB (자료 파일 50MB + 여유)
 exports.getUploadUrl = (0, https_1.onCall)({ secrets: R2_SECRETS }, async (request) => {
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
-    const { fileName, contentType } = request.data;
+    const { fileName, contentType, fileSize } = request.data;
     if (!fileName || !contentType) {
         throw new https_1.HttpsError("invalid-argument", "파일 정보가 누락되었습니다.");
     }
+    if (typeof fileSize !== "number" || !Number.isFinite(fileSize) || fileSize <= 0) {
+        throw new https_1.HttpsError("invalid-argument", "파일 크기가 유효하지 않습니다.");
+    }
+    if (fileSize > MAX_UPLOAD_BYTES) {
+        throw new https_1.HttpsError("invalid-argument", `파일 크기가 너무 큽니다. (최대 ${Math.floor(MAX_UPLOAD_BYTES / 1024 / 1024)}MB)`);
+    }
     const r2 = getR2Client();
-    const key = `materials/${uid}/${Date.now()}_${fileName}`;
+    // 파일명 정리: 확장자는 유지하고, 본문은 영숫자/하이픈/언더스코어만 남김
+    const lastDot = fileName.lastIndexOf(".");
+    const ext = lastDot >= 0 ? fileName.slice(lastDot + 1).toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+    const base = (lastDot >= 0 ? fileName.slice(0, lastDot) : fileName)
+        .replace(/[^a-zA-Z0-9-_]/g, "_")
+        .replace(/_{2,}/g, "_")
+        .replace(/^_+|_+$/g, "")
+        .slice(0, 80) || "file";
+    const safeName = ext ? `${base}.${ext}` : base;
+    const key = `materials/${uid}/${Date.now()}_${safeName}`;
     const command = new client_s3_1.PutObjectCommand({
         Bucket: process.env.R2_BUCKET_NAME,
         Key: key,
         ContentType: contentType,
+        ContentLength: fileSize, // 서명에 길이 바인딩 → 다른 크기 PUT 거부
     });
     const uploadUrl = await (0, s3_request_presigner_1.getSignedUrl)(r2, command, { expiresIn: 600 }); // 10분
     // 퍼블릭 다운로드 URL
@@ -263,14 +343,14 @@ exports.getDownloadUrl = (0, https_1.onCall)({ secrets: R2_SECRETS }, async (req
     if (!materialId) {
         throw new https_1.HttpsError("invalid-argument", "자료 ID가 누락되었습니다.");
     }
-    // 구매 확인
+    // 구매 확인 (환불되지 않은 가장 최근 구매를 사용)
     const purchases = await db
         .collection("purchases")
         .where("buyerId", "==", uid)
         .where("materialId", "==", materialId)
-        .limit(1)
         .get();
-    let isBuyer = !purchases.empty;
+    const validPurchaseDoc = purchases.docs.find((d) => d.data().refunded !== true);
+    let isBuyer = !!validPurchaseDoc;
     if (!isBuyer) {
         // 판매자 본인인지 확인
         const materialDoc = await db.collection("materials").doc(materialId).get();
@@ -281,6 +361,14 @@ exports.getDownloadUrl = (0, https_1.onCall)({ secrets: R2_SECRETS }, async (req
     const materialDoc = await db.collection("materials").doc(materialId).get();
     if (!materialDoc.exists) {
         throw new https_1.HttpsError("not-found", "자료를 찾을 수 없습니다.");
+    }
+    // 구매자가 다운로드 URL을 발급받는 즉시 환불 차단을 위해 표시
+    // (워터마크 실패 fallback 경로에서도 표시되어야 하므로 분기 전에 수행)
+    if (validPurchaseDoc) {
+        await validPurchaseDoc.ref.update({
+            downloaded: true,
+            downloadedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
     }
     const r2 = getR2Client();
     const { fileKey, fileName } = materialDoc.data();
@@ -298,7 +386,7 @@ exports.getDownloadUrl = (0, https_1.onCall)({ secrets: R2_SECRETS }, async (req
             // 구매자 정보 가져오기
             const userDoc = await db.collection("users").doc(uid).get();
             const nickname = userDoc.exists ? (userDoc.data().nickname || uid) : uid;
-            const purchaseId = purchases.empty ? "owner" : purchases.docs[0].id;
+            const purchaseId = validPurchaseDoc ? validPurchaseDoc.id : "owner";
             const watermarkText = `Licensed to ${nickname} (${purchaseId})`;
             // 워터마크 삽입
             const watermarkedBytes = await addWatermarkToPdf(originalBytes, watermarkText);
@@ -523,20 +611,23 @@ exports.tossReady = (0, https_1.onCall)(async (request) => {
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
-    const { amount } = request.data;
-    if (!amount || !Number.isInteger(amount) || amount < MIN_CHARGE_AMOUNT || amount > MAX_CHARGE_AMOUNT) {
+    const { amount: pointAmount } = request.data;
+    if (!pointAmount || !Number.isInteger(pointAmount) || pointAmount < MIN_CHARGE_AMOUNT || pointAmount > MAX_CHARGE_AMOUNT) {
         throw new https_1.HttpsError("invalid-argument", `충전 금액은 ${MIN_CHARGE_AMOUNT.toLocaleString()}원~${MAX_CHARGE_AMOUNT.toLocaleString()}원이어야 합니다.`);
     }
+    const vat = Math.ceil(pointAmount * 0.1);
+    const paymentAmount = pointAmount + vat;
     const orderId = `unifile_${uid}_${Date.now()}`;
-    // 토스 결제 세션 저장
+    // 토스 결제 세션 저장 (pointAmount = 포인트로 적립될 금액, paymentAmount = 실제 결제 금액)
     await db.collection("toss_sessions").doc(orderId).set({
         userId: uid,
-        amount,
+        pointAmount,
+        vat,
+        paymentAmount,
         status: "ready",
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
-    // 토스페이먼츠는 클라이언트에서 SDK로 결제창을 띄우므로 orderId만 반환
-    return { orderId };
+    return { orderId, paymentAmount, vat };
 });
 // 토스페이먼츠 결제 승인
 exports.tossApprove = (0, https_1.onCall)(async (request) => {
@@ -555,15 +646,16 @@ exports.tossApprove = (0, https_1.onCall)(async (request) => {
     }
     const session = sessionDoc.data();
     if (session.status === "approved") {
-        return { success: true }; // 이미 처리 완료된 결제
+        return { success: true, pointAmount: session.pointAmount };
     }
     if (session.status !== "ready") {
         throw new https_1.HttpsError("failed-precondition", "이미 처리되었거나 만료된 결제입니다.");
     }
-    if (session.userId !== uid || session.amount !== amount) {
+    if (session.userId !== uid || session.paymentAmount !== amount) {
         throw new https_1.HttpsError("permission-denied", "결제 정보가 일치하지 않습니다.");
     }
-    // 토스페이먼츠 ���제 승인 API 호출
+    const pointAmount = session.pointAmount;
+    // 토스페이먼츠 결제 승인 API 호출
     const authHeader = Buffer.from(`${TOSS_SECRET_KEY}:`).toString("base64");
     try {
         await axios_1.default.post("https://api.tosspayments.com/v1/payments/confirm", { paymentKey, orderId, amount }, {
@@ -572,31 +664,32 @@ exports.tossApprove = (0, https_1.onCall)(async (request) => {
                 "Content-Type": "application/json",
             },
         });
-        // Firestore 트랜잭션으로 포인트 충전
+        // Firestore 트랜잭션으로 포인트 충전 (포인트는 pointAmount만 적립)
         await db.runTransaction(async (tx) => {
             const userRef = db.collection("users").doc(uid);
             const userDoc = await tx.get(userRef);
             const currentPoints = userDoc.exists ? userDoc.data().points || 0 : 0;
-            const newPoints = currentPoints + amount;
+            const newPoints = currentPoints + pointAmount;
             tx.set(userRef, {
                 points: newPoints,
-                totalEarned: admin.firestore.FieldValue.increment(amount),
+                totalEarned: admin.firestore.FieldValue.increment(pointAmount),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             }, { merge: true });
             tx.create(db.collection("transactions").doc(), {
                 userId: uid,
                 type: "charge",
-                amount,
+                amount: pointAmount,
                 balanceAfter: newPoints,
                 balanceType: "points",
-                description: `포인트 충전 ${amount.toLocaleString()}P (토스)`,
+                description: `포인트 충전 ${pointAmount.toLocaleString()}P (토스 / 결제 ${amount.toLocaleString()}원, VAT 포함)`,
                 status: "completed",
                 tossPaymentKey: paymentKey,
+                tossPaymentAmount: amount,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
             });
             tx.update(sessionRef, { status: "approved", paymentKey });
         });
-        return { success: true };
+        return { success: true, pointAmount };
     }
     catch (err) {
         await sessionRef.update({ status: "failed" });
@@ -707,6 +800,68 @@ exports.purchaseMaterial = (0, https_1.onCall)(async (request) => {
     });
     return { success: true };
 });
+// --- 클로즈드 베타 이벤트: 응모 ---
+const RAFFLE_POINTS_PER_TICKET = 1000;
+const RAFFLE_ALLOWED_PRODUCT_IDS = new Set(["ipad-air-4"]);
+exports.enterRaffle = (0, https_1.onCall)(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid)
+        throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
+    const { productId, quantity } = request.data || {};
+    if (typeof productId !== "string" || !RAFFLE_ALLOWED_PRODUCT_IDS.has(productId)) {
+        throw new https_1.HttpsError("invalid-argument", "잘못된 응모 상품입니다.");
+    }
+    const qty = Number(quantity);
+    if (!Number.isInteger(qty) || qty < 1 || qty > 100) {
+        throw new https_1.HttpsError("invalid-argument", "응모 수량은 1~100 사이여야 합니다.");
+    }
+    const pointsNeeded = qty * RAFFLE_POINTS_PER_TICKET;
+    const userRef = db.collection("users").doc(uid);
+    const entryRef = db.collection("raffle_entries").doc(`${uid}_${productId}`);
+    const result = await db.runTransaction(async (tx) => {
+        const userDoc = await tx.get(userRef);
+        if (!userDoc.exists) {
+            throw new https_1.HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
+        }
+        const userData = userDoc.data();
+        const currentPoints = Number(userData.points || 0);
+        if (currentPoints < pointsNeeded) {
+            throw new https_1.HttpsError("failed-precondition", "포인트가 부족합니다.");
+        }
+        const entryDoc = await tx.get(entryRef);
+        const currentCount = entryDoc.exists ? Number(entryDoc.data().count || 0) : 0;
+        const newPoints = currentPoints - pointsNeeded;
+        const newCount = currentCount + qty;
+        tx.update(userRef, {
+            points: newPoints,
+            totalSpent: admin.firestore.FieldValue.increment(pointsNeeded),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        tx.set(entryRef, {
+            uid,
+            productId,
+            count: newCount,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            ...(entryDoc.exists
+                ? {}
+                : { createdAt: admin.firestore.FieldValue.serverTimestamp() }),
+        }, { merge: true });
+        tx.create(db.collection("transactions").doc(), {
+            userId: uid,
+            type: "raffle_entry",
+            amount: -pointsNeeded,
+            balanceAfter: newPoints,
+            balanceType: "points",
+            description: `이벤트 응모권 ${qty}개 (${productId})`,
+            relatedProductId: productId,
+            quantity: qty,
+            status: "completed",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        return { success: true, newPoints, newCount };
+    });
+    return result;
+});
 // --- 본인인증 ---
 // 인증번호 발송 요청
 exports.requestVerification = (0, https_1.onCall)({ secrets: ALIGO_SECRETS }, async (request) => {
@@ -734,6 +889,12 @@ exports.requestVerification = (0, https_1.onCall)({ secrets: ALIGO_SECRETS }, as
         attempts: 0,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+    // 서버 IP 확인
+    try {
+        const ipRes = await axios_1.default.get("https://api.ipify.org?format=json");
+        console.log("[SERVER_IP]", ipRes.data.ip);
+    }
+    catch (e) { }
     // 알리고 알림톡 발송 (본인인증)
     try {
         if (ALIGO_API_KEY && ALIGO_SENDER_KEY) {
@@ -745,10 +906,10 @@ exports.requestVerification = (0, https_1.onCall)({ secrets: ALIGO_SECRETS }, as
             formData.append("sender", ALIGO_SENDER_NUMBER);
             formData.append("receiver_1", cleanPhone);
             formData.append("subject_1", "본인인증");
-            formData.append("message_1", `유니파일 본인인증번호\n\n[${code}]\n\n타인에게 노출되지 않도록 유의해주세요.`);
-            await axios_1.default.post("https://kakaoapi.aligo.in/akv10/alimtalk/send/", formData.toString(), {
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            });
+            formData.append("message_1", "유니파일 본인인증번호\n\n[" + code + "]\n\n타인에게 노출되지 않도록 유의해주세요.");
+            const res = await axios_1.default.post("https://kakaoapi.aligo.in/akv10/alimtalk/send/", formData, { headers: { "Content-Type": "application/x-www-form-urlencoded" } });
+            console.log("[ALIGO] 본인인증 응답:", JSON.stringify(res.data));
+            console.log("[ALIGO] 보낸메시지:", formData.get("message_1"));
         }
         else {
             console.log(`[DEV] 본인인증 코드 for ${cleanPhone}: ${code}`);
@@ -819,20 +980,21 @@ exports.requestWithdraw = (0, https_1.onCall)(async (request) => {
     if (!bankName?.trim() || !accountNumber?.trim() || !accountHolder?.trim()) {
         throw new https_1.HttpsError("invalid-argument", "계좌 정보를 모두 입력해주세요.");
     }
-    // 본인인증 확인
+    // 사용자 존재 확인 (본인인증은 현재 플랫폼 정책으로 출금 페이지에서 해제)
     const userDoc = await db.collection("users").doc(uid).get();
     if (!userDoc.exists)
         throw new https_1.HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
-    if (!userDoc.data().identityVerified) {
-        throw new https_1.HttpsError("failed-precondition", "본인인증이 필요합니다.");
-    }
     // 수수료·세금 계산 (서버에서 재계산)
+    // 입력 금액이 수익금에서 차감되는 기준 금액. 실수령 = 입력 금액 - 수수료 - 세금 - 출금수수료
     const fee = WITHDRAW_FEE;
     const commission = Math.ceil(amount * PLATFORM_COMMISSION_RATE); // 플랫폼 수수료 10%
     const taxable = amount > WITHDRAW_TAX_THRESHOLD;
-    const grossAmount = taxable ? Math.ceil(amount / (1 - WITHDRAW_TAX_RATE)) : amount;
-    const tax = grossAmount - amount;
-    const totalDeduction = grossAmount + fee + commission;
+    const tax = taxable ? Math.ceil(amount * WITHDRAW_TAX_RATE) : 0;
+    const totalDeduction = amount; // 수익금에서 차감되는 금액
+    const received = amount - commission - tax - fee; // 실수령 금액
+    if (received <= 0) {
+        throw new https_1.HttpsError("failed-precondition", "수수료·세금을 빼면 실수령액이 남지 않습니다. 더 큰 금액으로 신청해주세요.");
+    }
     // Firestore 트랜잭션으로 수익금 차감 + 출금 기록
     let balanceAfter = 0;
     await db.runTransaction(async (tx) => {
@@ -841,10 +1003,10 @@ exports.requestWithdraw = (0, https_1.onCall)(async (request) => {
         if (!snap.exists)
             throw new https_1.HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
         const currentEarnings = snap.data().earnings || 0;
-        if (currentEarnings < totalDeduction) {
-            throw new https_1.HttpsError("failed-precondition", `수수료·세금 포함 ${totalDeduction.toLocaleString()}원이 필요합니다. 수익금이 부족합니다.`);
+        if (currentEarnings < amount) {
+            throw new https_1.HttpsError("failed-precondition", `${amount.toLocaleString()}원이 필요합니다. 수익금이 부족합니다.`);
         }
-        balanceAfter = currentEarnings - totalDeduction;
+        balanceAfter = currentEarnings - amount;
         tx.update(userRef, {
             earnings: balanceAfter,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -863,9 +1025,10 @@ exports.requestWithdraw = (0, https_1.onCall)(async (request) => {
             commission,
             tax,
             totalDeduction,
+            received,
             balanceAfter,
             balanceType: "earnings",
-            description: `수익금 출금 신청 (${bankName.trim()} ${maskedAccount})`,
+            description: `수익금 출금 신청 (${bankName.trim()} ${maskedAccount}, 실수령 ${received.toLocaleString()}원)`,
             bankName: bankName.trim(),
             accountNumber: maskedAccount,
             accountHolder: accountHolder.trim(),
@@ -881,14 +1044,15 @@ exports.requestWithdraw = (0, https_1.onCall)(async (request) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
     });
-    return { success: true, balanceAfter, totalDeduction, fee, commission, tax };
+    return { success: true, balanceAfter, totalDeduction, received, fee, commission, tax };
 });
 // --- 신고 ---
 exports.submitReport = (0, https_1.onCall)(async (request) => {
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
-    const { materialId, materialTitle, reason, originalSource, description, contactEmail, isRightsHolder } = request.data;
+    const { materialId, materialTitle, reason, originalSource, description, contactEmail, isRightsHolder, type } = request.data;
+    const reportType = type === "defect" ? "defect" : "copyright";
     if (!materialId || !reason || !description?.trim()) {
         throw new https_1.HttpsError("invalid-argument", "필수 정보가 누락되었습니다.");
     }
@@ -896,6 +1060,23 @@ exports.submitReport = (0, https_1.onCall)(async (request) => {
     const materialDoc = await db.collection("materials").doc(materialId).get();
     if (!materialDoc.exists) {
         throw new https_1.HttpsError("not-found", "해당 자료를 찾을 수 없습니다.");
+    }
+    // 자료 하자 신고는 해당 자료 구매자만 가능 (판매자 본인 신고 불가)
+    let purchaseId = null;
+    if (reportType === "defect") {
+        if (materialDoc.data().authorId === uid) {
+            throw new https_1.HttpsError("failed-precondition", "본인 자료에는 하자 신고를 할 수 없습니다.");
+        }
+        const purchasesSnap = await db
+            .collection("purchases")
+            .where("buyerId", "==", uid)
+            .where("materialId", "==", materialId)
+            .get();
+        const active = purchasesSnap.docs.find((d) => d.data().refunded !== true);
+        if (!active) {
+            throw new https_1.HttpsError("failed-precondition", "구매한 자료만 하자 신고를 할 수 있습니다.");
+        }
+        purchaseId = active.id;
     }
     // rate limiting: 동일 사용자 1시간 내 최대 5건
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -907,15 +1088,15 @@ exports.submitReport = (0, https_1.onCall)(async (request) => {
     if (recentReports.size >= 5) {
         throw new https_1.HttpsError("resource-exhausted", "단시간에 너무 많은 신고를 제출했습니다. 1시간 후 다시 시도해주세요.");
     }
-    // 동일 자료 중복 신고 방지
+    // 동일 자료 중복 신고 방지 (유형별)
     const duplicateReport = await db
         .collection("reports")
         .where("reporterId", "==", uid)
         .where("materialId", "==", materialId)
         .where("status", "==", "pending")
-        .limit(1)
+        .limit(5)
         .get();
-    if (!duplicateReport.empty) {
+    if (duplicateReport.docs.some((d) => (d.data().type || "copyright") === reportType)) {
         throw new https_1.HttpsError("already-exists", "이미 해당 자료에 대한 신고가 접수되어 처리 대기 중입니다.");
     }
     const userDoc = await db.collection("users").doc(uid).get();
@@ -923,6 +1104,7 @@ exports.submitReport = (0, https_1.onCall)(async (request) => {
     await db.collection("reports").add({
         materialId,
         materialTitle: materialTitle || materialDoc.data().title,
+        type: reportType,
         reason,
         originalSource: originalSource || "",
         description: description.trim(),
@@ -930,6 +1112,7 @@ exports.submitReport = (0, https_1.onCall)(async (request) => {
         isRightsHolder: isRightsHolder || false,
         reporterId: uid,
         reporterName,
+        purchaseId: purchaseId || null,
         status: "pending",
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
@@ -1153,6 +1336,217 @@ exports.adminDeleteMaterial = (0, https_1.onCall)({ secrets: R2_SECRETS }, async
     }
     await writeAdminLog(uid, "delete_material", { materialId, reportId, reason, r2Deleted });
     return { success: true, r2Deleted };
+});
+// 관리자 수익금 지급/회수
+exports.adminGrantEarnings = (0, https_1.onCall)(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid)
+        throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
+    await verifyAdmin(uid);
+    const { targetUserId, amount, reason } = request.data;
+    if (!targetUserId || typeof targetUserId !== "string") {
+        throw new https_1.HttpsError("invalid-argument", "대상 사용자 ID가 필요합니다.");
+    }
+    if (!Number.isInteger(amount) || amount === 0 || Math.abs(amount) > 10_000_000) {
+        throw new https_1.HttpsError("invalid-argument", "지급 금액은 0이 아닌 정수여야 하며, 절대값 1,000만원 이하여야 합니다.");
+    }
+    const targetRef = db.collection("users").doc(targetUserId);
+    let balanceAfter = 0;
+    await db.runTransaction(async (tx) => {
+        const snap = await tx.get(targetRef);
+        if (!snap.exists) {
+            throw new https_1.HttpsError("not-found", "대상 사용자를 찾을 수 없습니다.");
+        }
+        const currentEarnings = snap.data().earnings || 0;
+        const newEarnings = currentEarnings + amount;
+        if (newEarnings < 0) {
+            throw new https_1.HttpsError("failed-precondition", `차감 후 수익금이 음수가 됩니다. (현재 잔액 ${currentEarnings.toLocaleString()}원)`);
+        }
+        balanceAfter = newEarnings;
+        tx.update(targetRef, {
+            earnings: newEarnings,
+            totalEarned: admin.firestore.FieldValue.increment(amount > 0 ? amount : 0),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        tx.create(db.collection("transactions").doc(), {
+            userId: targetUserId,
+            type: "admin_grant",
+            amount,
+            balanceAfter,
+            balanceType: "earnings",
+            description: `관리자 수익금 ${amount > 0 ? "지급" : "회수"}${reason ? ` (${reason})` : ""}`,
+            grantedBy: uid,
+            status: "completed",
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    });
+    await writeAdminLog(uid, "grant_earnings", { targetUserId, amount, reason: reason || "", balanceAfter });
+    return { success: true, balanceAfter };
+});
+// 자료 하자 신고 승인 (관리자): 전원 환불 + 자료 삭제
+exports.approveDefectReport = (0, https_1.onCall)({ secrets: R2_SECRETS }, async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid)
+        throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
+    await verifyAdmin(uid);
+    const { reportId } = request.data;
+    if (!reportId) {
+        throw new https_1.HttpsError("invalid-argument", "신고 ID가 필요합니다.");
+    }
+    const reportRef = db.collection("reports").doc(reportId);
+    const reportDoc = await reportRef.get();
+    if (!reportDoc.exists) {
+        throw new https_1.HttpsError("not-found", "신고를 찾을 수 없습니다.");
+    }
+    const report = reportDoc.data();
+    if ((report.type || "copyright") !== "defect") {
+        throw new https_1.HttpsError("failed-precondition", "자료 하자 신고가 아닙니다.");
+    }
+    if (report.status !== "pending") {
+        throw new https_1.HttpsError("failed-precondition", "이미 처리된 신고입니다.");
+    }
+    const materialId = report.materialId;
+    const materialRef = db.collection("materials").doc(materialId);
+    const materialDoc = await materialRef.get();
+    if (!materialDoc.exists) {
+        throw new https_1.HttpsError("not-found", "자료를 찾을 수 없습니다.");
+    }
+    const material = materialDoc.data();
+    const sellerId = material.authorId;
+    const materialTitle = material.title;
+    // 환불 대상: 아직 환불되지 않은 모든 구매 건
+    const purchasesSnap = await db
+        .collection("purchases")
+        .where("materialId", "==", materialId)
+        .get();
+    const targets = purchasesSnap.docs.filter((d) => d.data().refunded !== true);
+    if (targets.length > 400) {
+        throw new https_1.HttpsError("failed-precondition", "환불 대상 구매가 너무 많습니다. 수동 처리가 필요합니다.");
+    }
+    // 트랜잭션: 모든 환불을 원자적으로 처리
+    await db.runTransaction(async (tx) => {
+        const sellerRef = db.collection("users").doc(sellerId);
+        const sellerDoc = await tx.get(sellerRef);
+        let sellerEarnings = sellerDoc.exists ? (sellerDoc.data().earnings || 0) : 0;
+        let sellerPendingEarnings = sellerDoc.exists ? (sellerDoc.data().pendingEarnings || 0) : 0;
+        // 구매자 문서들을 먼저 모두 읽음 (트랜잭션 규칙: read 먼저, write 나중)
+        const buyerReads = await Promise.all(targets.map(async (purchaseDoc) => {
+            const purchase = purchaseDoc.data();
+            const buyerRef = db.collection("users").doc(purchase.buyerId);
+            const buyerDoc = await tx.get(buyerRef);
+            return { purchaseDoc, purchase, buyerRef, buyerDoc };
+        }));
+        let totalRefunded = 0;
+        for (const { purchaseDoc, purchase, buyerRef, buyerDoc } of buyerReads) {
+            const price = purchase.price;
+            const buyerId = purchase.buyerId;
+            const buyerPoints = buyerDoc.exists ? (buyerDoc.data().points || 0) : 0;
+            // 보류 수익금 → 정산된 수익금 순서로 차감
+            const fromPending = Math.min(sellerPendingEarnings, price);
+            const fromEarnings = price - fromPending;
+            if (fromEarnings > sellerEarnings) {
+                // 판매자 잔액 부족: 정지된 수익금까지 최대한 차감 (음수 허용하지 않음)
+                // 여기서는 안전하게 실패 처리
+                throw new https_1.HttpsError("failed-precondition", "판매자 수익금이 부족하여 모든 구매자에게 환불할 수 없습니다. 판매자 정지 후 수동 정산이 필요합니다.");
+            }
+            sellerPendingEarnings -= fromPending;
+            sellerEarnings -= fromEarnings;
+            totalRefunded += price;
+            // 구매자 포인트 복구
+            tx.update(buyerRef, {
+                points: buyerPoints + price,
+                totalSpent: admin.firestore.FieldValue.increment(-price),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            // 구매 기록에 환불 표시
+            tx.update(purchaseDoc.ref, {
+                refunded: true,
+                refundedAt: admin.firestore.FieldValue.serverTimestamp(),
+                refundReason: "defect_approved",
+            });
+            // 환불 거래 내역 (구매자)
+            tx.create(db.collection("transactions").doc(), {
+                userId: buyerId,
+                type: "refund",
+                amount: price,
+                balanceAfter: buyerPoints + price,
+                balanceType: "points",
+                description: `자료 하자 승인 환불${materialTitle ? ` ("${materialTitle}")` : ""}`,
+                relatedMaterialId: materialId,
+                relatedUserId: sellerId,
+                status: "completed",
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            // 환불 거래 내역 (판매자)
+            tx.create(db.collection("transactions").doc(), {
+                userId: sellerId,
+                type: "refund",
+                amount: -price,
+                balanceAfter: sellerEarnings + sellerPendingEarnings,
+                balanceType: "earnings",
+                description: `자료 하자 승인 환불 (판매자 회수${materialTitle ? ` / "${materialTitle}"` : ""})`,
+                relatedMaterialId: materialId,
+                relatedUserId: buyerId,
+                status: "completed",
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        }
+        // 판매자 잔액 반영
+        if (totalRefunded > 0) {
+            tx.update(sellerRef, {
+                earnings: sellerEarnings,
+                pendingEarnings: sellerPendingEarnings,
+                totalEarned: admin.firestore.FieldValue.increment(-totalRefunded),
+                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        }
+        // 신고 상태 업데이트
+        tx.update(reportRef, {
+            status: "resolved",
+            resolution: "defect_refunded",
+            refundedCount: targets.length,
+            refundedTotal: totalRefunded,
+            resolvedBy: uid,
+            resolvedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+    });
+    // R2 파일 삭제 (최대 3회 재시도)
+    const { fileKey } = material;
+    let r2Deleted = false;
+    if (fileKey) {
+        const r2 = getR2Client();
+        const { DeleteObjectCommand } = await Promise.resolve().then(() => __importStar(require("@aws-sdk/client-s3")));
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                await r2.send(new DeleteObjectCommand({
+                    Bucket: process.env.R2_BUCKET_NAME,
+                    Key: fileKey,
+                }));
+                r2Deleted = true;
+                break;
+            }
+            catch (err) {
+                if (attempt === 2) {
+                    await db.collection("failed_deletions").add({
+                        fileKey,
+                        materialId,
+                        error: String(err),
+                        deletedBy: uid,
+                        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                    });
+                }
+            }
+        }
+    }
+    // 자료 완전 삭제
+    await materialRef.delete();
+    await writeAdminLog(uid, "approve_defect_report", {
+        reportId,
+        materialId,
+        refundedCount: targets.length,
+        r2Deleted,
+    });
+    return { success: true, refundedCount: targets.length, r2Deleted };
 });
 // 판매자 탈퇴 (관리자)
 exports.adminBanUser = (0, https_1.onCall)(async (request) => {
@@ -1462,20 +1856,72 @@ exports.refundPurchase = (0, https_1.onCall)(async (request) => {
     });
     return { success: true };
 });
+// 리뷰 작성 (실제 구매자만, 환불된 구매는 제외)
+exports.submitReview = (0, https_1.onCall)(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid)
+        throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
+    const { materialId, rating, content } = request.data || {};
+    if (!materialId || typeof materialId !== "string") {
+        throw new https_1.HttpsError("invalid-argument", "자료 ID가 누락되었습니다.");
+    }
+    if (typeof rating !== "number" || !Number.isFinite(rating) || rating < 1 || rating > 5) {
+        throw new https_1.HttpsError("invalid-argument", "별점은 1~5 사이여야 합니다.");
+    }
+    if (typeof content !== "string") {
+        throw new https_1.HttpsError("invalid-argument", "후기 내용이 누락되었습니다.");
+    }
+    const trimmed = content.trim();
+    if (trimmed.length === 0 || trimmed.length > 1000) {
+        throw new https_1.HttpsError("invalid-argument", "후기는 1~1000자 사이여야 합니다.");
+    }
+    // 환불되지 않은 실제 구매가 있는지 확인
+    const purchases = await db
+        .collection("purchases")
+        .where("buyerId", "==", uid)
+        .where("materialId", "==", materialId)
+        .get();
+    const hasValidPurchase = purchases.docs.some((d) => d.data().refunded !== true);
+    if (!hasValidPurchase) {
+        throw new https_1.HttpsError("permission-denied", "구매한 자료에만 후기를 작성할 수 있습니다.");
+    }
+    // 중복 작성 방지
+    const existing = await db
+        .collection("reviews")
+        .where("materialId", "==", materialId)
+        .where("userId", "==", uid)
+        .limit(1)
+        .get();
+    if (!existing.empty) {
+        throw new https_1.HttpsError("already-exists", "이미 후기를 작성하셨습니다.");
+    }
+    // 사용자 닉네임 조회
+    const userDoc = await db.collection("users").doc(uid).get();
+    const userName = (userDoc.exists && (userDoc.data().nickname || userDoc.data().email)) || "익명";
+    const reviewRef = db.collection("reviews").doc();
+    await reviewRef.set({
+        userId: uid,
+        userName,
+        materialId,
+        rating,
+        content: trimmed,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return { success: true, reviewId: reviewRef.id };
+});
 // 포인트 충전 요청 (계좌이체)
 exports.submitChargeRequest = (0, https_1.onCall)(async (request) => {
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
-    const { amount, transferAmount, vat, fee, senderName, senderPhone, receiptNumber, receiptType } = request.data;
+    const { amount, senderName, senderPhone, receiptNumber, receiptType } = request.data;
     if (!amount || amount < 1000)
         throw new https_1.HttpsError("invalid-argument", "최소 충전 금액은 1,000원입니다.");
     if (!senderName || !senderPhone)
         throw new https_1.HttpsError("invalid-argument", "입금자 정보가 누락되었습니다.");
     // 서버에서 재계산하여 검증
     const serverVat = Math.ceil(amount * 0.10);
-    const serverFee = Math.ceil(amount * 0.10);
-    const serverTransferAmount = amount + serverVat + serverFee;
+    const serverTransferAmount = amount + serverVat;
     const userDoc = await db.collection("users").doc(uid).get();
     const email = userDoc.data()?.email || "";
     await db.collection("charge_requests").add({
@@ -1484,7 +1930,7 @@ exports.submitChargeRequest = (0, https_1.onCall)(async (request) => {
         amount,
         transferAmount: serverTransferAmount,
         vat: serverVat,
-        fee: serverFee,
+        fee: 0,
         senderName,
         senderPhone,
         receiptNumber: receiptNumber || "",
@@ -1619,18 +2065,24 @@ exports.toggleNeedRequest = (0, https_1.onCall)(async (request) => {
     const needUsers = data.needUsers || [];
     if (needUsers.includes(uid)) {
         // 이미 눌렀으면 취소
+        const remaining = needUsers.filter((u) => u !== uid);
+        if (remaining.length === 0) {
+            // 공감자 0이면 요청 삭제
+            await reqRef.delete();
+            return { success: true, added: false, deleted: true };
+        }
         await reqRef.update({
             needUsers: admin.firestore.FieldValue.arrayRemove(uid),
             needCount: admin.firestore.FieldValue.increment(-1),
         });
-        return { success: true, added: false };
+        return { success: true, added: false, deleted: false };
     }
     else {
         await reqRef.update({
             needUsers: admin.firestore.FieldValue.arrayUnion(uid),
             needCount: admin.firestore.FieldValue.increment(1),
         });
-        return { success: true, added: true };
+        return { success: true, added: true, deleted: false };
     }
 });
 // 자료 업로드 시 매칭되는 요청이 있으면 알림 저장
@@ -1651,7 +2103,7 @@ exports.onMaterialCreated = (0, firestore_1.onDocumentCreated)("materials/{mater
         const reqSubject = (reqData.subject || "").toLowerCase().trim();
         if (subject.includes(reqSubject) || reqSubject.includes(subject)) {
             const needUsers = reqData.needUsers || [];
-            // 각 사용자에게 알림 생성
+            // 각 사용자에게 알림 생성 + 알림톡 발송
             const batch = db.batch();
             for (const userId of needUsers) {
                 const notifRef = db.collection("notifications").doc();
@@ -1665,6 +2117,30 @@ exports.onMaterialCreated = (0, firestore_1.onDocumentCreated)("materials/{mater
                     read: false,
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 });
+                // 알리고 알림톡 발송 (자료등록)
+                if (ALIGO_API_KEY && ALIGO_SENDER_KEY) {
+                    try {
+                        const userDoc = await db.collection("users").doc(userId).get();
+                        const userData = userDoc.data();
+                        const userPhone = userData?.verifiedPhone;
+                        const userName = userData?.displayName || "회원";
+                        if (userPhone) {
+                            const formData = new URLSearchParams();
+                            formData.append("apikey", ALIGO_API_KEY);
+                            formData.append("userid", ALIGO_USER_ID);
+                            formData.append("senderkey", ALIGO_SENDER_KEY);
+                            formData.append("tpl_code", "UG_8790");
+                            formData.append("sender", ALIGO_SENDER_NUMBER);
+                            formData.append("receiver_1", userPhone);
+                            formData.append("subject_1", "자료등록");
+                            formData.append("message_1", `관심과목 자료 등록\n\n${reqData.subject}\n\n${userName}님이 요청한 ${reqData.subject} 과목의 자료가 등록되었어요. 유니파일에서 확인해보세요!`);
+                            await axios_1.default.post("https://kakaoapi.aligo.in/akv10/alimtalk/send/", formData.toString(), { headers: { "Content-Type": "application/x-www-form-urlencoded" } });
+                        }
+                    }
+                    catch (err) {
+                        console.error("알리고 자료등록 알림톡 오류:", err?.response?.data || err.message);
+                    }
+                }
             }
             await batch.commit();
             // 요청 상태를 fulfilled로 변경
