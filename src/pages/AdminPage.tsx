@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { httpsCallable } from "firebase/functions";
-import { collection, query, where, orderBy, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, query, orderBy, getDocs, doc, updateDoc } from "firebase/firestore";
 import { functions, db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -273,7 +273,7 @@ export default function AdminPage() {
     try {
       const q = query(
         collection(db, "materials"),
-        where("gradeClaim", "!=", null),
+        orderBy("gradeStatus"),
         orderBy("createdAt", "desc")
       );
       console.log("[admin] fetching grade requests...");
