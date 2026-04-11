@@ -105,7 +105,8 @@ export default function ChargePage() {
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex items-start justify-center px-6 py-12 bg-muted/50">
-      <Card className="w-full max-w-[520px] shadow-sm">
+      <div className="w-full max-w-[520px] space-y-4">
+      <Card className="w-full shadow-sm">
         <CardHeader>
           <CardTitle className="text-2xl">포인트 충전</CardTitle>
         </CardHeader>
@@ -184,7 +185,7 @@ export default function ChargePage() {
               </div>
 
               <Button
-                className="w-full h-12 text-base font-bold bg-[#862633] hover:bg-[#6e1f2b] text-white"
+                className="w-full h-12 text-base font-bold bg-[#862633] hover:bg-[#6B1E29] text-white"
                 onClick={() => {
                   if (amount < 1000) {
                     setError("충전 금액을 선택해주세요.");
@@ -347,7 +348,7 @@ export default function ChargePage() {
                   이전
                 </Button>
                 <Button
-                  className="flex-1 h-12 text-base font-bold bg-[#862633] hover:bg-[#6e1f2b] text-white"
+                  className="flex-1 h-12 text-base font-bold bg-[#862633] hover:bg-[#6B1E29] text-white"
                   onClick={handleConfirmTransfer}
                   disabled={loading}
                 >
@@ -402,6 +403,51 @@ export default function ChargePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* 환불 안내 */}
+      <Card className="w-full shadow-sm">
+        <CardContent className="p-5">
+          <h3 className="text-[15px] font-bold mb-3">포인트 환불 안내</h3>
+          <ul className="text-[13px] text-muted-foreground space-y-2 ml-1">
+            <li>
+              • 충전 후 <span className="font-semibold text-foreground">사용하지 않은 포인트</span>는
+              언제든지 <span className="font-semibold text-foreground">전액 환불</span>이 가능합니다.
+            </li>
+            <li>
+              • 자료 구매 후 <span className="font-semibold text-foreground">24시간 이내에 다운로드하지 않은 경우</span>,
+              해당 포인트는 <span className="font-semibold text-foreground">자동으로 환불</span>됩니다.
+            </li>
+            <li>
+              • 한 번이라도 <span className="font-semibold text-foreground">다운로드한 자료</span>는
+              원칙적으로 환불이 불가능합니다. (자료 하자·저작권 문제 등 정당한 사유가 있는 경우 개별 심사)
+            </li>
+            <li>
+              • 환불은 <span className="font-semibold text-foreground">송금하신 계좌</span>로 처리되며,
+              영업일 기준 1~3일 이내에 입금됩니다.
+            </li>
+            <li>
+              • 충전 시 부과된 <span className="font-semibold text-foreground">부가세(10%)·수수료(10%)</span>는
+              사용 내역이 없을 경우에 한해 함께 환불됩니다.
+            </li>
+          </ul>
+
+          <div className="mt-4 p-3.5 rounded-lg bg-amber-50 border border-amber-200">
+            <p className="text-[12px] text-amber-800 leading-relaxed">
+              환불을 원하시면 <span className="font-semibold">1:1 문의</span> 또는
+              <a href="mailto:unifileservice@gmail.com" className="ml-0.5 font-semibold underline">
+                unifileservice@gmail.com
+              </a>
+              으로 회원 정보·충전 내역과 함께 요청해주세요.
+            </p>
+          </div>
+
+          <p className="text-[11px] text-muted-foreground mt-3 leading-relaxed">
+            ※ 전자상거래법상 구매 후 7일 이내 청약철회 권리가 보장되나,
+            디지털 콘텐츠의 특성상 다운로드 완료 시점에 청약철회권이 제한됩니다 (전자상거래법 제17조).
+          </p>
+        </CardContent>
+      </Card>
+      </div>
     </div>
   );
 }

@@ -161,12 +161,6 @@ export default function WithdrawPage() {
                 정산 대기 중: {(userProfile?.pendingEarnings ?? 0).toLocaleString()}원 (구매 후 24시간 경과 시 출금 가능)
               </p>
             )}
-            <div className="mt-3 pt-3 border-t border-border">
-              <p className="text-xs text-muted-foreground">
-                보유 포인트: <span className="font-semibold text-foreground">{(userProfile?.points ?? 0).toLocaleString()}P</span>
-                <span className="ml-2 text-muted-foreground">(포인트는 전액 환불 가능, 출금은 수익금만 가능)</span>
-              </p>
-            </div>
           </CardContent>
         </Card>
 
@@ -344,18 +338,6 @@ export default function WithdrawPage() {
               <li>• 수익금(판매수익)은 반드시 <span className="font-semibold text-foreground">본인 명의 계좌</span>로만 신청 가능하며, 신청한 다음 영업일에 입금됩니다. (은행 영업일 기준)</li>
               <li>• 계좌번호를 잘못 입력하여 출금된 경우 책임지지 않습니다.</li>
               <li>• CMA통장 및 가상계좌는 거래시간 제한으로 출금 오류가 발생할 수 있으니, 가급적 <span className="font-semibold text-foreground">입출금이 자유로운 보통예금통장</span>으로 신청해주세요.</li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* 포인트 & 수익금 안내 */}
-        <Card className="mt-4">
-          <CardContent className="p-5">
-            <h2 className="text-[15px] font-bold mb-3">포인트 vs 수익금 안내</h2>
-            <ul className="text-[13px] text-muted-foreground space-y-2 ml-1 mb-5">
-              <li>• <span className="font-semibold text-foreground">포인트</span>: 충전한 금액이며, 자료 구매에 사용됩니다. 사용하지 않은 포인트는 <span className="font-semibold text-foreground">전액 환불</span>이 가능합니다.</li>
-              <li>• <span className="font-semibold text-foreground">수익금</span>: 자료 판매로 얻은 수익이며, 출금 시 플랫폼 수수료가 차감됩니다.</li>
-              <li>• 자료를 구매하면 구매자의 <span className="font-semibold text-foreground">포인트</span>가 차감되고, 판매자에게 <span className="font-semibold text-foreground">수익금</span>으로 지급됩니다.</li>
             </ul>
           </CardContent>
         </Card>
