@@ -19,8 +19,8 @@ export default function BrowsePage() {
   const initialQuery = searchParams.get("q") || "";
   const initialSort = searchParams.get("sort") || "popular";
 
-  const [selectedCategory, setSelectedCategory] = useState<Category | "전체">(
-    initialCategory || "전체"
+  const [selectedCategory, setSelectedCategory] = useState<Category>(
+    initialCategory || "수업"
   );
   const initialDept = searchParams.get("department") || "";
   const [searchQuery, setSearchQuery] = useState(initialQuery);
@@ -129,9 +129,7 @@ export default function BrowsePage() {
   const filtered = useMemo(() => {
     let result = materials.filter((m) => !(m as any).hidden && (m as any).scanStatus !== "infected" && (m as any).scanStatus !== "scanning");
 
-    if (selectedCategory !== "전체") {
-      result = result.filter((m) => m.category === selectedCategory);
-    }
+    result = result.filter((m) => m.category === selectedCategory);
 
     if (selectedDepartment) {
       result = result.filter((m) => m.department === selectedDepartment);
@@ -217,22 +215,25 @@ export default function BrowsePage() {
             type="text"
             placeholder="과목명, 교수명, 키워드로 검색..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              // 검색어가 비어있다가 입력이 들어오는 순간 필터 전체 초기화
+              if (v.trim() && !searchQuery.trim()) {
+                setSelectedCategory("수업");
+                setSelectedIsuType("");
+                setSelectedSubType("");
+                setSelectedDepartment("");
+                setSelectedSubCategory("");
+                setSelectedCourse("");
+                setSelectedProfessor("");
+                setSelectedSemester("");
+              }
+              setSearchQuery(v);
+            }}
             className="h-11 rounded-lg text-[15px]"
           />
 
           <div className="flex flex-wrap gap-2">
-            <button
-              className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium transition-colors",
-                selectedCategory === "전체"
-                  ? "bg-primary text-white"
-                  : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
-              )}
-              onClick={() => setSelectedCategory("전체")}
-            >
-              전체
-            </button>
             {categories.map((cat) => (
               <button
                 key={cat.name}
