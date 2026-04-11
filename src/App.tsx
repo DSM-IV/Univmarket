@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import BetaEventPopup from "./components/BetaEventPopup";
 import HomePage from "./pages/HomePage";
 import BrowsePage from "./pages/BrowsePage";
 import DetailPage from "./pages/DetailPage";
@@ -28,6 +29,9 @@ import KhuPage from "./pages/KhuPage";
 import HufsPage from "./pages/HufsPage";
 import UosPage from "./pages/UosPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import EventsPage from "./pages/EventsPage";
+import EventRafflePage from "./pages/EventRafflePage";
+import SellerPage from "./pages/SellerPage";
 
 function SuspensionBanner() {
   const { userProfile } = useAuth();
@@ -68,6 +72,7 @@ function App() {
             <Route path="/home" element={<HomePage />} />
             <Route path="/browse" element={<BrowsePage />} />
             <Route path="/material/:id" element={<DetailPage />} />
+            <Route path="/seller/:authorId" element={<SellerPage />} />
             <Route path="/upload" element={<UploadPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/cart" element={<CartPage />} />
@@ -90,9 +95,12 @@ function App() {
             <Route path="/univ/hufs" element={<HufsPage />} />
             <Route path="/univ/uos" element={<UosPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/events" element={<EventsPage />} />
+            <Route path="/events/closed-beta-raffle" element={<EventRafflePage />} />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <Footer />
+          <BetaEventPopup />
         </div>
       </AuthProvider>
     </BrowserRouter>

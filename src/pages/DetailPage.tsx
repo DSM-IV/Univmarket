@@ -61,6 +61,7 @@ export default function DetailPage() {
   const [reviewSort, setReviewSort] = useState<ReviewSort>("recent");
   const [downloading, setDownloading] = useState(false);
   const [authorSalesCount, setAuthorSalesCount] = useState(0);
+  const [authorNickname, setAuthorNickname] = useState("");
   const [inCart, setInCart] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
 
@@ -98,6 +99,15 @@ export default function DetailPage() {
             (sum, d) => sum + (d.data().salesCount || 0), 0
           );
           setAuthorSalesCount(totalSales);
+
+          // 판매자 닉네임 조회 (현재 닉네임으로 표시)
+          try {
+            const userSnap = await getDoc(doc(db, "users", snap.data().authorId));
+            const nick = userSnap.exists() ? (userSnap.data().nickname as string) : "";
+            setAuthorNickname(nick || mat.author || "익명");
+          } catch {
+            setAuthorNickname(mat.author || "익명");
+          }
         }
       } catch (err) {
 
@@ -625,17 +635,22 @@ export default function DetailPage() {
                   </span>
                 </div>
 
-                <div className="flex items-center gap-3 p-4 bg-secondary rounded-lg mt-4 mb-6">
+                <Link
+                  to={`/seller/${material.authorId}`}
+                  className="flex items-center gap-3 p-4 bg-secondary rounded-lg mt-4 mb-6 hover:bg-accent transition-colors group"
+                >
                   <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-base shrink-0">
-                    {material.author.charAt(0)}
+                    {(authorNickname || "?").charAt(0)}
                   </div>
-                  <div>
-                    <span className="block font-semibold text-sm">{material.author}</span>
+                  <div className="min-w-0">
+                    <span className="block font-semibold text-sm group-hover:underline truncate">
+                      {authorNickname || "익명"}
+                    </span>
                     <span className="text-[13px] text-muted-foreground">
                       총 판매 {authorSalesCount}건
                     </span>
                   </div>
-                </div>
+                </Link>
 
                 <Card className="mb-6">
                   <CardContent className="p-6">
