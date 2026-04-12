@@ -5,6 +5,7 @@ import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Wallet, Menu, X } from "lucide-react";
+import NotificationPanel from "./NotificationPanel";
 
 export default function Navbar() {
   const [cartCount, setCartCount] = useState(0);
@@ -72,6 +73,7 @@ export default function Navbar() {
                   </span>
                 )}
               </Link>
+              <NotificationPanel />
               <Link
                 to="/charge"
                 onClick={scrollTop}
@@ -108,7 +110,7 @@ export default function Navbar() {
                 variant="default"
                 size="sm"
                 onClick={handleLogout}
-                className="rounded-full bg-[#862633] hover:bg-[#6e1f2b] text-white"
+                className="rounded-full bg-[#862633] hover:bg-[#6B1E29] text-white"
               >
                 로그아웃
               </Button>
@@ -123,6 +125,8 @@ export default function Navbar() {
         {/* Mobile: key actions + hamburger */}
         <div className="flex md:hidden items-center gap-1 ml-auto">
           {user && (
+            <>
+            <NotificationPanel onNavigate={closeMobile} />
             <Link
               to="/cart"
               className="relative p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
@@ -135,6 +139,7 @@ export default function Navbar() {
                 </span>
               )}
             </Link>
+            </>
           )}
           <button
             onClick={() => setMobileOpen((v) => !v)}
@@ -202,7 +207,7 @@ export default function Navbar() {
                   variant="default"
                   size="sm"
                   onClick={() => { closeMobile(); handleLogout(); }}
-                  className="rounded-full w-full bg-[#862633] hover:bg-[#6e1f2b] text-white"
+                  className="rounded-full w-full bg-[#862633] hover:bg-[#6B1E29] text-white"
                 >
                   로그아웃
                 </Button>

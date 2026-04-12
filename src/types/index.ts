@@ -73,3 +73,15 @@ export interface Transaction {
   status: "pending" | "completed" | "failed";
   createdAt: string;
 }
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: "sale" | "review" | "material_available";
+  title: string;
+  message: string;
+  materialId?: string;
+  materialTitle?: string;
+  read: boolean;
+  createdAt: string;
+}

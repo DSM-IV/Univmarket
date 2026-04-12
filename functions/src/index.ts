@@ -933,11 +933,23 @@ export const purchaseMaterial = onCall(async (request) => {
     });
   });
 
+  // 판매자에게 알림 생성
+  await db.collection("notifications").add({
+    userId: sellerId,
+    type: "sale",
+    title: "자료가 판매되었어요!",
+    message: `"${materialTitle}" 자료가 판매되었습니다. (+${price.toLocaleString()}P)`,
+    materialId,
+    materialTitle,
+    read: false,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
   return { success: true };
 });
 
 // --- 클로즈드 베타 이벤트: 응모 ---
-const RAFFLE_POINTS_PER_TICKET = 1000;
+const RAFFLE_POINTS_PER_TICKET = 100;
 const RAFFLE_ALLOWED_PRODUCT_IDS = new Set(["ipad-air-4"]);
 
 export const enterRaffle = onCall(async (request) => {
@@ -950,12 +962,7 @@ export const enterRaffle = onCall(async (request) => {
     throw new HttpsError("invalid-argument", "잘못된 응모 상품입니다.");
   }
 
-  const qty = Number(quantity);
-  if (!Number.isInteger(qty) || qty < 1 || qty > 100) {
-    throw new HttpsError("invalid-argument", "응모 수량은 1~100 사이여야 합니다.");
-  }
-
-  const pointsNeeded = qty * RAFFLE_POINTS_PER_TICKET;
+  const pointsNeeded = RAFFLE_POINTS_PER_TICKET;
   const userRef = db.collection("users").doc(uid);
   const entryRef = db.collection("raffle_entries").doc(`${uid}_${productId}`);
 
@@ -965,16 +972,19 @@ export const enterRaffle = onCall(async (request) => {
       throw new HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
     }
 
+    // 이미 응모했는지 확인 (1인 1회 제한)
+    const entryDoc = await tx.get(entryRef);
+    if (entryDoc.exists) {
+      throw new HttpsError("already-exists", "이미 응모하셨습니다. 1인 1회만 응모 가능합니다.");
+    }
+
     const userData = userDoc.data()!;
     const currentPoints = Number(userData.points || 0);
     if (currentPoints < pointsNeeded) {
       throw new HttpsError("failed-precondition", "포인트가 부족합니다.");
     }
 
-    const entryDoc = await tx.get(entryRef);
-    const currentCount = entryDoc.exists ? Number(entryDoc.data()!.count || 0) : 0;
     const newPoints = currentPoints - pointsNeeded;
-    const newCount = currentCount + qty;
 
     tx.update(userRef, {
       points: newPoints,
@@ -982,19 +992,12 @@ export const enterRaffle = onCall(async (request) => {
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    tx.set(
-      entryRef,
-      {
-        uid,
-        productId,
-        count: newCount,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-        ...(entryDoc.exists
-          ? {}
-          : { createdAt: admin.firestore.FieldValue.serverTimestamp() }),
-      },
-      { merge: true }
-    );
+    tx.set(entryRef, {
+      uid,
+      productId,
+      count: 1,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
     tx.create(db.collection("transactions").doc(), {
       userId: uid,
@@ -1002,14 +1005,14 @@ export const enterRaffle = onCall(async (request) => {
       amount: -pointsNeeded,
       balanceAfter: newPoints,
       balanceType: "points",
-      description: `이벤트 응모권 ${qty}개 (${productId})`,
+      description: `이벤트 응모 (${productId})`,
       relatedProductId: productId,
-      quantity: qty,
+      quantity: 1,
       status: "completed",
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    return { success: true, newPoints, newCount };
+    return { success: true, newPoints, newCount: 1 };
   });
 
   return result;
@@ -2214,6 +2217,9 @@ export const submitReview = onCall(async (request) => {
   const userDoc = await db.collection("users").doc(uid).get();
   const userName = (userDoc.exists && (userDoc.data()!.nickname || userDoc.data()!.email)) || "익명";
 
+  // 자료 정보 조회 (작성자에게 알림용)
+  const materialDoc = await db.collection("materials").doc(materialId).get();
+
   const reviewRef = db.collection("reviews").doc();
   await reviewRef.set({
     userId: uid,
@@ -2223,6 +2229,24 @@ export const submitReview = onCall(async (request) => {
     content: trimmed,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
+
+  // 자료 작성자에게 후기 알림 생성 (본인 제외)
+  if (materialDoc.exists) {
+    const materialData = materialDoc.data()!;
+    const authorId = materialData.authorId;
+    if (authorId && authorId !== uid) {
+      await db.collection("notifications").add({
+        userId: authorId,
+        type: "review",
+        title: "새 후기가 등록되었어요!",
+        message: `"${materialData.title}" 자료에 ★${rating} 후기가 달렸습니다.`,
+        materialId,
+        materialTitle: materialData.title || "",
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  }
 
   return { success: true, reviewId: reviewRef.id };
 });
