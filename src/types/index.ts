@@ -72,6 +72,14 @@ export interface Transaction {
   relatedMaterialId?: string;
   status: "pending" | "completed" | "failed";
   createdAt: string;
+  // 출금 관련 필드
+  fee?: number;
+  commission?: number;
+  tax?: number;
+  received?: number;
+  bankName?: string;
+  accountNumber?: string;
+  accountHolder?: string;
 }
 
 export interface Notification {

@@ -33,8 +33,10 @@ interface Withdrawal {
   userId: string;
   amount: number;
   fee: number;
+  commission: number;
   tax: number;
   totalDeduction: number;
+  received: number;
   bankName: string;
   accountNumber: string;
   realAccountNumber?: string;
@@ -883,29 +885,39 @@ export default function AdminPage() {
 
                       <Separator className="mb-3" />
 
+                      {/* 실 입금액 강조 */}
+                      <div className="mb-3 p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-center justify-between">
+                        <span className="text-sm font-semibold text-primary">실 입금액</span>
+                        <span className="text-lg font-extrabold text-primary">{(w.received ?? 0).toLocaleString()}원</span>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm max-sm:grid-cols-1">
                         <div className="flex gap-2">
-                          <span className="w-16 shrink-0 font-medium text-gray-500">입금 계좌</span>
+                          <span className="w-20 shrink-0 font-medium text-gray-500">입금 계좌</span>
                           <span className="text-gray-900 font-semibold">{w.bankName} {w.realAccountNumber || w.accountNumber}</span>
                         </div>
                         <div className="flex gap-2">
-                          <span className="w-16 shrink-0 font-medium text-gray-500">예금주</span>
+                          <span className="w-20 shrink-0 font-medium text-gray-500">예금주</span>
                           <span className="text-gray-700">{w.accountHolder}</span>
                         </div>
                         <div className="flex gap-2">
-                          <span className="w-16 shrink-0 font-medium text-gray-500">수수료</span>
-                          <span className="text-gray-700">{w.fee?.toLocaleString() || 0}원</span>
+                          <span className="w-20 shrink-0 font-medium text-gray-500">신청 금액</span>
+                          <span className="text-gray-900 font-semibold">{Math.abs(w.amount).toLocaleString()}원</span>
                         </div>
                         <div className="flex gap-2">
-                          <span className="w-16 shrink-0 font-medium text-gray-500">세금</span>
-                          <span className="text-gray-700">{w.tax?.toLocaleString() || 0}원</span>
+                          <span className="w-20 shrink-0 font-medium text-gray-500">플랫폼 수수료</span>
+                          <span className="text-gray-700">−{(w.commission ?? 0).toLocaleString()}원</span>
                         </div>
                         <div className="flex gap-2">
-                          <span className="w-16 shrink-0 font-medium text-gray-500">총 차감</span>
-                          <span className="text-gray-900 font-semibold">{w.totalDeduction?.toLocaleString() || 0}원</span>
+                          <span className="w-20 shrink-0 font-medium text-gray-500">세금</span>
+                          <span className="text-gray-700">{w.tax ? `−${w.tax.toLocaleString()}원` : "없음"}</span>
                         </div>
                         <div className="flex gap-2">
-                          <span className="w-16 shrink-0 font-medium text-gray-500">사용자 ID</span>
+                          <span className="w-20 shrink-0 font-medium text-gray-500">출금수수료</span>
+                          <span className="text-gray-700">−{(w.fee ?? 0).toLocaleString()}원</span>
+                        </div>
+                        <div className="flex gap-2">
+                          <span className="w-20 shrink-0 font-medium text-gray-500">사용자 ID</span>
                           <span className="text-gray-500 text-xs font-mono">{w.userId}</span>
                         </div>
                       </div>

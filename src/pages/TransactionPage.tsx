@@ -6,8 +6,9 @@ import type { Transaction } from "../types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { CreditCard, Receipt } from "lucide-react";
+import { CreditCard, Receipt, ChevronDown, ChevronUp } from "lucide-react";
 
 type FilterTab = "all" | "charge" | "purchase" | "sale" | "withdraw";
 
@@ -133,50 +134,9 @@ export default function TransactionPage() {
           <div className="space-y-2">
             {filtered.map((t) => {
               const income = isIncome(t.type);
+              const isWithdraw = t.type === "withdraw";
               return (
-                <Card key={t.id}>
-                  <CardContent className="flex items-center justify-between gap-4 max-sm:gap-2 p-4 max-sm:p-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <Badge variant={TYPE_BADGE_VARIANT[t.type] || "outline"}>
-                        {TYPE_LABELS[t.type] || t.type}
-                      </Badge>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-gray-900">
-                          {t.description}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs text-gray-400">
-                            {formatDate(t.createdAt)}
-                          </p>
-                          {t.type === "withdraw" && t.status && (
-                            <span className={cn(
-                              "text-[11px] font-semibold px-1.5 py-0.5 rounded",
-                              t.status === "pending" && "bg-amber-100 text-amber-700",
-                              t.status === "completed" && "bg-emerald-100 text-emerald-700",
-                              t.status === "failed" && "bg-red-100 text-red-700",
-                            )}>
-                              {STATUS_LABELS[t.status] || t.status}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span
-                        className={cn(
-                          "block text-sm font-bold",
-                          income ? "text-blue-600" : "text-red-500"
-                        )}
-                      >
-                        {income ? "+" : "-"}
-                        {Math.abs(t.amount).toLocaleString()}{t.balanceType === "earnings" ? "원" : "P"}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        {t.balanceType === "earnings" ? "수익금" : "포인트"} 잔액 {t.balanceAfter.toLocaleString()}{t.balanceType === "earnings" ? "원" : "P"}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                <TransactionCard key={t.id} t={t} income={income} isWithdraw={isWithdraw} />
               );
             })}
           </div>
@@ -188,5 +148,100 @@ export default function TransactionPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function TransactionCard({ t, income, isWithdraw }: { t: Transaction; income: boolean; isWithdraw: boolean }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Card className={cn(isWithdraw && "cursor-pointer")} onClick={() => isWithdraw && setOpen((v) => !v)}>
+      <CardContent className="p-4 max-sm:p-3">
+        <div className="flex items-center justify-between gap-4 max-sm:gap-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <Badge variant={TYPE_BADGE_VARIANT[t.type] || "outline"}>
+              {TYPE_LABELS[t.type] || t.type}
+            </Badge>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-gray-900">
+                {t.description}
+              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-gray-400">
+                  {formatDate(t.createdAt)}
+                </p>
+                {isWithdraw && t.status && (
+                  <span className={cn(
+                    "text-[11px] font-semibold px-1.5 py-0.5 rounded",
+                    t.status === "pending" && "bg-amber-100 text-amber-700",
+                    t.status === "completed" && "bg-emerald-100 text-emerald-700",
+                    t.status === "failed" && "bg-red-100 text-red-700",
+                  )}>
+                    {STATUS_LABELS[t.status] || t.status}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="shrink-0 text-right">
+              <span className={cn("block text-sm font-bold", income ? "text-blue-600" : "text-red-500")}>
+                {income ? "+" : "-"}
+                {Math.abs(t.amount).toLocaleString()}{t.balanceType === "earnings" ? "원" : "P"}
+              </span>
+              <span className="text-xs text-gray-400">
+                {t.balanceType === "earnings" ? "수익금" : "포인트"} 잔액 {t.balanceAfter.toLocaleString()}{t.balanceType === "earnings" ? "원" : "P"}
+              </span>
+            </div>
+            {isWithdraw && (
+              open ? <ChevronUp className="w-4 h-4 text-gray-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+            )}
+          </div>
+        </div>
+
+        {/* 출금 상세 정보 */}
+        {isWithdraw && open && (
+          <div className="mt-3">
+            <Separator className="mb-3" />
+            <div className="grid grid-cols-2 gap-2 text-sm max-sm:grid-cols-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">입금 계좌</span>
+                <span className="font-medium">{t.bankName} {t.accountNumber}</span>
+              </div>
+              {t.accountHolder && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">예금주</span>
+                  <span className="font-medium">{t.accountHolder}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">플랫폼 수수료</span>
+                <span>−{(t.commission ?? 0).toLocaleString()}원</span>
+              </div>
+              {(t.tax ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">세금 (8.8%)</span>
+                  <span>−{(t.tax ?? 0).toLocaleString()}원</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">출금수수료</span>
+                <span>−{(t.fee ?? 0).toLocaleString()}원</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">실수령액</span>
+                <span className="font-bold text-primary">{(t.received ?? 0).toLocaleString()}원</span>
+              </div>
+            </div>
+            <div className="mt-3 p-2.5 rounded-lg bg-muted text-center">
+              <span className="text-xs text-muted-foreground">
+                {t.status === "pending" ? "입금 대기 중 — 영업일 기준 1~3일 소요" :
+                 t.status === "completed" ? "입금 완료" : "거절됨"}
+              </span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
