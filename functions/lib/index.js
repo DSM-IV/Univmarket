@@ -33,6 +33,7 @@ const scheduler_1 = require("firebase-functions/v2/scheduler");
 const firestore_1 = require("firebase-functions/v2/firestore");
 const axios_1 = __importDefault(require("axios"));
 const cors_1 = __importDefault(require("cors"));
+const crypto_1 = require("crypto");
 const client_s3_1 = require("@aws-sdk/client-s3");
 const s3_request_presigner_1 = require("@aws-sdk/s3-request-presigner");
 const pdf_lib_1 = require("pdf-lib");
@@ -52,10 +53,28 @@ const ALIGO_API_KEY = process.env.ALIGO_API_KEY || "";
 const ALIGO_USER_ID = process.env.ALIGO_USER_ID || "";
 const ALIGO_SENDER_KEY = process.env.ALIGO_SENDER_KEY || "";
 const ALIGO_SENDER_NUMBER = process.env.ALIGO_SENDER_NUMBER || "";
-const KAKAOPAY_CID = process.env.KAKAOPAY_CID || "TC0ONETIME";
+const KAKAOPAY_CID = process.env.KAKAOPAY_CID || "";
 const KAKAOPAY_SECRET_KEY = process.env.KAKAOPAY_SECRET_KEY || "";
 const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY || "";
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://unifile.store";
+// 레이트 리밋 유틸리티
+async function checkRateLimit(key, maxRequests, windowMs) {
+    const ref = db.collection("rate_limits").doc(key);
+    const now = Date.now();
+    await db.runTransaction(async (tx) => {
+        const doc = await tx.get(ref);
+        const data = doc.data();
+        if (data && data.windowStart > now - windowMs) {
+            if (data.count >= maxRequests) {
+                throw new https_1.HttpsError("resource-exhausted", "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.");
+            }
+            tx.update(ref, { count: admin.firestore.FieldValue.increment(1) });
+        }
+        else {
+            tx.set(ref, { windowStart: now, count: 1 });
+        }
+    });
+}
 const MIN_CHARGE_AMOUNT = 1000;
 const MAX_CHARGE_AMOUNT = 1000000; // 100만원
 // Cloudflare R2 - secrets는 함수 내부에서 접근
@@ -73,6 +92,19 @@ function getR2Client() {
         responseChecksumValidation: "WHEN_REQUIRED",
     });
 }
+// 닉네임 중복 검사
+async function checkNicknameDuplicate(nickname, excludeUid) {
+    const snap = await db.collection("users")
+        .where("nickname", "==", nickname)
+        .limit(1)
+        .get();
+    if (!snap.empty) {
+        const existing = snap.docs[0];
+        if (!excludeUid || existing.id !== excludeUid) {
+            throw new https_1.HttpsError("already-exists", "이미 사용 중인 닉네임입니다.");
+        }
+    }
+}
 // 회원가입 시 유저 문서 생성
 exports.createUserProfile = (0, https_1.onCall)(async (request) => {
     const uid = request.auth?.uid;
@@ -83,9 +115,19 @@ exports.createUserProfile = (0, https_1.onCall)(async (request) => {
     const existing = await userRef.get();
     if (existing.exists)
         return { success: true };
+    // 닉네임 유효성 검사
+    const trimmedNickname = (nickname || displayName || "").trim();
+    if (trimmedNickname.length < 2 || trimmedNickname.length > 16) {
+        throw new https_1.HttpsError("invalid-argument", "닉네임은 2~16자여야 합니다.");
+    }
+    if (!/^[\p{L}\p{N}_.-]+$/u.test(trimmedNickname)) {
+        throw new https_1.HttpsError("invalid-argument", "닉네임에 사용할 수 없는 문자가 포함되어 있습니다.");
+    }
+    // 닉네임 중복 검사
+    await checkNicknameDuplicate(trimmedNickname);
     await userRef.set({
         displayName: displayName || "",
-        nickname: nickname || displayName || "",
+        nickname: trimmedNickname,
         email: email || "",
         university: university || "",
         points: 0,
@@ -123,6 +165,8 @@ exports.updateNickname = (0, https_1.onCall)(async (request) => {
     if ((snap.data()?.nickname || "") === nickname) {
         return { success: true, nickname };
     }
+    // 닉네임 중복 검사
+    await checkNicknameDuplicate(nickname, uid);
     await userRef.update({
         nickname,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -140,6 +184,8 @@ exports.sendKakaoVerification = (0, https_1.onCall)({ secrets: ALIGO_SECRETS }, 
     if (!/^01[016789]\d{7,8}$/.test(cleanPhone)) {
         return { success: false, error: "올바른 휴대폰 번호를 입력해주세요." };
     }
+    // SMS 레이트 리밋: 동일 번호 5분당 3회
+    await checkRateLimit(`sms_${cleanPhone}`, 3, 5 * 60 * 1000);
     // 동일 이름+전화번호로 이미 가입된 유저가 있는지 확인 (중복가입 방지)
     const existingUsers = await db
         .collection("users")
@@ -151,14 +197,15 @@ exports.sendKakaoVerification = (0, https_1.onCall)({ secrets: ALIGO_SECRETS }, 
         return { success: false, error: "이미 가입된 정보입니다. 기존 계정으로 로그인해주세요." };
     }
     // 인증번호 생성 (6자리)
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const code = String((0, crypto_1.randomInt)(100000, 1000000));
     const sessionId = `signup_${cleanPhone}_${Date.now()}`;
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5분 후 만료
-    // Firestore에 인증 세션 저장
+    // Firestore에 인증 세션 저장 (코드는 해싱하여 저장)
+    const codeHash = (0, crypto_1.createHash)("sha256").update(code).digest("hex");
     await db.collection("verification_sessions").doc(sessionId).set({
         name: name.trim(),
         phone: cleanPhone,
-        code,
+        code: codeHash,
         expiresAt,
         attempts: 0,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -216,8 +263,9 @@ exports.verifyKakaoCode = (0, https_1.onCall)(async (request) => {
         await sessionRef.delete();
         return { verified: false, error: "인증 시도 횟수를 초과했습니다. 다시 요청해주세요." };
     }
-    // 코드 검증
-    if (session.code !== code.trim()) {
+    // 코드 검증 (해싱 비교)
+    const inputHash = (0, crypto_1.createHash)("sha256").update(code.trim()).digest("hex");
+    if (session.code !== inputHash) {
         await sessionRef.update({ attempts: admin.firestore.FieldValue.increment(1) });
         return { verified: false, error: "인증번호가 일치하지 않습니다." };
     }
@@ -251,7 +299,7 @@ exports.setR2Cors = (0, https_1.onCall)({ secrets: R2_SECRETS }, async (request)
         CORSConfiguration: {
             CORSRules: [
                 {
-                    AllowedOrigins: ["*"],
+                    AllowedOrigins: [FRONTEND_URL, "https://unifile.store", "https://www.unifile.store"],
                     AllowedMethods: ["GET", "PUT", "HEAD"],
                     AllowedHeaders: ["*"],
                     ExposeHeaders: ["ETag"],
@@ -340,6 +388,8 @@ exports.getDownloadUrl = (0, https_1.onCall)({ secrets: R2_SECRETS }, async (req
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
+    // 다운로드 레이트 리밋: 유저당 1분에 10회
+    await checkRateLimit(`dl_${uid}`, 10, 60 * 1000);
     const { materialId } = request.data;
     if (!materialId) {
         throw new https_1.HttpsError("invalid-argument", "자료 ID가 누락되었습니다.");
@@ -410,8 +460,8 @@ exports.getDownloadUrl = (0, https_1.onCall)({ secrets: R2_SECRETS }, async (req
             return { downloadUrl };
         }
         catch (err) {
-            // 워터마크 실패 시 원본 제공 (fallback)
-            console.error("Watermark failed, serving original:", err);
+            console.error("Watermark failed:", err);
+            throw new https_1.HttpsError("internal", "파일 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
         }
     }
     // 비-PDF 파일 또는 판매자 본인 → 원본 presigned URL
@@ -503,6 +553,8 @@ exports.kakaopayReady = (0, https_1.onCall)(async (request) => {
     const uid = request.auth?.uid;
     if (!uid)
         throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
+    if (!KAKAOPAY_CID)
+        throw new https_1.HttpsError("unavailable", "카카오페이 결제가 설정되지 않았습니다.");
     const { amount } = request.data;
     if (!amount || !Number.isInteger(amount) || amount < MIN_CHARGE_AMOUNT || amount > MAX_CHARGE_AMOUNT) {
         throw new https_1.HttpsError("invalid-argument", `충전 금액은 ${MIN_CHARGE_AMOUNT.toLocaleString()}원~${MAX_CHARGE_AMOUNT.toLocaleString()}원이어야 합니다.`);
@@ -616,9 +668,9 @@ exports.tossReady = (0, https_1.onCall)(async (request) => {
     if (!pointAmount || !Number.isInteger(pointAmount) || pointAmount < MIN_CHARGE_AMOUNT || pointAmount > MAX_CHARGE_AMOUNT) {
         throw new https_1.HttpsError("invalid-argument", `충전 금액은 ${MIN_CHARGE_AMOUNT.toLocaleString()}원~${MAX_CHARGE_AMOUNT.toLocaleString()}원이어야 합니다.`);
     }
-    const vat = Math.ceil(pointAmount * 0.1);
+    const vat = Math.ceil(pointAmount / 10);
     const paymentAmount = pointAmount + vat;
-    const orderId = `unifile_${uid}_${Date.now()}`;
+    const orderId = `unifile_${db.collection("toss_sessions").doc().id}`;
     // 토스 결제 세션 저장 (pointAmount = 포인트로 적립될 금액, paymentAmount = 실제 결제 금액)
     await db.collection("toss_sessions").doc(orderId).set({
         userId: uid,
@@ -799,10 +851,21 @@ exports.purchaseMaterial = (0, https_1.onCall)(async (request) => {
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
     });
+    // 판매자에게 알림 생성
+    await db.collection("notifications").add({
+        userId: sellerId,
+        type: "sale",
+        title: "자료가 판매되었어요!",
+        message: `"${materialTitle}" 자료가 판매되었습니다. (+${price.toLocaleString()}P)`,
+        materialId,
+        materialTitle,
+        read: false,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
     return { success: true };
 });
 // --- 클로즈드 베타 이벤트: 응모 ---
-const RAFFLE_POINTS_PER_TICKET = 1000;
+const RAFFLE_POINTS_PER_TICKET = 100;
 const RAFFLE_ALLOWED_PRODUCT_IDS = new Set(["ipad-air-4"]);
 exports.enterRaffle = (0, https_1.onCall)(async (request) => {
     const uid = request.auth?.uid;
@@ -812,11 +875,7 @@ exports.enterRaffle = (0, https_1.onCall)(async (request) => {
     if (typeof productId !== "string" || !RAFFLE_ALLOWED_PRODUCT_IDS.has(productId)) {
         throw new https_1.HttpsError("invalid-argument", "잘못된 응모 상품입니다.");
     }
-    const qty = Number(quantity);
-    if (!Number.isInteger(qty) || qty < 1 || qty > 100) {
-        throw new https_1.HttpsError("invalid-argument", "응모 수량은 1~100 사이여야 합니다.");
-    }
-    const pointsNeeded = qty * RAFFLE_POINTS_PER_TICKET;
+    const pointsNeeded = RAFFLE_POINTS_PER_TICKET;
     const userRef = db.collection("users").doc(uid);
     const entryRef = db.collection("raffle_entries").doc(`${uid}_${productId}`);
     const result = await db.runTransaction(async (tx) => {
@@ -824,15 +883,17 @@ exports.enterRaffle = (0, https_1.onCall)(async (request) => {
         if (!userDoc.exists) {
             throw new https_1.HttpsError("not-found", "사용자 정보를 찾을 수 없습니다.");
         }
+        // 이미 응모했는지 확인 (1인 1회 제한)
+        const entryDoc = await tx.get(entryRef);
+        if (entryDoc.exists) {
+            throw new https_1.HttpsError("already-exists", "이미 응모하셨습니다. 1인 1회만 응모 가능합니다.");
+        }
         const userData = userDoc.data();
         const currentPoints = Number(userData.points || 0);
         if (currentPoints < pointsNeeded) {
             throw new https_1.HttpsError("failed-precondition", "포인트가 부족합니다.");
         }
-        const entryDoc = await tx.get(entryRef);
-        const currentCount = entryDoc.exists ? Number(entryDoc.data().count || 0) : 0;
         const newPoints = currentPoints - pointsNeeded;
-        const newCount = currentCount + qty;
         tx.update(userRef, {
             points: newPoints,
             totalSpent: admin.firestore.FieldValue.increment(pointsNeeded),
@@ -841,25 +902,22 @@ exports.enterRaffle = (0, https_1.onCall)(async (request) => {
         tx.set(entryRef, {
             uid,
             productId,
-            count: newCount,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-            ...(entryDoc.exists
-                ? {}
-                : { createdAt: admin.firestore.FieldValue.serverTimestamp() }),
-        }, { merge: true });
+            count: 1,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
         tx.create(db.collection("transactions").doc(), {
             userId: uid,
             type: "raffle_entry",
             amount: -pointsNeeded,
             balanceAfter: newPoints,
             balanceType: "points",
-            description: `이벤트 응모권 ${qty}개 (${productId})`,
+            description: `이벤트 응모 (${productId})`,
             relatedProductId: productId,
-            quantity: qty,
+            quantity: 1,
             status: "completed",
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
         });
-        return { success: true, newPoints, newCount };
+        return { success: true, newPoints, newCount: 1 };
     });
     return result;
 });
@@ -877,15 +935,18 @@ exports.requestVerification = (0, https_1.onCall)({ secrets: ALIGO_SECRETS }, as
     const cleanPhone = (phone || "").replace(/-/g, "");
     if (!/^01[016789]\d{7,8}$/.test(cleanPhone))
         throw new https_1.HttpsError("invalid-argument", "올바른 휴대폰 번호를 입력해주세요.");
+    // SMS 레이트 리밋: 동일 유저 5분당 3회
+    await checkRateLimit(`sms_verify_${uid}`, 3, 5 * 60 * 1000);
     // 인증번호 생성 (6자리)
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const code = String((0, crypto_1.randomInt)(100000, 1000000));
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5분 후 만료
-    // Firestore에 인증 세션 저장
+    // Firestore에 인증 세션 저장 (코드는 해싱하여 저장)
+    const codeHash = (0, crypto_1.createHash)("sha256").update(code).digest("hex");
     await db.collection("verification_sessions").doc(uid).set({
         name: name.trim(),
         birth,
         phone: cleanPhone,
-        code,
+        code: codeHash,
         expiresAt,
         attempts: 0,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -946,8 +1007,9 @@ exports.confirmVerification = (0, https_1.onCall)(async (request) => {
         await sessionRef.delete();
         throw new https_1.HttpsError("resource-exhausted", "인증 시도 횟수를 초과했습니다. 다시 요청해주세요.");
     }
-    // 코드 검증
-    if (session.code !== code.trim()) {
+    // 코드 검증 (해싱 비교)
+    const inputHash = (0, crypto_1.createHash)("sha256").update(code.trim()).digest("hex");
+    if (session.code !== inputHash) {
         await sessionRef.update({ attempts: admin.firestore.FieldValue.increment(1) });
         throw new https_1.HttpsError("invalid-argument", "인증번호가 일치하지 않습니다.");
     }
@@ -966,6 +1028,7 @@ exports.confirmVerification = (0, https_1.onCall)(async (request) => {
 // --- 출금 ---
 const WITHDRAW_FEE = 500;
 const WITHDRAW_MIN = 5000;
+const WITHDRAW_MAX = 5000000; // 500만원
 const WITHDRAW_TAX_THRESHOLD = 125000;
 const WITHDRAW_TAX_RATE = 0.088;
 const PLATFORM_COMMISSION_RATE = 0.10; // 플랫폼 수수료 10% (원래 40%에서 할인)
@@ -975,8 +1038,8 @@ exports.requestWithdraw = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError("unauthenticated", "로그인이 필요합니다.");
     const { amount, bankName, accountNumber, accountHolder } = request.data;
     // 입력 검증
-    if (!amount || !Number.isInteger(amount) || amount < WITHDRAW_MIN) {
-        throw new https_1.HttpsError("invalid-argument", `최소 출금 금액은 ${WITHDRAW_MIN.toLocaleString()}원입니다.`);
+    if (!amount || !Number.isInteger(amount) || amount < WITHDRAW_MIN || amount > WITHDRAW_MAX) {
+        throw new https_1.HttpsError("invalid-argument", `출금 금액은 ${WITHDRAW_MIN.toLocaleString()}원~${WITHDRAW_MAX.toLocaleString()}원이어야 합니다.`);
     }
     if (!bankName?.trim() || !accountNumber?.trim() || !accountHolder?.trim()) {
         throw new https_1.HttpsError("invalid-argument", "계좌 정보를 모두 입력해주세요.");
@@ -1132,23 +1195,26 @@ exports.getWithdrawals = (0, https_1.onCall)(async (request) => {
         .orderBy("createdAt", "desc")
         .limit(200)
         .get();
-    const withdrawals = await Promise.all(snap.docs.map(async (d) => {
+    // 대기 중인 건의 원본 계좌번호를 일괄 조회 (N+1 방지)
+    const pendingIds = snap.docs.filter((d) => d.data().status === "pending").map((d) => d.id);
+    const secretMap = {};
+    for (let i = 0; i < pendingIds.length; i += 10) {
+        const batch = pendingIds.slice(i, i + 10);
+        const secretDocs = await db.getAll(...batch.map((id) => db.collection("withdraw_secrets").doc(id)));
+        secretDocs.forEach((doc) => {
+            if (doc.exists)
+                secretMap[doc.id] = doc.data().accountNumber;
+        });
+    }
+    const withdrawals = snap.docs.map((d) => {
         const data = d.data();
-        // 대기 중인 건만 원본 계좌 조회
-        let realAccount = "";
-        if (data.status === "pending") {
-            const secretDoc = await db.collection("withdraw_secrets").doc(d.id).get();
-            if (secretDoc.exists) {
-                realAccount = secretDoc.data().accountNumber;
-            }
-        }
         return {
             id: d.id,
             ...data,
-            realAccountNumber: realAccount,
+            realAccountNumber: secretMap[d.id] || "",
             createdAt: data.createdAt?.toDate?.()?.toISOString?.() || "",
         };
-    }));
+    });
     return { withdrawals };
 });
 // 출금 입금 완료 처리 (관리자)
@@ -1727,30 +1793,45 @@ exports.settlePendingPoints = (0, scheduler_1.onSchedule)("every 1 hours", async
         purchaseRefs.push(doc.ref);
     }
     // 판매자별 pendingEarnings → earnings 이전
+    const failedSellers = [];
     for (const [sellerId, amount] of Object.entries(sellerAmounts)) {
-        await db.runTransaction(async (tx) => {
-            const sellerRef = db.collection("users").doc(sellerId);
-            const sellerDoc = await tx.get(sellerRef);
-            if (!sellerDoc.exists)
-                return;
-            const pending = sellerDoc.data().pendingEarnings || 0;
-            const settleAmount = Math.min(pending, amount);
-            if (settleAmount > 0) {
-                tx.update(sellerRef, {
-                    pendingEarnings: admin.firestore.FieldValue.increment(-settleAmount),
-                    earnings: admin.firestore.FieldValue.increment(settleAmount),
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                });
-            }
-        });
+        try {
+            await db.runTransaction(async (tx) => {
+                const sellerRef = db.collection("users").doc(sellerId);
+                const sellerDoc = await tx.get(sellerRef);
+                if (!sellerDoc.exists)
+                    return;
+                const pending = sellerDoc.data().pendingEarnings || 0;
+                const settleAmount = Math.min(pending, amount);
+                if (settleAmount > 0) {
+                    tx.update(sellerRef, {
+                        pendingEarnings: admin.firestore.FieldValue.increment(-settleAmount),
+                        earnings: admin.firestore.FieldValue.increment(settleAmount),
+                        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                    });
+                }
+            });
+        }
+        catch (err) {
+            console.error(`[settlePendingPoints] 판매자 ${sellerId} 정산 실패:`, err);
+            failedSellers.push(sellerId);
+        }
+    }
+    if (failedSellers.length > 0) {
+        console.error(`[settlePendingPoints] 정산 실패 판매자 ${failedSellers.length}명:`, failedSellers);
     }
     // 구매 기록에 정산 완료 표시
     for (let i = 0; i < purchaseRefs.length; i += 500) {
-        const batch = db.batch();
-        purchaseRefs.slice(i, i + 500).forEach((ref) => {
-            batch.update(ref, { settled: true });
-        });
-        await batch.commit();
+        try {
+            const batch = db.batch();
+            purchaseRefs.slice(i, i + 500).forEach((ref) => {
+                batch.update(ref, { settled: true });
+            });
+            await batch.commit();
+        }
+        catch (err) {
+            console.error(`[settlePendingPoints] 구매 정산 표시 실패 (배치 ${i / 500}):`, err);
+        }
     }
 });
 // --- 환불 ---
@@ -1899,6 +1980,8 @@ exports.submitReview = (0, https_1.onCall)(async (request) => {
     // 사용자 닉네임 조회
     const userDoc = await db.collection("users").doc(uid).get();
     const userName = (userDoc.exists && (userDoc.data().nickname || userDoc.data().email)) || "익명";
+    // 자료 정보 조회 (작성자에게 알림용)
+    const materialDoc = await db.collection("materials").doc(materialId).get();
     const reviewRef = db.collection("reviews").doc();
     await reviewRef.set({
         userId: uid,
@@ -1908,6 +1991,23 @@ exports.submitReview = (0, https_1.onCall)(async (request) => {
         content: trimmed,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
+    // 자료 작성자에게 후기 알림 생성 (본인 제외)
+    if (materialDoc.exists) {
+        const materialData = materialDoc.data();
+        const authorId = materialData.authorId;
+        if (authorId && authorId !== uid) {
+            await db.collection("notifications").add({
+                userId: authorId,
+                type: "review",
+                title: "새 후기가 등록되었어요!",
+                message: `"${materialData.title}" 자료에 ★${rating} 후기가 달렸습니다.`,
+                materialId,
+                materialTitle: materialData.title || "",
+                read: false,
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+        }
+    }
     return { success: true, reviewId: reviewRef.id };
 });
 // 포인트 충전 요청 (계좌이체)
@@ -1921,7 +2021,7 @@ exports.submitChargeRequest = (0, https_1.onCall)(async (request) => {
     if (!senderName || !senderPhone)
         throw new https_1.HttpsError("invalid-argument", "입금자 정보가 누락되었습니다.");
     // 서버에서 재계산하여 검증
-    const serverVat = Math.ceil(amount * 0.10);
+    const serverVat = Math.ceil(amount / 10);
     const serverTransferAmount = amount + serverVat;
     const userDoc = await db.collection("users").doc(uid).get();
     const email = userDoc.data()?.email || "";
@@ -2095,16 +2195,17 @@ exports.onMaterialCreated = (0, firestore_1.onDocumentCreated)("materials/{mater
     const subject = (material.subject || "").toLowerCase().trim();
     if (!subject)
         return;
-    // 매칭되는 open 요청 찾기
+    // 매칭되는 open 요청 찾기 (최대 200건)
     const requestsSnap = await db.collection("material_requests")
         .where("status", "==", "open")
+        .limit(200)
         .get();
     for (const reqDoc of requestsSnap.docs) {
         const reqData = reqDoc.data();
         const reqSubject = (reqData.subject || "").toLowerCase().trim();
         if (subject.includes(reqSubject) || reqSubject.includes(subject)) {
             const needUsers = reqData.needUsers || [];
-            // 각 사용자에게 알림 생성 + 알림톡 발송
+            // 각 사용자에게 알림 생성 (알림 패널에 표시)
             const batch = db.batch();
             for (const userId of needUsers) {
                 const notifRef = db.collection("notifications").doc();
@@ -2118,30 +2219,6 @@ exports.onMaterialCreated = (0, firestore_1.onDocumentCreated)("materials/{mater
                     read: false,
                     createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 });
-                // 알리고 알림톡 발송 (자료등록)
-                if (ALIGO_API_KEY && ALIGO_SENDER_KEY) {
-                    try {
-                        const userDoc = await db.collection("users").doc(userId).get();
-                        const userData = userDoc.data();
-                        const userPhone = userData?.verifiedPhone;
-                        const userName = userData?.displayName || "회원";
-                        if (userPhone) {
-                            const formData = new URLSearchParams();
-                            formData.append("apikey", ALIGO_API_KEY);
-                            formData.append("userid", ALIGO_USER_ID);
-                            formData.append("senderkey", ALIGO_SENDER_KEY);
-                            formData.append("tpl_code", "UG_8790");
-                            formData.append("sender", ALIGO_SENDER_NUMBER);
-                            formData.append("receiver_1", userPhone);
-                            formData.append("subject_1", "자료등록");
-                            formData.append("message_1", `관심과목 자료 등록\n\n${reqData.subject}\n\n${userName}님이 요청한 ${reqData.subject} 과목의 자료가 등록되었어요. 유니파일에서 확인해보세요!`);
-                            await axios_1.default.post("https://kakaoapi.aligo.in/akv10/alimtalk/send/", formData.toString(), { headers: { "Content-Type": "application/x-www-form-urlencoded" } });
-                        }
-                    }
-                    catch (err) {
-                        console.error("알리고 자료등록 알림톡 오류:", err?.response?.data || err.message);
-                    }
-                }
             }
             await batch.commit();
             // 요청 상태를 fulfilled로 변경

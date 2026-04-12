@@ -244,7 +244,7 @@ export default function SnuPage() {
             내 공부자료로<br />수익을 만들어 보세요
           </h2>
           <p className="text-base text-muted-foreground mb-9">
-            노트, 족보, 레포트 등 어떤 자료든 판매할 수 있어요
+            노트, 자소서, 레포트 등 어떤 자료든 판매할 수 있어요
           </p>
           <Button size="xl" asChild>
             <Link to="/upload">지금 시작하기</Link>

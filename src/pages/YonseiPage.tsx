@@ -123,7 +123,7 @@ export default function YonseiPage() {
       <section className="py-24 bg-muted max-sm:py-16">
         <div className="max-w-[560px] mx-auto text-center px-6">
           <h2 className="text-4xl font-extrabold tracking-[-0.04em] leading-[1.3] mb-4 max-sm:text-[28px]">내 공부자료로<br />수익을 만들어 보세요</h2>
-          <p className="text-base text-muted-foreground mb-9">노트, 족보, 레포트 등 어떤 자료든 판매할 수 있어요</p>
+          <p className="text-base text-muted-foreground mb-9">노트, 자소서, 레포트 등 어떤 자료든 판매할 수 있어요</p>
           <Button size="xl" asChild><Link to="/upload">지금 시작하기</Link></Button>
         </div>
       </section>

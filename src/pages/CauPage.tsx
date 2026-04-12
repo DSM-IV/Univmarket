@@ -66,7 +66,7 @@ export default function CauPage() {
 
       {recentMaterials.length > 0 && (<section className="py-16 max-sm:py-12"><div className="max-w-[1140px] mx-auto px-6"><div className="flex items-end justify-between mb-8"><div><h2 className="text-[26px] font-bold tracking-[-0.03em] mb-1.5">최신 자료</h2><p className="text-[15px] text-muted-foreground">방금 올라온 따끈따끈한 자료들</p></div><Link to="/browse?sort=recent" className="flex items-center gap-0.5 text-sm font-semibold text-muted-foreground hover:text-primary transition-colors shrink-0">전체보기<ChevronRight className="w-4 h-4" /></Link></div><div className="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1 max-sm:gap-3">{recentMaterials.map((m) => (<MaterialCard key={m.id} material={m} rating={reviewStats[m.id]?.avgRating} reviewCount={reviewStats[m.id]?.reviewCount} />))}</div></div></section>)}
 
-      <section className="py-24 bg-muted max-sm:py-16"><div className="max-w-[560px] mx-auto text-center px-6"><h2 className="text-4xl font-extrabold tracking-[-0.04em] leading-[1.3] mb-4 max-sm:text-[28px]">내 공부자료로<br />수익을 만들어 보세요</h2><p className="text-base text-muted-foreground mb-9">노트, 족보, 레포트 등 어떤 자료든 판매할 수 있어요</p><Button size="xl" asChild><Link to="/upload">지금 시작하기</Link></Button></div></section>
+      <section className="py-24 bg-muted max-sm:py-16"><div className="max-w-[560px] mx-auto text-center px-6"><h2 className="text-4xl font-extrabold tracking-[-0.04em] leading-[1.3] mb-4 max-sm:text-[28px]">내 공부자료로<br />수익을 만들어 보세요</h2><p className="text-base text-muted-foreground mb-9">노트, 자소서, 레포트 등 어떤 자료든 판매할 수 있어요</p><Button size="xl" asChild><Link to="/upload">지금 시작하기</Link></Button></div></section>
     </div>
   );
 }
