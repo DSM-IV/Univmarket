@@ -642,6 +642,23 @@ export default function UploadPage() {
         </div>
 
         <form className="flex flex-col gap-7" onSubmit={handleSubmit}>
+          {/* 저작권 배너 */}
+          <div className="flex gap-3 p-4.5 bg-amber-500/[0.06] rounded-lg">
+            <div className="flex-shrink-0 text-amber-500 mt-0.5">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="text-[13px] text-muted-foreground leading-relaxed">
+              <strong className="block text-sm font-bold mb-1.5 text-foreground">
+                저작권 관련 주의사항
+              </strong>
+              <ul className="m-0 pl-4.5 list-disc">
+                <li className="mb-0.5">타인의 저작물(교재, 논문, 강의자료 등)을 무단으로 복제하여 업로드하지 마세요.</li>
+                <li className="mb-0.5">본인이 직접 작성한 자료만 판매할 수 있습니다.</li>
+                <li className="mb-0.5">저작권 침해 자료는 사전 통보 없이 삭제될 수 있으며, 법적 책임은 업로더에게 있습니다.</li>
+              </ul>
+            </div>
+          </div>
+
           {/* 기본 정보 */}
           <Card>
             <CardContent className="p-7 max-sm:p-5">
@@ -1382,23 +1399,6 @@ export default function UploadPage() {
               )}
             </CardContent>
           </Card>}
-
-          {/* 저작권 배너 */}
-          <div className="flex gap-3 p-4.5 bg-amber-500/[0.06] rounded-lg">
-            <div className="flex-shrink-0 text-amber-500 mt-0.5">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div className="text-[13px] text-muted-foreground leading-relaxed">
-              <strong className="block text-sm font-bold mb-1.5 text-foreground">
-                저작권 관련 주의사항
-              </strong>
-              <ul className="m-0 pl-4.5 list-disc">
-                <li className="mb-0.5">타인의 저작물(교재, 논문, 강의자료 등)을 무단으로 복제하여 업로드하지 마세요.</li>
-                <li className="mb-0.5">본인이 직접 작성한 자료만 판매할 수 있습니다.</li>
-                <li className="mb-0.5">저작권 침해 자료는 사전 통보 없이 삭제될 수 있으며, 법적 책임은 업로더에게 있습니다.</li>
-              </ul>
-            </div>
-          </div>
 
           {error && (
             <p className="bg-red-500/[0.06] text-red-500 px-4 py-3 rounded-lg text-sm font-medium">
