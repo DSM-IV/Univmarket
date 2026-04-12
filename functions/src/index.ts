@@ -28,10 +28,7 @@ const ALIGO_USER_ID = process.env.ALIGO_USER_ID || "";
 const ALIGO_SENDER_KEY = process.env.ALIGO_SENDER_KEY || "";
 const ALIGO_SENDER_NUMBER = process.env.ALIGO_SENDER_NUMBER || "";
 
-const KAKAOPAY_CID = process.env.KAKAOPAY_CID;
-if (!KAKAOPAY_CID) {
-  console.warn("KAKAOPAY_CID 환경변수가 설정되지 않았습니다. 카카오페이 결제가 동작하지 않습니다.");
-}
+const KAKAOPAY_CID = process.env.KAKAOPAY_CID || "";
 const KAKAOPAY_SECRET_KEY = process.env.KAKAOPAY_SECRET_KEY || "";
 const TOSS_SECRET_KEY = process.env.TOSS_SECRET_KEY || "";
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://unifile.store";
@@ -620,6 +617,7 @@ export const scanFile = onCall({ secrets: R2_SECRETS }, async (request) => {
 export const kakaopayReady = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+  if (!KAKAOPAY_CID) throw new HttpsError("unavailable", "카카오페이 결제가 설정되지 않았습니다.");
 
   const { amount } = request.data;
   if (!amount || !Number.isInteger(amount) || amount < MIN_CHARGE_AMOUNT || amount > MAX_CHARGE_AMOUNT) {

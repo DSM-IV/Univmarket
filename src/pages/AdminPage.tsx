@@ -169,7 +169,9 @@ export default function AdminPage() {
       navigate("/login");
       return;
     }
-    if (userProfile && userProfile.role !== "admin") {
+    // userProfile 로드 대기
+    if (!userProfile) return;
+    if (userProfile.role !== "admin") {
       setError("관리자 권한이 필요합니다.");
       return;
     }
