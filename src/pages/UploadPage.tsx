@@ -725,42 +725,25 @@ export default function UploadPage() {
                   </select>
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[13px] font-semibold mb-2 text-foreground">
-                    파일 형식
+                  <label htmlFor="semester" className="block text-[13px] font-semibold mb-2 text-foreground">
+                    학기
                   </label>
-                  <Input
-                    type="text"
-                    value={
-                      files.length === 0
-                        ? ""
-                        : files.length === 1
-                          ? getFileTypeLabel(files[0])
-                          : `${Array.from(new Set(files.map(getFileTypeLabel))).join(", ")} (${files.length}개)`
-                    }
-                    disabled
-                  />
+                  <select
+                    id="semester"
+                    name="semester"
+                    value={formData.semester}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
+                  >
+                    <option value="">학기를 선택하세요</option>
+                    {Array.from({ length: 6 }, (_, i) => 2025 - i).map((year) => (
+                      <optgroup key={year} label={`${year}학년도`}>
+                        <option value={`${year}-1`}>{year}학년도 1학기</option>
+                        <option value={`${year}-2`}>{year}학년도 2학기</option>
+                      </optgroup>
+                    ))}
+                  </select>
                 </div>
-              </div>
-
-              <div className="mb-4">
-                <label htmlFor="semester" className="block text-[13px] font-semibold mb-2 text-foreground">
-                  학기
-                </label>
-                <select
-                  id="semester"
-                  name="semester"
-                  value={formData.semester}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
-                >
-                  <option value="">학기를 선택하세요</option>
-                  {Array.from({ length: 6 }, (_, i) => 2025 - i).map((year) => (
-                    <optgroup key={year} label={`${year}학년도`}>
-                      <option value={`${year}-1`}>{year}학년도 1학기</option>
-                      <option value={`${year}-2`}>{year}학년도 2학기</option>
-                    </optgroup>
-                  ))}
-                </select>
               </div>
 
               {/* 과목명 검색 — 클릭 시 이수구분/학과/과목명 자동 채움 */}
