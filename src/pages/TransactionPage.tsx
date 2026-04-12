@@ -20,6 +20,15 @@ const TAB_LABELS: Record<FilterTab, string> = {
   withdraw: "출금",
 };
 
+const BALANCE_TYPE_MAP: Record<string, { label: string; color: string; bg: string }> = {
+  charge: { label: "포인트", color: "text-blue-600", bg: "bg-blue-50" },
+  purchase: { label: "포인트", color: "text-blue-600", bg: "bg-blue-50" },
+  refund: { label: "포인트", color: "text-blue-600", bg: "bg-blue-50" },
+  sale: { label: "수익금", color: "text-emerald-600", bg: "bg-emerald-50" },
+  withdraw: { label: "수익금", color: "text-emerald-600", bg: "bg-emerald-50" },
+  admin_grant: { label: "수익금", color: "text-emerald-600", bg: "bg-emerald-50" },
+};
+
 const TYPE_LABELS: Record<string, string> = {
   charge: "충전",
   purchase: "구매",
@@ -111,20 +120,28 @@ export default function TransactionPage() {
 
         {/* Tabs */}
         <div className="mb-4 flex border-b border-gray-200">
-          {(Object.keys(TAB_LABELS) as FilterTab[]).map((key) => (
-            <button
-              key={key}
-              className={cn(
-                "flex-1 py-3 text-center text-sm font-medium transition-colors",
-                tab === key
-                  ? "border-b-2 border-[#862633] text-[#862633]"
-                  : "text-gray-500 hover:text-gray-700"
-              )}
-              onClick={() => setTab(key)}
-            >
-              {TAB_LABELS[key]}
-            </button>
-          ))}
+          {(Object.keys(TAB_LABELS) as FilterTab[]).map((key) => {
+            const bt = key !== "all" ? BALANCE_TYPE_MAP[key] : null;
+            return (
+              <button
+                key={key}
+                className={cn(
+                  "flex-1 py-3 text-center text-sm font-medium transition-colors flex flex-col items-center gap-0.5",
+                  tab === key
+                    ? "border-b-2 border-[#862633] text-[#862633]"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+                onClick={() => setTab(key)}
+              >
+                <span>{TAB_LABELS[key]}</span>
+                {bt && (
+                  <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full", bt.color, bt.bg)}>
+                    {bt.label}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* Content */}
@@ -159,9 +176,16 @@ function TransactionCard({ t, income, isWithdraw }: { t: Transaction; income: bo
       <CardContent className="p-4 max-sm:p-3">
         <div className="flex items-center justify-between gap-4 max-sm:gap-2">
           <div className="flex min-w-0 items-center gap-3">
-            <Badge variant={TYPE_BADGE_VARIANT[t.type] || "outline"}>
-              {TYPE_LABELS[t.type] || t.type}
-            </Badge>
+            <div className="flex flex-col items-center gap-1 shrink-0">
+              <Badge variant={TYPE_BADGE_VARIANT[t.type] || "outline"}>
+                {TYPE_LABELS[t.type] || t.type}
+              </Badge>
+              {BALANCE_TYPE_MAP[t.type] && (
+                <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full", BALANCE_TYPE_MAP[t.type].color, BALANCE_TYPE_MAP[t.type].bg)}>
+                  {BALANCE_TYPE_MAP[t.type].label}
+                </span>
+              )}
+            </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-gray-900">
                 {t.description}
