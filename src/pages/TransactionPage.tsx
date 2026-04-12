@@ -109,7 +109,13 @@ export default function TransactionPage() {
       <div className="mx-auto max-w-3xl px-4">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-900">거래 내역</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-gray-900">거래 내역</h1>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">포인트</span>
+              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">수익금</span>
+            </div>
+          </div>
           <Button asChild size="sm" variant="outline">
             <Link to="/charge">
               <CreditCard className="mr-1.5 h-4 w-4" />
@@ -126,19 +132,15 @@ export default function TransactionPage() {
               <button
                 key={key}
                 className={cn(
-                  "flex-1 py-3 text-center text-sm font-medium transition-colors flex flex-col items-center gap-0.5",
+                  "flex-1 py-3 text-center text-sm font-medium transition-colors",
                   tab === key
                     ? "border-b-2 border-[#862633] text-[#862633]"
-                    : "text-gray-500 hover:text-gray-700"
+                    : "text-gray-500 hover:text-gray-700",
+                  bt && bt.bg
                 )}
                 onClick={() => setTab(key)}
               >
-                <span>{TAB_LABELS[key]}</span>
-                {bt && (
-                  <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full", bt.color, bt.bg)}>
-                    {bt.label}
-                  </span>
-                )}
+                {TAB_LABELS[key]}
               </button>
             );
           })}
@@ -172,20 +174,17 @@ function TransactionCard({ t, income, isWithdraw }: { t: Transaction; income: bo
   const [open, setOpen] = useState(false);
 
   return (
-    <Card className={cn(isWithdraw && "cursor-pointer")} onClick={() => isWithdraw && setOpen((v) => !v)}>
+    <Card className={cn(
+      "border-l-4",
+      BALANCE_TYPE_MAP[t.type]?.label === "포인트" ? "border-l-blue-400" : "border-l-emerald-400",
+      isWithdraw && "cursor-pointer"
+    )} onClick={() => isWithdraw && setOpen((v) => !v)}>
       <CardContent className="p-4 max-sm:p-3">
         <div className="flex items-center justify-between gap-4 max-sm:gap-2">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex flex-col items-center gap-1 shrink-0">
-              <Badge variant={TYPE_BADGE_VARIANT[t.type] || "outline"}>
-                {TYPE_LABELS[t.type] || t.type}
-              </Badge>
-              {BALANCE_TYPE_MAP[t.type] && (
-                <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full", BALANCE_TYPE_MAP[t.type].color, BALANCE_TYPE_MAP[t.type].bg)}>
-                  {BALANCE_TYPE_MAP[t.type].label}
-                </span>
-              )}
-            </div>
+            <Badge variant={TYPE_BADGE_VARIANT[t.type] || "outline"}>
+              {TYPE_LABELS[t.type] || t.type}
+            </Badge>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-gray-900">
                 {t.description}
