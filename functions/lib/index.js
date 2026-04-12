@@ -1261,15 +1261,15 @@ exports.rejectWithdrawal = (0, https_1.onCall)(async (request) => {
         throw new https_1.HttpsError("invalid-argument", "출금 거래가 아닙니다.");
     if (tx.status !== "pending")
         throw new https_1.HttpsError("failed-precondition", "대기 중인 출금만 거절할 수 있습니다.");
-    // 포인트 환불 (totalDeduction 전액)
+    // 수익금 환불 (totalDeduction 전액)
     const userRef = db.collection("users").doc(tx.userId);
     await db.runTransaction(async (transaction) => {
         const userDoc = await transaction.get(userRef);
         if (!userDoc.exists)
             throw new https_1.HttpsError("not-found", "사용자를 찾을 수 없습니다.");
-        const currentPoints = userDoc.data().points || 0;
+        const currentEarnings = userDoc.data().earnings || 0;
         transaction.update(userRef, {
-            points: currentPoints + tx.totalDeduction,
+            earnings: currentEarnings + tx.totalDeduction,
             updatedAt: admin.firestore.FieldValue.serverTimestamp(),
         });
         transaction.update(txRef, {
