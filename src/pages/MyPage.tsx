@@ -300,7 +300,7 @@ export default function MyPage() {
             </div>
             <div className="flex gap-6 max-sm:gap-3 text-center">
               <Link to="/transactions" className="group no-underline">
-                <span className="block text-lg font-bold text-[#862633] group-hover:underline">
+                <span className="block text-lg font-bold text-blue-600 group-hover:underline">
                   {(userProfile?.points ?? 0).toLocaleString()}P
                 </span>
                 <span className="text-xs text-gray-500">포인트</span>

@@ -68,7 +68,7 @@ function isIncome(type: string): boolean {
 }
 
 export default function TransactionPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<FilterTab>("all");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -108,20 +108,26 @@ export default function TransactionPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-3xl px-4">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-gray-900">거래 내역</h1>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">포인트</span>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">수익금</span>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/charge">
+                <CreditCard className="mr-1.5 h-4 w-4" />
+                포인트 충전
+              </Link>
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl bg-blue-50 p-4">
+              <p className="text-xs font-semibold text-blue-500 mb-1">포인트</p>
+              <p className="text-xl font-extrabold text-blue-700">{(userProfile?.points ?? 0).toLocaleString()}<span className="text-sm font-bold ml-0.5">P</span></p>
+            </div>
+            <div className="rounded-xl bg-emerald-50 p-4">
+              <p className="text-xs font-semibold text-emerald-500 mb-1">수익금</p>
+              <p className="text-xl font-extrabold text-emerald-700">{(userProfile?.earnings ?? 0).toLocaleString()}<span className="text-sm font-bold ml-0.5">원</span></p>
             </div>
           </div>
-          <Button asChild size="sm" variant="outline">
-            <Link to="/charge">
-              <CreditCard className="mr-1.5 h-4 w-4" />
-              포인트 충전
-            </Link>
-          </Button>
         </div>
 
         {/* Tabs */}
@@ -134,9 +140,10 @@ export default function TransactionPage() {
                 className={cn(
                   "flex-1 py-3 text-center text-sm font-medium transition-colors",
                   tab === key
-                    ? "border-b-2 border-[#862633] text-[#862633]"
-                    : "text-gray-500 hover:text-gray-700",
-                  bt && bt.bg
+                    ? bt?.label === "수익금" ? "border-b-2 border-emerald-500 text-emerald-600"
+                    : bt?.label === "포인트" ? "border-b-2 border-blue-500 text-blue-600"
+                    : "border-b-2 border-[#862633] text-[#862633]"
+                    : "text-gray-500 hover:text-gray-700"
                 )}
                 onClick={() => setTab(key)}
               >
@@ -175,8 +182,7 @@ function TransactionCard({ t, income, isWithdraw }: { t: Transaction; income: bo
 
   return (
     <Card className={cn(
-      "border-l-4",
-      BALANCE_TYPE_MAP[t.type]?.label === "포인트" ? "border-l-blue-400" : "border-l-emerald-400",
+      BALANCE_TYPE_MAP[t.type]?.label === "포인트" ? "bg-blue-50/50" : "bg-emerald-50/50",
       isWithdraw && "cursor-pointer"
     )} onClick={() => isWithdraw && setOpen((v) => !v)}>
       <CardContent className="p-4 max-sm:p-3">
