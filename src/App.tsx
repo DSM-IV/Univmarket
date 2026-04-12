@@ -32,6 +32,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import EventsPage from "./pages/EventsPage";
 import EventRafflePage from "./pages/EventRafflePage";
 import SellerPage from "./pages/SellerPage";
+import RequestDetailPage from "./pages/RequestDetailPage";
 
 function SuspensionBanner() {
   const { userProfile } = useAuth();
@@ -95,6 +96,7 @@ function App() {
             <Route path="/univ/hufs" element={<HufsPage />} />
             <Route path="/univ/uos" element={<UosPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/request/:id" element={<RequestDetailPage />} />
             <Route path="/events" element={<EventsPage />} />
             <Route path="/events/closed-beta-raffle" element={<EventRafflePage />} />
             <Route path="*" element={<NotFoundPage />} />

@@ -93,7 +93,7 @@ export default function KoreaUnivPage() {
         }
       } else {
         const fn = httpsCallable(functions, "submitMaterialRequest");
-        await fn({ subject: reqSubject, professor: reqProfessor, description: "" });
+        await fn({ subject: reqSubject, professor: reqProfessor, description: "", category: selectedReqCategory });
         fetchRequests();
       }
       setReqDept("");
@@ -514,57 +514,43 @@ export default function KoreaUnivPage() {
           ) : (
             <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
               {filteredRequests.map((req) => (
-                <Card key={req.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-5">
-                    <div className="mb-3">
-                      <h4 className="text-[15px] font-bold text-foreground truncate">{req.subject}</h4>
-                      {req.professor && (
-                        <p className="text-xs text-muted-foreground mt-0.5">{req.professor} 교수님</p>
-                      )}
-                    </div>
-                    {req.description && (
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">
-                        {req.description}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between mb-3">
-                      <button
-                        className={cn(
-                          "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold transition-all cursor-pointer border-none",
-                          user && req.needUsers.includes(user.uid)
-                            ? "bg-[#862633] text-white"
-                            : "bg-[#862633]/5 text-[#862633] hover:bg-[#862633]/10"
+                <Link key={req.id} to={`/request/${req.id}`} className="no-underline text-inherit">
+                  <Card className="hover:shadow-md transition-shadow h-full">
+                    <CardContent className="p-5">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary">
+                          {req.category || "수업"}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">{req.nickname}</span>
+                      </div>
+                      <div className="mb-3">
+                        <h4 className="text-[15px] font-bold text-foreground truncate">{req.subject}</h4>
+                        {req.professor && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{req.professor} 교수님</p>
                         )}
-                        onClick={() => handleToggleNeed(req.id)}
-                        disabled={!user || needLoading === req.id}
-                      >
-                        <Hand className="w-4 h-4" />
-                        저도 필요해요
-                        <span className="ml-0.5 font-bold">{req.needCount}</span>
-                      </button>
-                      {!user && (
-                        <Link to="/login" className="text-xs text-muted-foreground hover:text-[#862633]">
-                          로그인하고 공감하기
-                        </Link>
+                      </div>
+                      {req.description && (
+                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2 leading-relaxed">
+                          {req.description}
+                        </p>
                       )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const params = new URLSearchParams({
-                          category: req.category || "수업",
-                          subject: req.subject,
-                          professor: req.professor || "",
-                        });
-                        navigate(`/upload?${params.toString()}`);
-                      }}
-                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-[#862633]/30 text-black hover:bg-[#862633]/5 transition-colors cursor-pointer"
-                    >
-                      <Upload className="w-4 h-4" />
-                      이 과목 자료 업로드하기
-                    </button>
-                  </CardContent>
-                </Card>
+                      <div className="flex items-center justify-between">
+                        <span
+                          className={cn(
+                            "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold",
+                            user && req.needUsers.includes(user.uid)
+                              ? "bg-[#862633] text-white"
+                              : "bg-[#862633]/5 text-[#862633]"
+                          )}
+                        >
+                          <Hand className="w-4 h-4" />
+                          저도 필요해요
+                          <span className="ml-0.5 font-bold">{req.needCount}</span>
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
               ))}
             </div>
           )}

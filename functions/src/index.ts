@@ -2471,7 +2471,7 @@ export const submitMaterialRequest = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
-  const { subject, professor, description } = request.data;
+  const { subject, professor, description, category } = request.data;
   if (!subject || !subject.trim()) throw new HttpsError("invalid-argument", "과목명을 입력해주세요.");
 
   const userDoc = await db.collection("users").doc(uid).get();
@@ -2483,6 +2483,7 @@ export const submitMaterialRequest = onCall(async (request) => {
     subject: subject.trim(),
     professor: professor?.trim() || "",
     description: description?.trim() || "",
+    category: category || "수업",
     needCount: 1,
     needUsers: [uid],
     status: "open",
