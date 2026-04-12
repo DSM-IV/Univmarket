@@ -42,6 +42,7 @@ export default function MaterialCard({ material, rating, reviewCount }: Props) {
             src={material.thumbnail}
             alt=""
             className="absolute inset-0 w-full h-full object-cover"
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
           />
         )}
         <div className="relative z-10 flex items-center gap-1.5">

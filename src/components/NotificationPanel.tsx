@@ -129,10 +129,11 @@ export default function NotificationPanel({ onNavigate }: Props) {
         onClick={() => setOpen((v) => !v)}
         className="relative p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors flex"
         title="알림"
+        aria-label={unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}개` : "알림"}
       >
         <Bell className="w-[18px] h-[18px]" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 text-[10px] font-bold leading-4 text-center text-white bg-red-500 rounded-full">
+          <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 text-[10px] font-bold leading-4 text-center text-white bg-red-500 rounded-full" aria-hidden="true">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}

@@ -113,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function logOut() {
     await signOut(auth);
+    localStorage.removeItem("betaEventPopupHiddenUntil");
   }
 
   return (

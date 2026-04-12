@@ -96,6 +96,21 @@ export default function LoginPage() {
           setLoading(false);
           return;
         }
+        if (formData.password.length < 8) {
+          setError("비밀번호는 8자리 이상이어야 합니다.");
+          setLoading(false);
+          return;
+        }
+        if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(formData.password)) {
+          setError("비밀번호에 특수문자를 1개 이상 포함해주세요.");
+          setLoading(false);
+          return;
+        }
+        if (formData.nickname.trim().length < 2 || formData.nickname.trim().length > 16) {
+          setError("닉네임은 2~16자여야 합니다.");
+          setLoading(false);
+          return;
+        }
         if (!agreeTerms || !agreePrivacy) {
           setError("이용약관과 개인정보처리방침에 모두 동의해주세요.");
           setLoading(false);
@@ -341,15 +356,25 @@ export default function LoginPage() {
                       type="password"
                       id="password"
                       name="password"
-                      placeholder="비밀번호를 입력하세요"
+                      placeholder={isSignUp ? "8자 이상, 특수문자 포함" : "비밀번호를 입력하세요"}
                       value={formData.password}
                       onChange={handleChange}
                       onKeyDown={(e) => setCapsLock(e.getModifierState("CapsLock"))}
                       onKeyUp={(e) => setCapsLock(e.getModifierState("CapsLock"))}
                       required
-                      minLength={6}
+                      minLength={isSignUp ? 8 : 6}
                       className="h-11 text-[15px] focus:ring-primary"
                     />
+                    {isSignUp && formData.password.length > 0 && (
+                      <div className="flex gap-3 mt-1.5 text-xs">
+                        <span className={formData.password.length >= 8 ? "text-green-600" : "text-muted-foreground"}>
+                          {formData.password.length >= 8 ? "✓" : "○"} 8자 이상
+                        </span>
+                        <span className={/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(formData.password) ? "text-green-600" : "text-muted-foreground"}>
+                          {/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(formData.password) ? "✓" : "○"} 특수문자
+                        </span>
+                      </div>
+                    )}
                     {capsLock && (
                       <p className="text-xs text-amber-600 mt-1.5 font-medium">
                         Caps Lock이 켜져 있습니다
@@ -567,7 +592,7 @@ function getErrorMessage(err: unknown, isSignUp: boolean): string {
     case "auth/invalid-email":
       return "유효하지 않은 이메일 형식입니다.";
     case "auth/weak-password":
-      return "비밀번호는 6자 이상이어야 합니다.";
+      return "비밀번호는 8자 이상, 특수문자를 포함해야 합니다.";
     case "auth/email-not-verified":
       return "이메일 인증이 완료되지 않았습니다. 이메일을 확인해주세요.";
     case "auth/too-many-requests":
@@ -576,8 +601,11 @@ function getErrorMessage(err: unknown, isSignUp: boolean): string {
       return "이 계정은 이용이 정지되었습니다. 문의사항은 고객센터로 연락해주세요.";
     case "auth/popup-closed-by-user":
       return "로그인 팝업이 닫혔습니다.";
-    default:
-      if (err instanceof Error && err.message) return err.message;
+    default: {
+      const msg = err instanceof Error ? err.message : "";
+      if (msg.includes("이미 사용 중인 닉네임")) return "이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.";
+      if (msg) return msg;
       return "오류가 발생했습니다. 다시 시도해주세요.";
+    }
   }
 }

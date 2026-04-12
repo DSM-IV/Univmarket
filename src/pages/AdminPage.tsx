@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { httpsCallable } from "firebase/functions";
-import { collection, query, orderBy, getDocs, doc, updateDoc } from "firebase/firestore";
+import { collection, query, orderBy, getDocs, doc, updateDoc, limit } from "firebase/firestore";
 import { functions, db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -169,8 +169,12 @@ export default function AdminPage() {
       navigate("/login");
       return;
     }
+    if (userProfile && userProfile.role !== "admin") {
+      setError("관리자 권한이 필요합니다.");
+      return;
+    }
     fetchReports();
-  }, [user, authLoading, navigate]);
+  }, [user, userProfile, authLoading, navigate]);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -365,11 +369,10 @@ export default function AdminPage() {
       const q = query(
         collection(db, "materials"),
         orderBy("gradeStatus"),
-        orderBy("createdAt", "desc")
+        orderBy("createdAt", "desc"),
+        limit(200)
       );
-      console.log("[admin] fetching grade requests...");
       const snap = await getDocs(q);
-      console.log("[admin] grade requests:", snap.size);
       const list = snap.docs
         .filter((d) => d.data().gradeClaim)
         .map((d) => ({

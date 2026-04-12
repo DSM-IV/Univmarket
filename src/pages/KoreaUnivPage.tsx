@@ -14,8 +14,7 @@ import { ChevronRight, Hand, Plus, X, Bell, MessageSquarePlus, Upload } from "lu
 import { cn } from "@/lib/utils";
 import type { Material } from "../types";
 
-// 앱 출시 후 공개 예정
-const SHOW_MATERIAL_REQUESTS = false;
+const SHOW_MATERIAL_REQUESTS = true;
 
 interface MaterialRequest {
   id: string;

@@ -128,5 +128,19 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.uid == request.auth.uid;
       allow write: if false; // only via Cloud Functions
     }
+    match /notifications/{notifId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if false; // only via Cloud Functions
+    }
+    match /rate_limits/{docId} {
+      allow read, write: if false; // Cloud Functions only
+    }
+    match /charge_requests/{docId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow write: if false; // only via Cloud Functions
+    }
   }
 }

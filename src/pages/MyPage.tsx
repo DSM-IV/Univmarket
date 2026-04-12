@@ -204,11 +204,13 @@ export default function MyPage() {
     setRefunding(materialId);
     try {
       const refundFn = httpsCallable(functions, "refundPurchase");
-      await refundFn({ purchaseId: purchase.id });
-      // 목록에서 제거
-      setPurchasedMaterials((prev) => prev.filter((m) => m.id !== materialId));
-      setPurchases((prev) => prev.map((p) => p.id === purchase.id ? { ...p, refunded: true } : p));
-      alert("환불이 완료되었습니다.");
+      const result = await refundFn({ purchaseId: purchase.id });
+      if (result.data) {
+        // 서버 확인 후 UI 업데이트
+        setPurchasedMaterials((prev) => prev.filter((m) => m.id !== materialId));
+        setPurchases((prev) => prev.map((p) => p.id === purchase.id ? { ...p, refunded: true } : p));
+        alert("환불이 완료되었습니다.");
+      }
     } catch (err: unknown) {
       alert((err as { message?: string }).message || "환불 처리에 실패했습니다.");
     } finally {

@@ -440,6 +440,14 @@ export default function DetailPage() {
                   src={previewImages[previewIndex]}
                   alt={`미리보기 ${previewIndex + 1}`}
                   className="w-full max-h-[600px] object-contain rounded-sm shadow-md bg-white"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    target.style.display = "none";
+                    const fallback = document.createElement("div");
+                    fallback.className = "w-full h-[280px] flex items-center justify-center bg-muted rounded-sm text-muted-foreground text-sm";
+                    fallback.textContent = "이미지를 불러올 수 없습니다";
+                    target.parentElement?.insertBefore(fallback, target);
+                  }}
                 />
                 {previewImages.length > 1 && (
                   <div className="flex items-center justify-center gap-4 mt-3">
@@ -465,7 +473,12 @@ export default function DetailPage() {
               </div>
             ) : material.thumbnail ? (
               <div className="relative bg-secondary flex flex-col items-center p-5">
-                <img src={material.thumbnail} alt="미리보기" className="w-full max-h-[600px] object-contain rounded-sm shadow-md bg-white" />
+                <img
+                  src={material.thumbnail}
+                  alt="미리보기"
+                  className="w-full max-h-[600px] object-contain rounded-sm shadow-md bg-white"
+                  onError={(e) => { e.currentTarget.style.display = "none"; }}
+                />
               </div>
             ) : (
               <div className="h-[280px] max-sm:h-[180px] bg-gradient-to-br from-[#667eea] to-[#764ba2] flex flex-col items-center justify-center gap-3">
