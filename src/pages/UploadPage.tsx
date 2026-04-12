@@ -642,23 +642,6 @@ export default function UploadPage() {
         </div>
 
         <form className="flex flex-col gap-7" onSubmit={handleSubmit}>
-          {/* 저작권 배너 */}
-          <div className="flex gap-3 p-4.5 bg-amber-500/[0.06] rounded-lg">
-            <div className="flex-shrink-0 text-amber-500 mt-0.5">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div className="text-[13px] text-muted-foreground leading-relaxed">
-              <strong className="block text-sm font-bold mb-1.5 text-foreground">
-                저작권 관련 주의사항
-              </strong>
-              <ul className="m-0 pl-4.5 list-disc">
-                <li className="mb-0.5">타인의 저작물(교재, 논문, 강의자료 등)을 무단으로 복제하여 업로드하지 마세요.</li>
-                <li className="mb-0.5">본인이 직접 작성한 자료만 판매할 수 있습니다.</li>
-                <li className="mb-0.5">저작권 침해 자료는 사전 통보 없이 삭제될 수 있으며, 법적 책임은 업로더에게 있습니다.</li>
-              </ul>
-            </div>
-          </div>
-
           {/* 기본 정보 */}
           <Card>
             <CardContent className="p-7 max-sm:p-5">
@@ -704,13 +687,19 @@ export default function UploadPage() {
                   required
                   className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors resize-y focus:bg-muted focus:ring-2 focus:ring-[#862633]/30 placeholder:text-muted-foreground"
                 />
-                <div className="mt-2 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] text-amber-800 leading-relaxed">
-                  <span className="font-bold shrink-0">⚠️ 주의</span>
-                  <span>
-                    자료 <span className="font-semibold">설명과 실제 내용이 다른 경우</span> 구매자의
-                    하자 신고 접수 시 관리자 검토 후 <span className="font-semibold">지급된 포인트가 회수되고 자료가 삭제</span>될 수 있습니다.
-                    반복 적발 시 계정 제재가 이루어질 수 있으니 설명을 정확히 작성해 주세요.
-                  </span>
+                <div className="mt-2 flex gap-3 p-4.5 bg-amber-500/[0.06] rounded-lg">
+                  <div className="flex-shrink-0 text-amber-500 mt-0.5">
+                    <AlertTriangle className="w-5 h-5" />
+                  </div>
+                  <div className="text-[13px] text-muted-foreground leading-relaxed">
+                    <strong className="block text-sm font-bold mb-1.5 text-foreground">
+                      자료 설명 관련 주의
+                    </strong>
+                    <ul className="m-0 pl-4.5 list-disc">
+                      <li className="mb-0.5">자료 설명과 실제 내용이 다른 경우 구매자의 하자 신고 접수 시 관리자 검토 후 지급된 포인트가 회수되고 자료가 삭제될 수 있습니다.</li>
+                      <li className="mb-0.5">반복 적발 시 계정 제재가 이루어질 수 있으니 설명을 정확히 작성해 주세요.</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
 
@@ -1399,6 +1388,23 @@ export default function UploadPage() {
               )}
             </CardContent>
           </Card>}
+
+          {/* 저작권 배너 */}
+          <div className="flex gap-3 p-4.5 bg-amber-500/[0.06] rounded-lg">
+            <div className="flex-shrink-0 text-amber-500 mt-0.5">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div className="text-[13px] text-muted-foreground leading-relaxed">
+              <strong className="block text-sm font-bold mb-1.5 text-foreground">
+                저작권 관련 주의사항
+              </strong>
+              <ul className="m-0 pl-4.5 list-disc">
+                <li className="mb-0.5">타인의 저작물(교재, 논문, 강의자료 등)을 무단으로 복제하여 업로드하지 마세요.</li>
+                <li className="mb-0.5">본인이 직접 작성한 자료만 판매할 수 있습니다.</li>
+                <li className="mb-0.5">저작권 침해 자료는 사전 통보 없이 삭제될 수 있으며, 법적 책임은 업로더에게 있습니다.</li>
+              </ul>
+            </div>
+          </div>
 
           {error && (
             <p className="bg-red-500/[0.06] text-red-500 px-4 py-3 rounded-lg text-sm font-medium">
