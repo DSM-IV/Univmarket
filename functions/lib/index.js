@@ -295,7 +295,8 @@ exports.getUploadUrl = (0, https_1.onCall)({ secrets: R2_SECRETS }, async (reque
         Bucket: process.env.R2_BUCKET_NAME,
         Key: key,
         ContentType: contentType,
-        ContentLength: fileSize, // 서명에 길이 바인딩 → 다른 크기 PUT 거부
+        // ContentLength는 서명에 포함하면 R2 presigned PUT이 거부하는 경우가 있어 제외.
+        // 크기 상한은 위 fileSize 인자 검증으로 처리 (defense-in-depth).
     });
     const uploadUrl = await (0, s3_request_presigner_1.getSignedUrl)(r2, command, { expiresIn: 600 }); // 10분
     // 퍼블릭 다운로드 URL
