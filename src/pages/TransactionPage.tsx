@@ -139,9 +139,11 @@ export default function TransactionPage() {
                 key={key}
                 className={cn(
                   "flex-1 py-3 text-center text-sm font-medium transition-colors",
+                  bt?.label === "포인트" && "bg-blue-50",
+                  bt?.label === "수익금" && "bg-emerald-50",
                   tab === key
-                    ? bt?.label === "수익금" ? "border-b-2 border-emerald-500 text-emerald-600"
-                    : bt?.label === "포인트" ? "border-b-2 border-blue-500 text-blue-600"
+                    ? bt?.label === "수익금" ? "border-b-2 border-emerald-500 text-emerald-600 font-bold"
+                    : bt?.label === "포인트" ? "border-b-2 border-blue-500 text-blue-600 font-bold"
                     : "border-b-2 border-[#862633] text-[#862633]"
                     : "text-gray-500 hover:text-gray-700"
                 )}
@@ -181,10 +183,7 @@ function TransactionCard({ t, income, isWithdraw }: { t: Transaction; income: bo
   const [open, setOpen] = useState(false);
 
   return (
-    <Card className={cn(
-      BALANCE_TYPE_MAP[t.type]?.label === "포인트" ? "bg-blue-50/50" : "bg-emerald-50/50",
-      isWithdraw && "cursor-pointer"
-    )} onClick={() => isWithdraw && setOpen((v) => !v)}>
+    <Card className={cn(isWithdraw && "cursor-pointer")} onClick={() => isWithdraw && setOpen((v) => !v)}>
       <CardContent className="p-4 max-sm:p-3">
         <div className="flex items-center justify-between gap-4 max-sm:gap-2">
           <div className="flex min-w-0 items-center gap-3">
