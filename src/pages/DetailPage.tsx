@@ -1,11 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import {
-  doc, getDoc, collection, query, where, orderBy,
-  getDocs, updateDoc, deleteDoc,
-} from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { db, functions } from "../firebase";
+import { apiGet, apiPost, apiPatch, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
 import { addToCart, isInCart } from "../services/cartService";
@@ -80,37 +75,12 @@ export default function DetailPage() {
     async function fetchMaterial() {
       if (!id) return;
       try {
-        const snap = await getDoc(doc(db, "materials", id));
-        if (snap.exists()) {
-          const mat = {
-            id: snap.id,
-            ...snap.data(),
-            createdAt: snap.data().createdAt?.toDate?.()?.toISOString?.() || "",
-          } as Material;
-          setMaterial(mat);
-
-          // 판매자의 총 판매 수 조회
-          const authorMaterialsQuery = query(
-            collection(db, "materials"),
-            where("authorId", "==", snap.data().authorId)
-          );
-          const authorSnap = await getDocs(authorMaterialsQuery);
-          const totalSales = authorSnap.docs.reduce(
-            (sum, d) => sum + (d.data().salesCount || 0), 0
-          );
-          setAuthorSalesCount(totalSales);
-
-          // 판매자 닉네임 조회 (현재 닉네임으로 표시)
-          try {
-            const userSnap = await getDoc(doc(db, "users", snap.data().authorId));
-            const nick = userSnap.exists() ? (userSnap.data().nickname as string) : "";
-            setAuthorNickname(nick || mat.author || "익명");
-          } catch {
-            setAuthorNickname(mat.author || "익명");
-          }
-        }
-      } catch (err) {
-
+        const mat = await apiGet<Material & { authorNickname?: string; authorTotalSales?: number }>(`/materials/${id}`);
+        setMaterial(mat);
+        setAuthorSalesCount(mat.authorTotalSales || 0);
+        setAuthorNickname(mat.authorNickname || mat.author || "익명");
+      } catch {
+        // not found
       } finally {
         setLoading(false);
       }
@@ -129,23 +99,14 @@ export default function DetailPage() {
   useEffect(() => {
     if (!id) return;
     async function fetchReviews() {
-      const q = query(
-        collection(db, "reviews"),
-        where("materialId", "==", id),
-        orderBy("createdAt", "desc")
-      );
-      const snap = await getDocs(q);
-      const list = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
-      })) as Review[];
-      setReviews(list);
-
-      if (user) {
-        const mine = list.find((r) => r.userId === user.uid);
-        if (mine) setMyReview(mine);
-      }
+      try {
+        const list = await apiGet<Review[]>(`/materials/${id}/reviews`);
+        setReviews(list);
+        if (user) {
+          const mine = list.find((r) => r.userId === user.uid);
+          if (mine) setMyReview(mine);
+        }
+      } catch { /* ignore */ }
     }
     fetchReviews();
   }, [id, user]);
@@ -158,54 +119,31 @@ export default function DetailPage() {
     setSubmittingReview(true);
     try {
       if (editingReview && myReview) {
-        await updateDoc(doc(db, "reviews", myReview.id), {
+        await apiPatch(`/reviews/${myReview.id}`, {
           rating: reviewRating,
           content: reviewContent.trim(),
         });
       } else {
-        // 구매자 검증을 포함한 서버 함수 호출
-        const submitReviewFn = httpsCallable<
-          { materialId: string; rating: number; content: string },
-          { success: boolean; reviewId: string }
-        >(functions, "submitReview");
         try {
-          await submitReviewFn({
+          await apiPost("/reviews", {
             materialId: id,
             rating: reviewRating,
             content: reviewContent.trim(),
           });
         } catch (e) {
-          const code = (e as { code?: string }).code || "";
           const msg = (e as Error).message || "후기 등록에 실패했습니다.";
-          if (code.includes("permission-denied")) {
-            alert("구매한 자료에만 후기를 작성할 수 있습니다.");
-          } else if (code.includes("already-exists")) {
-            alert("이미 후기를 작성하셨습니다.");
-          } else {
-            alert(msg);
-          }
+          alert(msg);
           setSubmittingReview(false);
           return;
         }
       }
       // 새로고침
-      const q = query(
-        collection(db, "reviews"),
-        where("materialId", "==", id),
-        orderBy("createdAt", "desc")
-      );
-      const snap = await getDocs(q);
-      const list = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
-      })) as Review[];
+      const list = await apiGet<Review[]>(`/materials/${id}/reviews`);
       setReviews(list);
       setMyReview(list.find((r) => r.userId === user.uid) || null);
       setReviewContent("");
       setEditingReview(false);
-    } catch (err) {
-
+    } catch {
       alert("후기 등록에 실패했습니다.");
     } finally {
       setSubmittingReview(false);
@@ -216,13 +154,11 @@ export default function DetailPage() {
     if (!myReview) return;
     if (!confirm("후기를 삭제하시겠습니까?")) return;
     try {
-      await deleteDoc(doc(db, "reviews", myReview.id));
+      await apiDelete(`/reviews/${myReview.id}`);
       setReviews(reviews.filter((r) => r.id !== myReview.id));
       setMyReview(null);
       setReviewContent("");
-    } catch (err) {
-
-    }
+    } catch { /* ignore */ }
   };
 
   const handleEditReview = () => {
@@ -236,11 +172,7 @@ export default function DetailPage() {
     if (!material) return;
     setDownloading(true);
     try {
-      const getDownloadUrl = httpsCallable<
-        { materialId: string },
-        { downloadUrl: string }
-      >(functions, "getDownloadUrl");
-      const { data } = await getDownloadUrl({ materialId: material.id });
+      const data = await apiPost<{ downloadUrl: string }>(`/materials/${material.id}/download-url`);
       const a = document.createElement("a");
       a.href = data.downloadUrl;
       a.download = "";
@@ -248,9 +180,8 @@ export default function DetailPage() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } catch (err) {
+    } catch {
       alert("다운로드에 실패했습니다. 다시 시도해주세요.");
-
     } finally {
       setDownloading(false);
     }
@@ -329,7 +260,7 @@ export default function DetailPage() {
     }
     setSaving(true);
     try {
-      await updateDoc(doc(db, "materials", id), {
+      const updated = await apiPatch<Material>(`/materials/${id}`, {
         title: editTitle.trim(),
         description: editDescription.trim(),
         price: priceInt,
@@ -337,17 +268,9 @@ export default function DetailPage() {
         professor: editProfessor.trim(),
         department: (material.category === "수업" || material.category === "이중전공 & 전과" || material.category === "교환학생") ? editDepartment : "",
       });
-      const snap = await getDoc(doc(db, "materials", id));
-      if (snap.exists()) {
-        setMaterial({
-          id: snap.id,
-          ...snap.data(),
-          createdAt: snap.data().createdAt?.toDate?.()?.toISOString?.() || "",
-        } as Material);
-      }
+      setMaterial(updated);
       setEditing(false);
-    } catch (err) {
-
+    } catch {
       alert("자료 수정에 실패했습니다.");
     } finally {
       setSaving(false);
@@ -359,10 +282,9 @@ export default function DetailPage() {
     if (!confirm("정말 이 자료를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
     setDeleting(true);
     try {
-      await deleteDoc(doc(db, "materials", id));
+      await apiDelete(`/materials/${id}`);
       navigate("/mypage");
-    } catch (err) {
-
+    } catch {
       alert("자료 삭제에 실패했습니다.");
       setDeleting(false);
     }

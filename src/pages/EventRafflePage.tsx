@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { onSnapshot, collection, query, where } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
 import { ArrowLeft, Coins, Gift, CheckCircle } from "lucide-react";
-import { db, functions } from "../firebase";
+import { apiGet, apiPost } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 
 type RaffleProduct = {
@@ -36,19 +34,20 @@ export default function EventRafflePage() {
       setEntries({});
       return;
     }
-    const q = query(
-      collection(db, "raffle_entries"),
-      where("uid", "==", user.uid)
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      const next: EntryMap = {};
-      snap.forEach((d) => {
-        const data = d.data() as { productId: string; count: number };
-        if (data.productId) next[data.productId] = Number(data.count || 0);
-      });
-      setEntries(next);
-    });
-    return unsub;
+    let cancelled = false;
+    async function fetchEntries() {
+      try {
+        const data = await apiGet<{ productId: string; count: number }[]>("/raffle/my-entries");
+        if (!cancelled) {
+          const next: EntryMap = {};
+          data.forEach((e) => { if (e.productId) next[e.productId] = Number(e.count || 0); });
+          setEntries(next);
+        }
+      } catch { if (!cancelled) setEntries({}); }
+    }
+    fetchEntries();
+    const interval = setInterval(fetchEntries, 10000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [user]);
 
   const points = Number(userProfile?.points || 0);
@@ -69,8 +68,7 @@ export default function EventRafflePage() {
 
     try {
       setSubmitting(product.id);
-      const call = httpsCallable(functions, "enterRaffle");
-      await call({ productId: product.id, quantity: 1 });
+      await apiPost("/raffle/enter", { productId: product.id, quantity: 1 });
       alert("응모가 완료되었습니다!");
     } catch (err: unknown) {
       const message =

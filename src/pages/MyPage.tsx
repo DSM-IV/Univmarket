@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { collection, query, where, orderBy, getDocs, documentId } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { db, functions } from "../firebase";
+import { apiGet, apiPost, apiPatch } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import type { Material } from "../types";
 import { Button } from "@/components/ui/button";
@@ -66,11 +64,7 @@ export default function MyPage() {
     setSavingNickname(true);
     setNicknameError("");
     try {
-      const fn = httpsCallable<{ nickname: string }, { success: boolean }>(
-        functions,
-        "updateNickname"
-      );
-      await fn({ nickname: trimmed });
+      await apiPatch("/users/nickname", { nickname: trimmed });
       setEditingNickname(false);
     } catch (e) {
       setNicknameError((e as Error).message || "변경에 실패했습니다.");
@@ -90,75 +84,44 @@ export default function MyPage() {
       setLoading(true);
       try {
         // 내가 올린 자료
-        const uploadedQuery = query(
-          collection(db, "materials"),
-          where("authorId", "==", user!.uid),
-          orderBy("createdAt", "desc")
-        );
-        const uploadedSnap = await getDocs(uploadedQuery);
-        setUploadedMaterials(
-          uploadedSnap.docs.map((d) => ({
-            id: d.id,
-            ...d.data(),
-            createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
-          })) as Material[]
-        );
+        const uploaded = await apiGet<Material[]>("/users/me/materials");
+        setUploadedMaterials(uploaded);
 
-        // 내가 구매한 자료
-        const purchasesQuery = query(
-          collection(db, "purchases"),
-          where("buyerId", "==", user!.uid)
-        );
-        const purchasesSnap = await getDocs(purchasesQuery);
-        const purchaseInfos: PurchaseInfo[] = purchasesSnap.docs.map((d) => ({
-          id: d.id,
-          materialId: d.data().materialId,
-          createdAt: d.data().createdAt?.toDate?.() || null,
-          refunded: d.data().refunded || false,
-          downloaded: d.data().downloaded || false,
+        // 내가 구매한 자료 (purchases response includes material data)
+        const purchasesResp = await apiGet<{
+          purchases: PurchaseInfo[];
+          materials: Material[];
+        }>("/users/me/purchases");
+        const purchaseInfos: PurchaseInfo[] = purchasesResp.purchases.map((p: any) => ({
+          ...p,
+          createdAt: p.createdAt ? new Date(p.createdAt) : null,
         }));
         setPurchases(purchaseInfos);
-        const materialIds = purchaseInfos.filter((p) => !p.refunded).map((p) => p.materialId);
 
+        const materialIds = purchaseInfos.filter((p) => !p.refunded).map((p) => p.materialId);
         if (materialIds.length > 0) {
-          const materialsData: Material[] = [];
-          // Firestore "in" queries support max 30 items, so batch the IDs
-          for (let i = 0; i < materialIds.length; i += 30) {
-            const batch = materialIds.slice(i, i + 30);
-            const batchQuery = query(
-              collection(db, "materials"),
-              where(documentId(), "in", batch)
-            );
-            const batchSnap = await getDocs(batchQuery);
-            for (const snap of batchSnap.docs) {
+          const materialsData: Material[] = [...purchasesResp.materials];
+          // 삭제되어 조회되지 않는 자료도 placeholder로 추가
+          for (const mid of materialIds) {
+            if (!materialsData.find((m) => m.id === mid)) {
               materialsData.push({
-                id: snap.id,
-                ...snap.data(),
-                createdAt: snap.data().createdAt?.toDate?.()?.toISOString?.() || "",
-              } as Material);
-            }
-            // 삭제되어 조회되지 않는 자료도 placeholder로 추가
-            for (const mid of batch) {
-              if (!batchSnap.docs.find((d) => d.id === mid)) {
-                materialsData.push({
-                  id: mid,
-                  title: "삭제된 자료",
-                  description: "",
-                  price: 0,
-                  category: "수업",
-                  subject: "",
-                  author: "",
-                  authorId: "",
-                  thumbnail: "",
-                  rating: 0,
-                  reviewCount: 0,
-                  salesCount: 0,
-                  createdAt: "",
-                  pages: 0,
-                  fileType: "",
-                  _deleted: true,
-                } as Material & { _deleted: boolean });
-              }
+                id: mid,
+                title: "삭제된 자료",
+                description: "",
+                price: 0,
+                category: "수업",
+                subject: "",
+                author: "",
+                authorId: "",
+                thumbnail: "",
+                rating: 0,
+                reviewCount: 0,
+                salesCount: 0,
+                createdAt: "",
+                pages: 0,
+                fileType: "",
+                _deleted: true,
+              } as Material & { _deleted: boolean });
             }
           }
           setPurchasedMaterials(materialsData);
@@ -176,11 +139,7 @@ export default function MyPage() {
   const handleDownload = async (materialId: string) => {
     setDownloading(materialId);
     try {
-      const getDownloadUrl = httpsCallable<
-        { materialId: string },
-        { downloadUrl: string }
-      >(functions, "getDownloadUrl");
-      const { data } = await getDownloadUrl({ materialId });
+      const data = await apiPost<{ downloadUrl: string }>(`/materials/${materialId}/download-url`);
       const a = document.createElement("a");
       a.href = data.downloadUrl;
       a.download = "";
@@ -203,9 +162,8 @@ export default function MyPage() {
 
     setRefunding(materialId);
     try {
-      const refundFn = httpsCallable(functions, "refundPurchase");
-      const result = await refundFn({ purchaseId: purchase.id });
-      if (result.data) {
+      const result = await apiPost<{ success: boolean }>(`/purchases/${purchase.id}/refund`);
+      if (result) {
         // 서버 확인 후 UI 업데이트
         setPurchasedMaterials((prev) => prev.filter((m) => m.id !== materialId));
         setPurchases((prev) => prev.map((p) => p.id === purchase.id ? { ...p, refunded: true } : p));

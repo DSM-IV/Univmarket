@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { doc, getDoc, collection, query, where, orderBy, onSnapshot, addDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { db, functions } from "../firebase";
+import { apiGet, apiPost, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,43 +45,38 @@ export default function RequestDetailPage() {
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const snap = await getDoc(doc(db, "material_requests", id));
-      if (snap.exists()) {
-        setRequest({
-          id: snap.id,
-          ...snap.data(),
-          createdAt: snap.data().createdAt?.toDate?.()?.toISOString?.() || "",
-        } as MaterialRequest);
+      try {
+        const data = await apiGet<MaterialRequest>(`/material-requests/${id}`);
+        setRequest(data);
+      } catch {
+        // not found
       }
       setLoading(false);
     })();
   }, [id]);
 
-  // 댓글 실시간 구독
+  // 댓글 폴링
   useEffect(() => {
     if (!id) return;
-    const q = query(
-      collection(db, "material_requests", id, "comments"),
-      orderBy("createdAt", "asc")
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      setComments(
-        snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-          createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
-        })) as Comment[]
-      );
-    }, () => {});
-    return unsub;
+    let cancelled = false;
+    const fetchComments = async () => {
+      try {
+        const data = await apiGet<Comment[]>(`/material-requests/${id}/comments`);
+        if (!cancelled) setComments(data);
+      } catch {
+        // ignore
+      }
+    };
+    fetchComments();
+    const interval = setInterval(fetchComments, 5000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [id]);
 
   const handleToggleNeed = async () => {
     if (!user || !id) return;
     setNeedLoading(true);
     try {
-      const fn = httpsCallable<{ requestId: string }, { added: boolean; deleted?: boolean }>(functions, "toggleNeedRequest");
-      const { data } = await fn({ requestId: id });
+      const data = await apiPost<{ added: boolean; deleted?: boolean }>(`/material-requests/${id}/toggle-need`);
       if (data.deleted) {
         navigate("/");
         return;
@@ -104,13 +97,13 @@ export default function RequestDetailPage() {
     if (!user || !id || !commentText.trim()) return;
     setSubmitting(true);
     try {
-      await addDoc(collection(db, "material_requests", id, "comments"), {
-        userId: user.uid,
-        nickname: userProfile?.nickname || user.displayName || "익명",
+      await apiPost(`/material-requests/${id}/comments`, {
         content: commentText.trim(),
-        createdAt: serverTimestamp(),
       });
       setCommentText("");
+      // 댓글 목록 새로고침
+      const updated = await apiGet<Comment[]>(`/material-requests/${id}/comments`);
+      setComments(updated);
     } catch {
       alert("댓글 등록에 실패했습니다.");
     }
@@ -119,7 +112,8 @@ export default function RequestDetailPage() {
 
   const handleDeleteComment = async (commentId: string) => {
     if (!id || !confirm("댓글을 삭제하시겠습니까?")) return;
-    await deleteDoc(doc(db, "material_requests", id, "comments", commentId));
+    await apiDelete(`/material-requests/${id}/comments/${commentId}`);
+    setComments((prev) => prev.filter((c) => c.id !== commentId));
   };
 
   const timeAgo = (iso: string) => {

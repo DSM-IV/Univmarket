@@ -1,35 +1,17 @@
-import { httpsCallable } from "firebase/functions";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  getDocs,
-} from "firebase/firestore";
-import { functions, db } from "../firebase";
+import { apiGet, apiPost } from "../api/client";
 import type { Transaction } from "../types";
 
 export type PaymentMethod = "kakaopay" | "toss" | "card";
 
 export async function chargeWithKakaopay(amount: number): Promise<string> {
-  const fn = httpsCallable<{ amount: number }, { redirectUrl: string }>(
-    functions,
-    "kakaopayReady"
-  );
-  const result = await fn({ amount });
-  return result.data.redirectUrl;
+  const result = await apiPost<{ redirectUrl: string }>("/payments/kakaopay/ready", { amount });
+  return result.redirectUrl;
 }
 
 export async function chargeWithTossReady(
   amount: number
 ): Promise<{ orderId: string; paymentAmount: number; vat: number }> {
-  const fn = httpsCallable<
-    { amount: number },
-    { orderId: string; paymentAmount: number; vat: number }
-  >(functions, "tossReady");
-  const result = await fn({ amount });
-  return result.data;
+  return apiPost("/payments/toss/ready", { amount });
 }
 
 export async function chargeWithTossApprove(
@@ -37,49 +19,24 @@ export async function chargeWithTossApprove(
   orderId: string,
   amount: number
 ): Promise<{ pointAmount: number }> {
-  const fn = httpsCallable<
-    { paymentKey: string; orderId: string; amount: number },
-    { success: boolean; pointAmount: number }
-  >(functions, "tossApprove");
-  const result = await fn({ paymentKey, orderId, amount });
-  return { pointAmount: result.data.pointAmount };
+  return apiPost("/payments/toss/approve", { paymentKey, orderId, amount });
 }
 
-export async function purchaseMaterial(
-  materialId: string
-): Promise<void> {
-  const fn = httpsCallable(functions, "purchaseMaterial");
-  await fn({ materialId });
+export async function purchaseMaterial(materialId: string): Promise<void> {
+  await apiPost(`/materials/${materialId}/purchase`);
 }
 
 export async function getTransactions(
-  userId: string,
+  _userId: string,
   count: number = 20
 ): Promise<Transaction[]> {
-  const q = query(
-    collection(db, "transactions"),
-    where("userId", "==", userId),
-    orderBy("createdAt", "desc"),
-    limit(count)
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({
-    id: d.id,
-    ...d.data(),
-    createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
-  })) as Transaction[];
+  return apiGet<Transaction[]>(`/users/me/transactions?limit=${count}`);
 }
 
 export async function hasPurchased(
-  userId: string,
+  _userId: string,
   materialId: string
 ): Promise<boolean> {
-  const q = query(
-    collection(db, "purchases"),
-    where("buyerId", "==", userId),
-    where("materialId", "==", materialId),
-    limit(1)
-  );
-  const snap = await getDocs(q);
-  return !snap.empty;
+  const result = await apiGet<{ purchased: boolean }>(`/users/me/purchases/check?materialId=${materialId}`);
+  return result.purchased;
 }

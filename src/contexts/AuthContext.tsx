@@ -12,15 +12,15 @@ import {
   browserSessionPersistence,
   type User,
 } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { auth, db, functions } from "../firebase";
+import { auth } from "../firebase";
+import { apiGet, apiPost } from "../api/client";
 import type { UserProfile } from "../types";
 
 interface AuthContextType {
   user: User | null;
   userProfile: UserProfile | null;
   loading: boolean;
+  refreshProfile: () => Promise<void>;
   signUp: (email: string, password: string, name: string, nickname: string, university: string, identityVerified?: boolean, verifiedPhone?: string) => Promise<void>;
   logIn: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
   logOut: () => Promise<void>;
@@ -43,7 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
-      // 이메일/비밀번호 가입자는 이메일 인증 완료 전까지 로그인 상태로 취급하지 않음
       if (u && !u.emailVerified && u.providerData[0]?.providerId === "password") {
         setUser(null);
         setUserProfile(null);
@@ -59,30 +58,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  // Firestore 유저 프로필 실시간 구독
+  // Spring Boot API에서 유저 프로필 조회
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
 
-    const unsubscribe = onSnapshot(doc(db, "users", user.uid), (snap) => {
-      if (snap.exists()) {
-        setUserProfile(snap.data() as UserProfile);
+    async function fetchProfile() {
+      try {
+        const profile = await apiGet<UserProfile>("/users/me");
+        if (!cancelled) {
+          setUserProfile(profile);
+        }
+      } catch {
+        // 프로필 없음 (아직 생성 전일 수 있음)
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
-    });
+    }
 
+    fetchProfile();
 
-    return unsubscribe;
+    // 30초마다 프로필 갱신 (onSnapshot 대체)
+    const interval = setInterval(fetchProfile, 30000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [user]);
+
+  async function refreshProfile() {
+    if (!user) return;
+    try {
+      const profile = await apiGet<UserProfile>("/users/me");
+      setUserProfile(profile);
+    } catch { /* ignore */ }
+  }
 
   async function signUp(email: string, password: string, name: string, nickname: string, university: string, identityVerified?: boolean, verifiedPhone?: string) {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
-    const createUserProfile = httpsCallable(functions, "createUserProfile");
-    await createUserProfile({
+    await apiPost("/users/profile", {
       displayName: name,
-      nickname: nickname,
-      email: email,
-      university: university,
+      nickname,
+      email,
+      university,
       identityVerified: identityVerified || false,
       verifiedPhone: verifiedPhone || "",
     });
@@ -117,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, userProfile, loading, signUp, logIn, logOut, resendVerificationEmail, resetPassword }}>
+    <AuthContext.Provider value={{ user, userProfile, loading, refreshProfile, signUp, logIn, logOut, resendVerificationEmail, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

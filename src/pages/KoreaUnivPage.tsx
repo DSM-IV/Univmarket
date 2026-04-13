@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { collection, getDocs, orderBy, query, limit, where } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { db, functions } from "../firebase";
+import { apiGet, apiPost } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import MaterialCard from "../components/MaterialCard";
 import { Button } from "@/components/ui/button";
@@ -55,21 +53,8 @@ export default function KoreaUnivPage() {
 
   const fetchRequests = async () => {
     try {
-      const q = query(
-        collection(db, "material_requests"),
-        where("status", "==", "open"),
-        where("needCount", ">", 0),
-        orderBy("needCount", "desc"),
-        limit(20)
-      );
-      const snap = await getDocs(q);
-      setMaterialRequests(
-        snap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
-        })) as MaterialRequest[]
-      );
+      const data = await apiGet<MaterialRequest[]>("/material-requests?status=open&sort=needCount&limit=20");
+      setMaterialRequests(data);
     } catch (err) {
       console.error("자료 요청 목록 조회 실패:", err);
     }
@@ -92,8 +77,7 @@ export default function KoreaUnivPage() {
           await handleToggleNeed(existing.id);
         }
       } else {
-        const fn = httpsCallable(functions, "submitMaterialRequest");
-        await fn({ subject: reqSubject, professor: reqProfessor, description: "", category: selectedReqCategory });
+        await apiPost("/material-requests", { subject: reqSubject, professor: reqProfessor, description: "", category: selectedReqCategory });
         fetchRequests();
       }
       setReqDept("");
@@ -111,8 +95,7 @@ export default function KoreaUnivPage() {
     if (!user) return;
     setNeedLoading(requestId);
     try {
-      const fn = httpsCallable<{ requestId: string }, { added: boolean; deleted?: boolean }>(functions, "toggleNeedRequest");
-      const { data } = await fn({ requestId });
+      const data = await apiPost<{ added: boolean; deleted?: boolean }>(`/material-requests/${requestId}/toggle-need`);
       if (data.deleted) {
         // 공감자 0이면 요청 자체가 삭제됨 → 목록에서 제거
         setMaterialRequests((prev) => prev.filter((r) => r.id !== requestId));
@@ -148,25 +131,10 @@ export default function KoreaUnivPage() {
   useEffect(() => {
     async function fetchMaterials() {
       try {
-        const recentQuery = query(collection(db, "materials"), orderBy("createdAt", "desc"), limit(4));
-        const popularQuery = query(collection(db, "materials"), orderBy("salesCount", "desc"), limit(4));
-
-        const [recentSnap, popularSnap] = await Promise.all([
-          getDocs(recentQuery),
-          getDocs(popularQuery),
+        const [recentDocs, popularDocs] = await Promise.all([
+          apiGet<Material[]>("/materials?sort=recent&limit=4"),
+          apiGet<Material[]>("/materials?sort=popular&limit=4"),
         ]);
-
-        const recentDocs = recentSnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
-        })) as Material[];
-
-        const popularDocs = popularSnap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
-        })) as Material[];
 
         setRecentMaterials(recentDocs.filter((m) => !(m as any).hidden));
         setPopularMaterials(popularDocs.filter((m) => !(m as any).hidden));

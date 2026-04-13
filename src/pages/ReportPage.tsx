@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "../firebase";
+import { apiPost } from "../api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -72,8 +71,7 @@ export default function ReportPage() {
     setError("");
 
     try {
-      const submitReportFn = httpsCallable(functions, "submitReport");
-      await submitReportFn({
+      await apiPost("/reports", {
         materialId,
         materialTitle,
         type: reportType,

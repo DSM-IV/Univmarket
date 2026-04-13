@@ -2,9 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { categories, departments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
-import { httpsCallable } from "firebase/functions";
-import { collection, addDoc, serverTimestamp, query, where, orderBy, limit, getDocs } from "firebase/firestore";
-import { db, functions } from "../firebase";
+import { apiGet, apiPost } from "../api/client";
 
 const UPLOAD_COOLDOWN_MS = 5 * 60 * 1000; // 5분
 import { Button } from "@/components/ui/button";
@@ -315,23 +313,19 @@ export default function UploadPage() {
     }
 
     // 등록 쿨타임 확인 (5분)
-    const recentQ = query(
-      collection(db, "materials"),
-      where("authorId", "==", user.uid),
-      orderBy("createdAt", "desc"),
-      limit(1)
-    );
-    const recentSnap = await getDocs(recentQ);
-    if (!recentSnap.empty) {
-      const lastCreated = recentSnap.docs[0].data().createdAt?.toDate?.();
-      if (lastCreated && Date.now() - lastCreated.getTime() < UPLOAD_COOLDOWN_MS) {
-        const remaining = Math.ceil((UPLOAD_COOLDOWN_MS - (Date.now() - lastCreated.getTime())) / 1000);
-        const min = Math.floor(remaining / 60);
-        const sec = remaining % 60;
-        setError(`자료 등록 후 5분간 재등록할 수 없습니다. (${min}분 ${sec}초 후 가능)`);
-        return;
+    try {
+      const recent = await apiGet<{ createdAt?: string }[]>("/users/me/materials?sort=createdAt,desc&limit=1");
+      if (recent.length > 0 && recent[0].createdAt) {
+        const lastCreated = new Date(recent[0].createdAt);
+        if (Date.now() - lastCreated.getTime() < UPLOAD_COOLDOWN_MS) {
+          const remaining = Math.ceil((UPLOAD_COOLDOWN_MS - (Date.now() - lastCreated.getTime())) / 1000);
+          const min = Math.floor(remaining / 60);
+          const sec = remaining % 60;
+          setError(`자료 등록 후 5분간 재등록할 수 없습니다. (${min}분 ${sec}초 후 가능)`);
+          return;
+        }
       }
-    }
+    } catch { /* ignore cooldown check failure */ }
 
     if (files.length === 0) {
       setError("파일을 선택해주세요.");
@@ -359,11 +353,6 @@ export default function UploadPage() {
     setError("");
 
     try {
-      const getUploadUrl = httpsCallable<
-        { fileName: string; contentType: string; fileSize: number },
-        { uploadUrl: string; fileUrl: string; key: string }
-      >(functions, "getUploadUrl");
-
       // 자료 파일 업로드 (최대 10개)
       const uploadedFiles: Array<{
         fileUrl: string;
@@ -377,8 +366,7 @@ export default function UploadPage() {
         const safeName = sanitizeFileName(f.name);
         let fdata: { uploadUrl: string; fileUrl: string; key: string };
         try {
-          const res = await getUploadUrl({ fileName: safeName, contentType: ct, fileSize: f.size });
-          fdata = res.data;
+          fdata = await apiPost<{ uploadUrl: string; fileUrl: string; key: string }>("/materials/upload-url", { fileName: safeName, contentType: ct, fileSize: f.size });
         } catch (e) {
           throw new Error(`업로드 URL 발급 실패 (${f.name}): ${(e as Error).message}`);
         }
@@ -416,7 +404,7 @@ export default function UploadPage() {
         const img = previewImages[i].file;
         const imgExt = (img.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
         const imgName = `preview_${Date.now()}_${i}.${imgExt}`;
-        const { data: imgData } = await getUploadUrl({
+        const imgData = await apiPost<{ uploadUrl: string; fileUrl: string; key: string }>("/materials/upload-url", {
           fileName: imgName,
           contentType: img.type,
           fileSize: img.size,
@@ -437,7 +425,7 @@ export default function UploadPage() {
       if (gradeImage && gradeClaim) {
         const gradeExt = (gradeImage.file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
         const gradeFileName = `grade_${Date.now()}.${gradeExt}`;
-        const { data: gradeData } = await getUploadUrl({
+        const gradeData = await apiPost<{ uploadUrl: string; fileUrl: string; key: string }>("/materials/upload-url", {
           fileName: gradeFileName,
           contentType: gradeImage.file.type,
           fileSize: gradeImage.file.size,
@@ -453,7 +441,7 @@ export default function UploadPage() {
         gradeImageUrl = gradeData.fileUrl;
       }
 
-      // Firestore에 자료 정보 저장
+      // API로 자료 정보 저장
       const materialData: Record<string, unknown> = {
         title: formData.title,
         description: formData.description,
@@ -465,12 +453,10 @@ export default function UploadPage() {
         price: priceInt,
         fileType: primaryFile.type,
         pages: formData.pages ? parseInt(formData.pages) : 0,
-        // 레거시 호환: 첫 번째 파일을 단일 필드로 노출 (다운로드/스캔 경로용)
         fileUrl: primaryFile.fileUrl,
         fileKey: primaryFile.key,
         fileName: primaryFile.name,
         fileSize: primaryFile.size,
-        // 다중 파일 배열
         fileUrls: uploadedFiles.map((f) => f.fileUrl),
         fileKeys: uploadedFiles.map((f) => f.key),
         fileNames: uploadedFiles.map((f) => f.name),
@@ -479,13 +465,6 @@ export default function UploadPage() {
         fileCount: uploadedFiles.length,
         thumbnail: uploadedPreviewUrls[0] || "",
         previewImages: uploadedPreviewUrls,
-        author: userProfile?.nickname || user.displayName || user.email || "",
-        authorId: user.uid,
-        rating: 0,
-        reviewCount: 0,
-        salesCount: 0,
-        scanStatus: "scanning",
-        createdAt: serverTimestamp(),
       };
 
       if (gradeImageUrl && gradeClaim) {
@@ -494,11 +473,10 @@ export default function UploadPage() {
         materialData.gradeStatus = "pending";
       }
 
-      const docRef = await addDoc(collection(db, "materials"), materialData);
+      const result = await apiPost<{ id: string }>("/materials", materialData);
 
       // 바이러스 검사 (백그라운드 실행)
-      const scanFileFn = httpsCallable(functions, "scanFile");
-      scanFileFn({ materialId: docRef.id }).catch(() => {});
+      apiPost(`/materials/${result.id}/scan`).catch(() => {});
 
       navigate("/browse");
     } catch (err) {

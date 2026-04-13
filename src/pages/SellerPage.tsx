@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { collection, doc, getDoc, getDocs, query, where, orderBy } from "firebase/firestore";
-import { db } from "../firebase";
+import { apiGet } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import type { Material } from "../types";
@@ -18,31 +17,13 @@ export default function SellerPage() {
     async function load() {
       if (!authorId) return;
       try {
-        const userSnap = await getDoc(doc(db, "users", authorId));
-        let resolvedNickname = "";
-        if (userSnap.exists()) {
-          resolvedNickname = (userSnap.data().nickname as string) || "";
-        }
+        const sellerData = await apiGet<{ nickname: string; materials: Material[] }>(`/users/${authorId}/profile`);
+        setNickname(sellerData.nickname || "익명");
 
-        const q = query(
-          collection(db, "materials"),
-          where("authorId", "==", authorId),
-          orderBy("createdAt", "desc")
+        const docs = (sellerData.materials || []).filter(
+          (m: any) => !m.hidden && m.scanStatus !== "infected" && m.scanStatus !== "scanning"
         );
-        const snap = await getDocs(q);
-        const docs = snap.docs
-          .map((d) => ({
-            id: d.id,
-            ...d.data(),
-            createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
-          }))
-          .filter((m: any) => !m.hidden && m.scanStatus !== "infected" && m.scanStatus !== "scanning") as Material[];
         setMaterials(docs);
-
-        if (!resolvedNickname && docs.length > 0) {
-          resolvedNickname = (docs[0] as any).author || "";
-        }
-        setNickname(resolvedNickname || "익명");
 
         const stats = await fetchReviewStats(docs.map((d) => d.id));
         setReviewStats(stats);

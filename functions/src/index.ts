@@ -92,6 +92,9 @@ export const createUserProfile = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
+  // Rate Limit: 동일 유저 1분에 3회 (중복 요청 방지)
+  await checkRateLimit(`create_profile_${uid}`, 3, 60 * 1000);
+
   const { displayName, nickname, email, university, identityVerified, verifiedPhone } = request.data;
 
   const userRef = db.collection("users").doc(uid);
@@ -132,6 +135,9 @@ export const createUserProfile = onCall(async (request) => {
 export const updateNickname = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  // Rate Limit: 동일 유저 1분에 5회
+  await checkRateLimit(`nickname_${uid}`, 5, 60 * 1000);
 
   const raw = request.data?.nickname;
   if (typeof raw !== "string") {
@@ -181,8 +187,15 @@ export const sendKakaoVerification = onCall(
       return { success: false, error: "올바른 휴대폰 번호를 입력해주세요." };
     }
 
+    // 글로벌 SMS 레이트 리밋: IP 기반 (비인증 요청 남용 방지)
+    const callerIp = request.rawRequest?.ip || "unknown";
+    await checkRateLimit(`sms_ip_${callerIp}`, 5, 10 * 60 * 1000); // IP당 10분에 5회
+
     // SMS 레이트 리밋: 동일 번호 5분당 3회
     await checkRateLimit(`sms_${cleanPhone}`, 3, 5 * 60 * 1000);
+
+    // 일일 글로벌 SMS 발송 제한 (비용 보호)
+    await checkRateLimit("sms_global_daily", 200, 24 * 60 * 60 * 1000);
 
     // 동일 이름+전화번호로 이미 가입된 유저가 있는지 확인 (중복가입 방지)
     const existingUsers = await db
@@ -235,11 +248,11 @@ export const sendKakaoVerification = onCall(
         console.log("[ALIGO] 응답:", JSON.stringify(res.data));
         console.log("[ALIGO] 보낸메시지:", formData.get("message_1"));
       } else {
-        console.log(`[DEV] 알림톡 인증번호 for ${cleanPhone}: ${code}`);
+        console.log(`[DEV] 알림톡 인증번호 발송 (번호: ${cleanPhone.slice(0, 3)}****${cleanPhone.slice(-4)})`);
       }
     } catch (err: any) {
       console.error("알리고 알림톡 발송 오류:", err?.response?.data || err.message);
-      console.log(`[FALLBACK] 인증번호 for ${cleanPhone}: ${code}`);
+      // SECURITY: 인증코드를 로그에 절대 출력하지 않음
     }
 
     return { success: true, sessionId };
@@ -335,6 +348,9 @@ const MAX_UPLOAD_BYTES = 60 * 1024 * 1024; // 60MB (자료 파일 50MB + 여유)
 export const getUploadUrl = onCall({ secrets: R2_SECRETS }, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  // Rate Limit: 동일 유저 1시간에 20회 (업로드 남용 방지)
+  await checkRateLimit(`upload_${uid}`, 20, 60 * 60 * 1000);
 
   const { fileName, contentType, fileSize } = request.data;
   if (!fileName || !contentType) {
@@ -537,9 +553,10 @@ export const scanFile = onCall({ secrets: R2_SECRETS }, async (request) => {
   if (material.authorId !== uid) throw new HttpsError("permission-denied", "본인의 자료만 검사할 수 있습니다.");
 
   if (!VIRUSTOTAL_API_KEY) {
-    // API 키 미설정 시 검사 건너뛰고 통과 처리
-    await materialRef.update({ scanStatus: "clean" });
-    return { status: "clean" };
+    // SECURITY: API 키 미설정 시 검사 불가 → 업로드 차단 (fail-secure)
+    console.error("[SECURITY] VIRUSTOTAL_API_KEY 미설정 — 파일 검사 불가, 업로드 차단");
+    await materialRef.update({ scanStatus: "unavailable", hidden: true });
+    throw new HttpsError("unavailable", "바이러스 검사 서비스가 설정되지 않았습니다. 관리자에게 문의해주세요.");
   }
 
   // R2에서 파일 다운로드
@@ -617,6 +634,10 @@ export const scanFile = onCall({ secrets: R2_SECRETS }, async (request) => {
 export const kakaopayReady = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  // Rate Limit: 동일 유저 10분에 10회 (결제 남용 방지)
+  await checkRateLimit(`pay_${uid}`, 10, 10 * 60 * 1000);
+
   if (!KAKAOPAY_CID) throw new HttpsError("unavailable", "카카오페이 결제가 설정되지 않았습니다.");
 
   const { amount } = request.data;
@@ -760,6 +781,9 @@ export const tossReady = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
+  // Rate Limit: 동일 유저 10분에 10회 (결제 남용 방지)
+  await checkRateLimit(`pay_${uid}`, 10, 10 * 60 * 1000);
+
   const { amount: pointAmount } = request.data;
   if (!pointAmount || !Number.isInteger(pointAmount) || pointAmount < MIN_CHARGE_AMOUNT || pointAmount > MAX_CHARGE_AMOUNT) {
     throw new HttpsError("invalid-argument", `충전 금액은 ${MIN_CHARGE_AMOUNT.toLocaleString()}원~${MAX_CHARGE_AMOUNT.toLocaleString()}원이어야 합니다.`);
@@ -876,6 +900,9 @@ export const tossApprove = onCall(async (request) => {
 export const purchaseMaterial = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  // Rate Limit: 동일 유저 1분에 10회 (빠른 연속 구매 방지)
+  await checkRateLimit(`purchase_${uid}`, 10, 60 * 1000);
 
   const { materialId } = request.data;
 
@@ -1109,12 +1136,6 @@ export const requestVerification = onCall({ secrets: ALIGO_SECRETS }, async (req
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // 서버 IP 확인
-  try {
-    const ipRes = await axios.get("https://api.ipify.org?format=json");
-    console.log("[SERVER_IP]", ipRes.data.ip);
-  } catch (e) {}
-
   // 알리고 알림톡 발송 (본인인증)
   try {
     if (ALIGO_API_KEY && ALIGO_SENDER_KEY) {
@@ -1135,11 +1156,11 @@ export const requestVerification = onCall({ secrets: ALIGO_SECRETS }, async (req
       console.log("[ALIGO] 본인인증 응답:", JSON.stringify(res.data));
       console.log("[ALIGO] 보낸메시지:", formData.get("message_1"));
     } else {
-      console.log(`[DEV] 본인인증 코드 for ${cleanPhone}: ${code}`);
+      console.log(`[DEV] 본인인증 코드 발송 (번호: ${cleanPhone.slice(0, 3)}****${cleanPhone.slice(-4)})`);
     }
   } catch (err: any) {
     console.error("알리고 알림톡 발송 오류:", err?.response?.data || err.message);
-    console.log(`[FALLBACK] 본인인증 코드 for ${cleanPhone}: ${code}`);
+    // SECURITY: 인증코드를 로그에 절대 출력하지 않음
   }
 
   return { success: true };
@@ -1206,6 +1227,9 @@ const PLATFORM_COMMISSION_RATE = 0.10; // 플랫폼 수수료 10% (원래 40%에
 export const requestWithdraw = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  // Rate Limit: 동일 유저 1시간에 3회 (출금 남용 방지)
+  await checkRateLimit(`withdraw_${uid}`, 3, 60 * 60 * 1000);
 
   const { amount, bankName, accountNumber, accountHolder } = request.data;
 
@@ -2338,6 +2362,9 @@ export const submitChargeRequest = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
 
+  // Rate Limit: 동일 유저 1시간에 5회
+  await checkRateLimit(`charge_req_${uid}`, 5, 60 * 60 * 1000);
+
   const { amount, senderName, senderPhone, receiptNumber, receiptType } = request.data;
   if (!amount || amount < 1000) throw new HttpsError("invalid-argument", "최소 충전 금액은 1,000원입니다.");
   if (!senderName || !senderPhone) throw new HttpsError("invalid-argument", "입금자 정보가 누락되었습니다.");
@@ -2470,6 +2497,9 @@ export const rejectChargeRequest = onCall(async (request) => {
 export const submitMaterialRequest = onCall(async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "로그인이 필요합니다.");
+
+  // Rate Limit: 동일 유저 1시간에 10회
+  await checkRateLimit(`mat_req_${uid}`, 10, 60 * 60 * 1000);
 
   const { subject, professor, description, category } = request.data;
   if (!subject || !subject.trim()) throw new HttpsError("invalid-argument", "과목명을 입력해주세요.");

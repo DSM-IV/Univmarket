@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { httpsCallable } from "firebase/functions";
-import { collection, query, orderBy, getDocs, doc, updateDoc, limit } from "firebase/firestore";
-import { functions, db } from "../firebase";
+import { apiGet, apiPost, apiDelete, apiPatch } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -140,18 +138,13 @@ export default function AdminPage() {
 
     setGrantLoading(true);
     try {
-      const fn = httpsCallable<
-        { targetUserId: string; amount: number; reason: string },
-        { success: boolean; balanceAfter: number }
-      >(functions, "adminGrantEarnings");
-      const result = await fn({
-        targetUserId: targetId,
-        amount: amountNum,
-        reason: grantReason.trim(),
-      });
+      const result = await apiPost<{ success: boolean; balanceAfter: number }>(
+        `/admin/users/${targetId}/grant-earnings`,
+        { amount: amountNum, reason: grantReason.trim() }
+      );
       setGrantResult({
         success: true,
-        message: `처리 완료. 현재 수익금 잔액: ${result.data.balanceAfter.toLocaleString()}원`,
+        message: `처리 완료. 현재 수익금 잔액: ${result.balanceAfter.toLocaleString()}원`,
       });
       setGrantAmount("");
       setGrantReason("");
@@ -184,8 +177,7 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
     try {
-      const fn = httpsCallable<void, { reports: Report[] }>(functions, "getReports");
-      const { data } = await fn();
+      const data = await apiGet<{ reports: Report[] }>("/admin/reports");
       setReports(data.reports);
     } catch (err) {
       const msg = (err as Error).message || "";
@@ -207,8 +199,7 @@ export default function AdminPage() {
 
     setActionLoading(report.id);
     try {
-      const fn = httpsCallable(functions, "adminDeleteMaterial");
-      await fn({ materialId: report.materialId, reportId: report.id, reason });
+      await apiDelete(`/admin/materials/${report.materialId}`, { reportId: report.id, reason });
       setReports((prev) =>
         prev.map((r) =>
           r.id === report.id ? { ...r, status: "resolved" } : r
@@ -239,12 +230,10 @@ export default function AdminPage() {
 
     setActionLoading(report.id);
     try {
-      const fn = httpsCallable<
-        { reportId: string },
-        { success: boolean; refundedCount: number }
-      >(functions, "approveDefectReport");
-      const result = await fn({ reportId: report.id });
-      alert(`처리 완료: ${result.data.refundedCount}건의 구매가 환불되었습니다.`);
+      const result = await apiPost<{ success: boolean; refundedCount: number }>(
+        `/admin/reports/${report.id}/approve-defect`
+      );
+      alert(`처리 완료: ${result.refundedCount}건의 구매가 환불되었습니다.`);
       setReports((prev) =>
         prev.map((r) =>
           r.id === report.id ? { ...r, status: "resolved" } : r
@@ -264,8 +253,7 @@ export default function AdminPage() {
 
     setActionLoading(reportId);
     try {
-      const fn = httpsCallable(functions, "updateReportStatus");
-      await fn({ reportId, status: "dismissed" });
+      await apiPost(`/admin/reports/${reportId}/status`, { status: "dismissed" });
       setReports((prev) =>
         prev.map((r) =>
           r.id === reportId ? { ...r, status: "dismissed" } : r
@@ -288,14 +276,10 @@ export default function AdminPage() {
 
     setActionLoading("ban");
     try {
-      const fn = httpsCallable<
-        { targetUserId: string; reason: string },
-        { success: boolean; hiddenMaterials: number }
-      >(functions, "adminBanUser");
-      const { data } = await fn({
-        targetUserId: banModal.reporterId,
-        reason: banReason,
-      });
+      const data = await apiPost<{ success: boolean; hiddenMaterials: number }>(
+        `/admin/users/${banModal.reporterId}/ban`,
+        { reason: banReason }
+      );
       alert(`탈퇴 처리 완료. ${data.hiddenMaterials}개 자료가 비공개 되었습니다.`);
       setBanModal(null);
       setBanReason("");
@@ -316,15 +300,10 @@ export default function AdminPage() {
 
     setActionLoading("suspend");
     try {
-      const fn = httpsCallable<
-        { targetUserId: string; reason: string; days: number },
-        { success: boolean; hiddenMaterials: number; suspendedUntil: string }
-      >(functions, "adminSuspendUser");
-      const { data } = await fn({
-        targetUserId: suspendModal.reporterId,
-        reason: suspendReason,
-        days: suspendDays,
-      });
+      const data = await apiPost<{ success: boolean; hiddenMaterials: number; suspendedUntil: string }>(
+        `/admin/users/${suspendModal.reporterId}/suspend`,
+        { reason: suspendReason, days: suspendDays }
+      );
       const until = new Date(data.suspendedUntil).toLocaleDateString("ko-KR");
       alert(`정지 처리 완료. ${until}까지 정지되며 ${data.hiddenMaterials}개 자료가 비공개 되었습니다.`);
       setSuspendModal(null);
@@ -344,8 +323,7 @@ export default function AdminPage() {
   const fetchWithdrawals = async () => {
     setWdLoading(true);
     try {
-      const fn = httpsCallable<void, { withdrawals: Withdrawal[] }>(functions, "getWithdrawals");
-      const { data } = await fn();
+      const data = await apiGet<{ withdrawals: Withdrawal[] }>("/admin/withdrawals");
       setWithdrawals(data.withdrawals);
     } catch {
       alert("출금 목록을 불러오는 데 실패했습니다.");
@@ -370,26 +348,7 @@ export default function AdminPage() {
   const fetchGradeRequests = async () => {
     setGradeLoading(true);
     try {
-      const q = query(
-        collection(db, "materials"),
-        orderBy("gradeStatus"),
-        orderBy("createdAt", "desc"),
-        limit(200)
-      );
-      const snap = await getDocs(q);
-      const list = snap.docs
-        .filter((d) => d.data().gradeClaim)
-        .map((d) => ({
-          id: d.id,
-          title: d.data().title || "",
-          subject: d.data().subject || "",
-          author: d.data().author || "",
-          authorId: d.data().authorId || "",
-          gradeClaim: d.data().gradeClaim || "",
-          gradeImage: d.data().gradeImage || "",
-          gradeStatus: d.data().gradeStatus || "pending",
-          createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
-        }));
+      const list = await apiGet<GradeRequest[]>("/admin/grade-requests");
       setGradeRequests(list);
     } catch (e) {
       console.error("[admin] fetchGradeRequests error", e);
@@ -404,7 +363,7 @@ export default function AdminPage() {
     if (!confirm(`"${req.title}" 자료에 ${grade} 성적 인증을 승인하시겠습니까?`)) return;
     setActionLoading(req.id);
     try {
-      await updateDoc(doc(db, "materials", req.id), {
+      await apiPatch(`/admin/materials/${req.id}/grade`, {
         gradeStatus: "verified",
         verifiedGrade: grade,
       });
@@ -422,7 +381,7 @@ export default function AdminPage() {
     if (!confirm(`"${req.title}" 자료의 성적 인증을 거절하시겠습니까?`)) return;
     setActionLoading(req.id);
     try {
-      await updateDoc(doc(db, "materials", req.id), {
+      await apiPatch(`/admin/materials/${req.id}/grade`, {
         gradeStatus: "rejected",
       });
       setGradeRequests((prev) =>
@@ -440,8 +399,7 @@ export default function AdminPage() {
   const fetchChargeRequests = async () => {
     setChargeLoading(true);
     try {
-      const fn = httpsCallable<void, { chargeRequests: ChargeRequest[] }>(functions, "getChargeRequests");
-      const { data } = await fn();
+      const data = await apiGet<{ chargeRequests: ChargeRequest[] }>("/admin/charge-requests");
       setChargeRequests(data.chargeRequests);
     } catch {
       alert("충전 요청 목록을 불러오는 데 실패했습니다.");
@@ -454,8 +412,7 @@ export default function AdminPage() {
     if (!confirm("입금을 확인하고 포인트를 지급하시겠습니까?")) return;
     setActionLoading(id);
     try {
-      const fn = httpsCallable(functions, "approveChargeRequest");
-      await fn({ requestId: id });
+      await apiPost(`/admin/charge-requests/${id}/approve`);
       setChargeRequests((prev) => prev.map((c) => c.id === id ? { ...c, status: "approved" } : c));
     } catch {
       alert("승인 처리에 실패했습니다.");
@@ -469,8 +426,7 @@ export default function AdminPage() {
     if (reason === null) return;
     setActionLoading(id);
     try {
-      const fn = httpsCallable(functions, "rejectChargeRequest");
-      await fn({ requestId: id, reason });
+      await apiPost(`/admin/charge-requests/${id}/reject`, { reason });
       setChargeRequests((prev) => prev.map((c) => c.id === id ? { ...c, status: "rejected" } : c));
     } catch {
       alert("거절 처리에 실패했습니다.");
@@ -485,8 +441,7 @@ export default function AdminPage() {
     if (!confirm("입금 완료 처리하시겠습니까?")) return;
     setActionLoading(id);
     try {
-      const fn = httpsCallable(functions, "completeWithdrawal");
-      await fn({ transactionId: id });
+      await apiPost(`/admin/withdrawals/${id}/complete`);
       setWithdrawals((prev) => prev.map((w) => w.id === id ? { ...w, status: "completed" } : w));
     } catch {
       alert("처리에 실패했습니다.");
@@ -500,8 +455,7 @@ export default function AdminPage() {
     if (reason === null) return;
     setActionLoading(id);
     try {
-      const fn = httpsCallable(functions, "rejectWithdrawal");
-      await fn({ transactionId: id, reason });
+      await apiPost(`/admin/withdrawals/${id}/reject`, { reason });
       setWithdrawals((prev) => prev.map((w) => w.id === id ? { ...w, status: "rejected" } : w));
     } catch {
       alert("처리에 실패했습니다.");

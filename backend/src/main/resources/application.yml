@@ -1,0 +1,74 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:univmarket}
+    username: ${DB_USERNAME:univmarket}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+    open-in-view: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+
+# Firebase Admin SDK
+firebase:
+  credentials-path: ${FIREBASE_CREDENTIALS_PATH:firebase-service-account.json}
+
+# Cloudflare R2
+r2:
+  account-id: ${R2_ACCOUNT_ID:}
+  access-key-id: ${R2_ACCESS_KEY_ID:}
+  secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+  bucket-name: ${R2_BUCKET_NAME:univmarket}
+  public-url: ${R2_PUBLIC_URL:}
+
+# Payment Gateways
+payment:
+  kakaopay:
+    cid: ${KAKAOPAY_CID:}
+    secret-key: ${KAKAOPAY_SECRET_KEY:}
+  toss:
+    secret-key: ${TOSS_SECRET_KEY:}
+
+# SMS (Aligo)
+aligo:
+  api-key: ${ALIGO_API_KEY:}
+  user-id: ${ALIGO_USER_ID:}
+  sender-key: ${ALIGO_SENDER_KEY:}
+  sender-number: ${ALIGO_SENDER_NUMBER:}
+
+# VirusTotal
+virustotal:
+  api-key: ${VIRUSTOTAL_API_KEY:}
+
+# App
+app:
+  frontend-url: ${FRONTEND_URL:https://unifile.store}
+  jwt-secret: ${JWT_SECRET:change-me-in-production}
+
+# Rate Limiting defaults
+rate-limit:
+  default-capacity: 100
+  default-refill-tokens: 100
+  default-refill-seconds: 60
+
+logging:
+  level:
+    com.univmarket: INFO
+    org.springframework.security: WARN

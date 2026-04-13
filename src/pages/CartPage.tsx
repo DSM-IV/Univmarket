@@ -3,8 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getCartItems, removeFromCart, type CartItem } from "../services/cartService";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { apiGet } from "../api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -32,8 +31,12 @@ export default function CartPage() {
       // 각 자료가 아직 존재하는지 확인
       const checks = await Promise.all(
         list.map(async (item) => {
-          const snap = await getDoc(doc(db, "materials", item.materialId));
-          return { item, exists: snap.exists() };
+          try {
+            await apiGet(`/materials/${item.materialId}`);
+            return { item, exists: true };
+          } catch {
+            return { item, exists: false };
+          }
         })
       );
       const valid = checks.filter((c) => c.exists).map((c) => c.item);

@@ -1,18 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  onSnapshot,
-  doc,
-  writeBatch,
-  updateDoc,
-} from "firebase/firestore";
-import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
+import { apiGet, apiPatch, apiPost } from "../api/client";
 import { Bell, ShoppingBag, MessageSquare, FileText, Check } from "lucide-react";
 import type { Notification } from "../types";
 
@@ -28,36 +17,33 @@ export default function NotificationPanel({ onNavigate }: Props) {
   const [unreadCount, setUnreadCount] = useState(0);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // 실시간 알림 구독
+  // API에서 알림 조회 (폴링)
   useEffect(() => {
     if (!user) {
       setNotifications([]);
       setUnreadCount(0);
       return;
     }
-    const q = query(
-      collection(db, "notifications"),
-      where("userId", "==", user.uid),
-      orderBy("createdAt", "desc"),
-      limit(30)
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const items: Notification[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-          createdAt: d.data().createdAt?.toDate?.()?.toISOString?.() || "",
-        })) as Notification[];
-        setNotifications(items);
-        setUnreadCount(items.filter((n) => !n.read).length);
-      },
-      () => {
-        setNotifications([]);
-        setUnreadCount(0);
+    let cancelled = false;
+
+    async function fetchNotifications() {
+      try {
+        const items = await apiGet<Notification[]>("/users/me/notifications?limit=30");
+        if (!cancelled) {
+          setNotifications(items);
+          setUnreadCount(items.filter((n) => !n.read).length);
+        }
+      } catch {
+        if (!cancelled) {
+          setNotifications([]);
+          setUnreadCount(0);
+        }
       }
-    );
-    return unsub;
+    }
+
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 10000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [user]);
 
   // 외부 클릭 시 패널 닫기
@@ -75,17 +61,17 @@ export default function NotificationPanel({ onNavigate }: Props) {
   const markAllRead = async () => {
     const unread = notifications.filter((n) => !n.read);
     if (unread.length === 0) return;
-    const batch = writeBatch(db);
-    unread.forEach((n) => {
-      batch.update(doc(db, "notifications", n.id), { read: true });
-    });
-    await batch.commit();
+    await apiPost("/users/me/notifications/read-all");
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
   };
 
   // 개별 알림 클릭 → 읽음 처리 + 이동
   const handleClick = async (n: Notification) => {
     if (!n.read) {
-      await updateDoc(doc(db, "notifications", n.id), { read: true });
+      await apiPatch(`/users/me/notifications/${n.id}/read`);
+      setNotifications((prev) => prev.map((item) => item.id === n.id ? { ...item, read: true } : item));
+      setUnreadCount((c) => Math.max(0, c - 1));
     }
     setOpen(false);
     onNavigate?.();

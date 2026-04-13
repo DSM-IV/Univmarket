@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { httpsCallable } from "firebase/functions";
-import { functions } from "../firebase";
+import { apiPost } from "../api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -82,8 +81,7 @@ export default function WithdrawPage() {
 
     setProcessing(true);
     try {
-      const requestWithdraw = httpsCallable(functions, "requestWithdraw");
-      await requestWithdraw({
+      await apiPost("/withdrawals", {
         amount: withdrawAmount,
         bankName: bankName.trim(),
         accountNumber: accountNumber.trim(),

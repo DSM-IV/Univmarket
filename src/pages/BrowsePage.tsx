@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { collection, getDocs, orderBy, query, limit } from "firebase/firestore";
-import { db } from "../firebase";
+import { apiGet } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -106,19 +105,14 @@ export default function BrowsePage() {
   useEffect(() => {
     async function fetchMaterials() {
       try {
-        const q = query(collection(db, "materials"), orderBy("createdAt", "desc"), limit(50));
-        const snapshot = await getDocs(q);
-        const docs = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "",
-        })) as Material[];
+        const data = await apiGet<{ content: Material[] }>("/materials?size=50&sort=createdAt,desc");
+        const docs = Array.isArray(data) ? data : (data.content || []);
         setMaterials(docs);
 
         const stats = await fetchReviewStats(docs.map((d) => d.id));
         setReviewStats(stats);
-      } catch (err) {
-
+      } catch {
+        // ignore
       } finally {
         setLoading(false);
       }

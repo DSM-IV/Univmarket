@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { collection, getDocs, orderBy, query, limit } from "firebase/firestore";
-import { db } from "../firebase";
+import { apiGet } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { Button } from "@/components/ui/button";
 import { categories } from "../data/mockData";
@@ -20,11 +19,10 @@ export default function KhuPage() {
   useEffect(() => {
     async function fetchMaterials() {
       try {
-        const recentQuery = query(collection(db, "materials"), orderBy("createdAt", "desc"), limit(4));
-        const popularQuery = query(collection(db, "materials"), orderBy("salesCount", "desc"), limit(4));
-        const [recentSnap, popularSnap] = await Promise.all([getDocs(recentQuery), getDocs(popularQuery)]);
-        const recentDocs = recentSnap.docs.map((doc) => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "" })) as Material[];
-        const popularDocs = popularSnap.docs.map((doc) => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || "" })) as Material[];
+        const [recentDocs, popularDocs] = await Promise.all([
+          apiGet<Material[]>("/materials?sort=recent&limit=4"),
+          apiGet<Material[]>("/materials?sort=popular&limit=4"),
+        ]);
         setRecentMaterials(recentDocs.filter((m) => !(m as any).hidden));
         setPopularMaterials(popularDocs.filter((m) => !(m as any).hidden));
         const allIds = [...new Set([...recentDocs, ...popularDocs].map((d) => d.id))];

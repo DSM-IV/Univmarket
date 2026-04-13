@@ -1,8 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase";
 import { useAuth } from "../contexts/AuthContext";
+import { apiGet } from "../api/client";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Wallet, Menu, X } from "lucide-react";
 import NotificationPanel from "./NotificationPanel";
@@ -18,11 +17,16 @@ export default function Navbar() {
       setCartCount(0);
       return;
     }
-    const q = query(collection(db, "carts"), where("userId", "==", user.uid));
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setCartCount(snap.size);
-    }, () => setCartCount(0));
-    return unsubscribe;
+    let cancelled = false;
+    async function fetchCount() {
+      try {
+        const items = await apiGet<{ length: number } & unknown[]>("/cart");
+        if (!cancelled) setCartCount(Array.isArray(items) ? items.length : 0);
+      } catch { if (!cancelled) setCartCount(0); }
+    }
+    fetchCount();
+    const interval = setInterval(fetchCount, 15000);
+    return () => { cancelled = true; clearInterval(interval); };
   }, [user]);
 
   const handleLogout = async () => {
