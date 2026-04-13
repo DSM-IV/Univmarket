@@ -32,11 +32,12 @@ public class RaffleService {
         if (count < 1 || count > 100) {
             throw ApiException.badRequest("응모 수는 1~100 사이여야 합니다.");
         }
+        final int entryCount = count;
 
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> ApiException.notFound("사용자를 찾을 수 없습니다."));
 
-        BigDecimal totalCost = RAFFLE_COST.multiply(BigDecimal.valueOf(count));
+        BigDecimal totalCost = RAFFLE_COST.multiply(BigDecimal.valueOf(entryCount));
 
         if (user.getPoints().compareTo(totalCost) < 0) {
             throw ApiException.badRequest("포인트가 부족합니다.");
@@ -51,13 +52,13 @@ public class RaffleService {
         // 기존 응모가 있으면 count 추가
         RaffleEntry entry = raffleEntryRepository.findByUserIdAndProductId(user.getId(), productId)
                 .map(existing -> {
-                    existing.setCount(existing.getCount() + count);
+                    existing.setCount(existing.getCount() + entryCount);
                     return raffleEntryRepository.save(existing);
                 })
                 .orElseGet(() -> raffleEntryRepository.save(RaffleEntry.builder()
                         .user(user)
                         .productId(productId)
-                        .count(count)
+                        .count(entryCount)
                         .build()));
 
         user = userRepository.findById(user.getId()).orElseThrow();
@@ -69,7 +70,7 @@ public class RaffleService {
                 .amount(totalCost.negate())
                 .balanceAfter(user.getPoints())
                 .balanceType("points")
-                .description("래플 응모 (" + count + "구)")
+                .description("래플 응모 (" + entryCount + "구)")
                 .status("completed")
                 .build());
 
