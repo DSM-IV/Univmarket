@@ -83,7 +83,9 @@ public class SecurityConfig {
         config.setAllowedOrigins(List.of(
                 frontendUrl,
                 "https://unifile.store",
-                "https://www.unifile.store"
+                "https://www.unifile.store",
+                "http://localhost:5173",
+                "http://localhost:3000"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
