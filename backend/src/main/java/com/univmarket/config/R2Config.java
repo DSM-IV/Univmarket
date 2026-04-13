@@ -9,9 +9,12 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+
 import java.net.URI;
 
 @Configuration
+@ConditionalOnProperty(name = "r2.access-key-id", matchIfMissing = false)
 public class R2Config {
 
     @Value("${r2.account-id}")
