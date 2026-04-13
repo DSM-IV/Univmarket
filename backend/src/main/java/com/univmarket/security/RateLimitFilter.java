@@ -46,26 +46,30 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        String clientIp = getClientIp(request);
-        String ipKey = "rl:ip:" + clientIp;
+        try {
+            String clientIp = getClientIp(request);
+            String ipKey = "rl:ip:" + clientIp;
 
-        if (!checkLimit(ipKey, IP_LIMIT, IP_WINDOW_SECONDS)) {
-            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"error\":\"요청이 너무 많습니다. 잠시 후 다시 시도해주세요.\"}");
-            return;
-        }
-
-        // 인증된 유저가 있으면 유저 기반 제한도 적용
-        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof FirebaseUserPrincipal principal) {
-            String userKey = "rl:user:" + principal.getUid();
-            if (!checkLimit(userKey, USER_LIMIT, USER_WINDOW_SECONDS)) {
+            if (!checkLimit(ipKey, IP_LIMIT, IP_WINDOW_SECONDS)) {
                 response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
                 response.setContentType("application/json;charset=UTF-8");
                 response.getWriter().write("{\"error\":\"요청이 너무 많습니다. 잠시 후 다시 시도해주세요.\"}");
                 return;
             }
+
+            // 인증된 유저가 있으면 유저 기반 제한도 적용
+            var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.getPrincipal() instanceof FirebaseUserPrincipal principal) {
+                String userKey = "rl:user:" + principal.getUid();
+                if (!checkLimit(userKey, USER_LIMIT, USER_WINDOW_SECONDS)) {
+                    response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.getWriter().write("{\"error\":\"요청이 너무 많습니다. 잠시 후 다시 시도해주세요.\"}");
+                    return;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Rate limiting 건너뜀 (Redis 연결 실패): {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);
