@@ -34,34 +34,35 @@ public class RaffleService {
         }
         final int entryCount = count;
 
-        User user = userRepository.findByFirebaseUid(firebaseUid)
+        final User initialUser = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> ApiException.notFound("사용자를 찾을 수 없습니다."));
+        final Long userId = initialUser.getId();
 
         BigDecimal totalCost = RAFFLE_COST.multiply(BigDecimal.valueOf(entryCount));
 
-        if (user.getPoints().compareTo(totalCost) < 0) {
+        if (initialUser.getPoints().compareTo(totalCost) < 0) {
             throw ApiException.badRequest("포인트가 부족합니다.");
         }
 
         // 포인트 차감
-        int updated = userRepository.deductPoints(user.getId(), totalCost);
+        int updated = userRepository.deductPoints(userId, totalCost);
         if (updated == 0) {
             throw ApiException.badRequest("포인트가 부족합니다. (동시 처리 충돌)");
         }
 
         // 기존 응모가 있으면 count 추가
-        RaffleEntry entry = raffleEntryRepository.findByUserIdAndProductId(user.getId(), productId)
+        RaffleEntry entry = raffleEntryRepository.findByUserIdAndProductId(userId, productId)
                 .map(existing -> {
                     existing.setCount(existing.getCount() + entryCount);
                     return raffleEntryRepository.save(existing);
                 })
                 .orElseGet(() -> raffleEntryRepository.save(RaffleEntry.builder()
-                        .user(user)
+                        .user(initialUser)
                         .productId(productId)
                         .count(entryCount)
                         .build()));
 
-        user = userRepository.findById(user.getId()).orElseThrow();
+        User user = userRepository.findById(userId).orElseThrow();
 
         // 거래내역
         transactionRepository.save(Transaction.builder()
