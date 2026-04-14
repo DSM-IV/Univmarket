@@ -38,14 +38,23 @@ CREATE TABLE IF NOT EXISTS materials (
     subject             VARCHAR(50),
     professor           VARCHAR(50),
     category            VARCHAR(20),
+    department          VARCHAR(50),
     semester            VARCHAR(20),
+    file_type           VARCHAR(50),
+    pages               INT NOT NULL DEFAULT 0,
+    file_count          INT NOT NULL DEFAULT 0,
     file_key            VARCHAR(500),
     file_url            VARCHAR(1000),
     file_name           VARCHAR(200),
     file_size           BIGINT,
     content_type        VARCHAR(100),
+    thumbnail           VARCHAR(1000),
     sales_count         INT NOT NULL DEFAULT 0,
     view_count          INT NOT NULL DEFAULT 0,
+    grade_image         VARCHAR(1000),
+    grade_claim         VARCHAR(10),
+    grade_status        VARCHAR(20),
+    verified_grade      VARCHAR(10),
     scan_status         VARCHAR(20) NOT NULL DEFAULT 'pending',
     hidden              BOOLEAN NOT NULL DEFAULT FALSE,
     copyright_deleted   BOOLEAN NOT NULL DEFAULT FALSE,
@@ -56,6 +65,26 @@ CREATE TABLE IF NOT EXISTS materials (
 CREATE INDEX IF NOT EXISTS idx_material_author ON materials(author_id);
 CREATE INDEX IF NOT EXISTS idx_material_created ON materials(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_material_hidden ON materials(hidden, copyright_deleted);
+
+-- 자료 파일 목록 (다중 파일, 최대 10개)
+CREATE TABLE IF NOT EXISTS material_files (
+    material_id  BIGINT NOT NULL REFERENCES materials(id) ON DELETE CASCADE,
+    idx          INT NOT NULL,
+    file_url     VARCHAR(1000),
+    file_key     VARCHAR(500),
+    file_name    VARCHAR(200),
+    file_size    BIGINT,
+    file_type    VARCHAR(50),
+    PRIMARY KEY (material_id, idx)
+);
+
+-- 자료 미리보기 이미지
+CREATE TABLE IF NOT EXISTS material_preview_images (
+    material_id  BIGINT NOT NULL REFERENCES materials(id) ON DELETE CASCADE,
+    idx          INT NOT NULL,
+    url          VARCHAR(1000),
+    PRIMARY KEY (material_id, idx)
+);
 
 CREATE TABLE IF NOT EXISTS purchases (
     id            BIGSERIAL PRIMARY KEY,

@@ -1,10 +1,12 @@
 package com.univmarket.controller;
 
+import com.univmarket.entity.Material;
 import com.univmarket.entity.Notification;
 import com.univmarket.entity.Purchase;
 import com.univmarket.entity.Transaction;
 import com.univmarket.entity.User;
 import com.univmarket.security.FirebaseUserPrincipal;
+import com.univmarket.service.MaterialService;
 import com.univmarket.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,6 +23,7 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final MaterialService materialService;
 
     /**
      * 프로필 생성
@@ -68,6 +71,16 @@ public class UserController {
             @RequestParam(defaultValue = "20") int size) {
         Page<Transaction> transactions = userService.getTransactions(principal.getUid(), page, size);
         return ResponseEntity.ok(transactions);
+    }
+
+    /**
+     * 내 자료 목록 (쿨다운 체크용)
+     */
+    @GetMapping("/me/materials")
+    public ResponseEntity<List<Material>> getMyMaterials(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @RequestParam(defaultValue = "20") int limit) {
+        return ResponseEntity.ok(materialService.listMyMaterials(principal.getUid(), limit));
     }
 
     /**

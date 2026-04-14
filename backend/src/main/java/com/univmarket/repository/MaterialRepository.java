@@ -16,6 +16,8 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
 
     List<Material> findByAuthorIdAndHiddenFalse(Long authorId);
 
+    Page<Material> findByAuthorId(Long authorId, Pageable pageable);
+
     @Modifying
     @Query("UPDATE Material m SET m.salesCount = m.salesCount + 1 WHERE m.id = :id")
     void incrementSalesCount(@Param("id") Long id);

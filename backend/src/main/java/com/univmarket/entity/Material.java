@@ -6,6 +6,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "materials", indexes = {
@@ -35,18 +37,32 @@ public class Material {
     private int price; // 0 ~ 500,000
 
     @Column(length = 50)
-    private String subject; // 과목명
+    private String subject;
 
     @Column(length = 50)
     private String professor;
 
     @Column(length = 20)
-    private String category; // 수업, 시험, 과제 등
+    private String category;
+
+    @Column(length = 50)
+    private String department;
 
     @Column(length = 20)
-    private String semester; // 2026-1 등
+    private String semester;
 
-    // 파일 정보 (R2)
+    @Column(name = "file_type", length = 50)
+    private String fileType;
+
+    @Column(name = "pages")
+    @Builder.Default
+    private int pages = 0;
+
+    @Column(name = "file_count")
+    @Builder.Default
+    private int fileCount = 0;
+
+    // 대표 파일 (다운로드/미리보기용 기본값)
     @Column(name = "file_key", length = 500)
     private String fileKey;
 
@@ -62,6 +78,26 @@ public class Material {
     @Column(name = "content_type", length = 100)
     private String contentType;
 
+    // 다중 파일 (최대 10개)
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "material_files",
+            joinColumns = @JoinColumn(name = "material_id"))
+    @OrderColumn(name = "idx")
+    @Builder.Default
+    private List<MaterialFile> files = new ArrayList<>();
+
+    // 썸네일 + 미리보기 이미지
+    @Column(name = "thumbnail", length = 1000)
+    private String thumbnail;
+
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "material_preview_images",
+            joinColumns = @JoinColumn(name = "material_id"))
+    @OrderColumn(name = "idx")
+    @Column(name = "url", length = 1000)
+    @Builder.Default
+    private List<String> previewImages = new ArrayList<>();
+
     // 통계
     @Column(name = "sales_count")
     @Builder.Default
@@ -70,6 +106,19 @@ public class Material {
     @Column(name = "view_count")
     @Builder.Default
     private int viewCount = 0;
+
+    // 성적 인증
+    @Column(name = "grade_image", length = 1000)
+    private String gradeImage;
+
+    @Column(name = "grade_claim", length = 10)
+    private String gradeClaim;
+
+    @Column(name = "grade_status", length = 20)
+    private String gradeStatus; // pending | verified | rejected
+
+    @Column(name = "verified_grade", length = 10)
+    private String verifiedGrade;
 
     // 바이러스 검사
     @Column(name = "scan_status", length = 20)
