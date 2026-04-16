@@ -121,7 +121,7 @@ export default function BrowsePage() {
   }, []);
 
   const filtered = useMemo(() => {
-    let result = materials.filter((m) => !(m as any).hidden && (m as any).scanStatus !== "infected" && (m as any).scanStatus !== "scanning");
+    let result = materials.filter((m) => !(m as any).hidden && (m as any).scanStatus !== "infected");
 
     result = result.filter((m) => m.category === selectedCategory);
 

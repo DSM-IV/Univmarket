@@ -136,8 +136,8 @@ export default function KoreaUnivPage() {
           apiGet<Material[]>("/materials?sort=popular&limit=4"),
         ]);
 
-        setRecentMaterials(recentDocs.filter((m) => !(m as any).hidden));
-        setPopularMaterials(popularDocs.filter((m) => !(m as any).hidden));
+        setRecentMaterials(recentDocs.filter((m) => !(m as any).hidden && (m as any).scanStatus !== "infected"));
+        setPopularMaterials(popularDocs.filter((m) => !(m as any).hidden && (m as any).scanStatus !== "infected"));
 
         const allIds = [...new Set([...recentDocs, ...popularDocs].map((d) => d.id))];
         const stats = await fetchReviewStats(allIds);

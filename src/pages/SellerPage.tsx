@@ -21,7 +21,7 @@ export default function SellerPage() {
         setNickname(sellerData.nickname || "익명");
 
         const docs = (sellerData.materials || []).filter(
-          (m: any) => !m.hidden && m.scanStatus !== "infected" && m.scanStatus !== "scanning"
+          (m: any) => !m.hidden && m.scanStatus !== "infected"
         );
         setMaterials(docs);
 
