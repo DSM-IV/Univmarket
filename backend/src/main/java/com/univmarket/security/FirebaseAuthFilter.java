@@ -3,6 +3,8 @@ package com.univmarket.security;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
+import com.univmarket.entity.User;
+import com.univmarket.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +31,7 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
 
     private final FirebaseAuth firebaseAuth;
     private final UserRoleService userRoleService;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -42,6 +45,17 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
                 FirebaseToken decodedToken = firebaseAuth.verifyIdToken(idToken);
                 String uid = decodedToken.getUid();
                 String email = decodedToken.getEmail();
+                String name = decodedToken.getName();
+
+                // Firebase 인증된 사용자를 DB에 자동 생성 (첫 로그인 시)
+                userRepository.findByFirebaseUid(uid).orElseGet(() -> {
+                    User newUser = User.builder()
+                            .firebaseUid(uid)
+                            .email(email != null ? email : uid + "@firebase.local")
+                            .displayName(name != null ? name : (email != null ? email : "사용자"))
+                            .build();
+                    return userRepository.save(newUser);
+                });
 
                 // DB에서 역할 조회
                 List<SimpleGrantedAuthority> authorities = userRoleService.getAuthorities(uid);
