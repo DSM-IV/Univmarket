@@ -1,9 +1,21 @@
-FROM eclipse-temurin:21-jre-alpine
-
+# Build stage
+FROM eclipse-temurin:21-jdk AS builder
 WORKDIR /app
 
-COPY build/libs/univmarket-backend-*.jar app.jar
+COPY gradle ./gradle
+COPY gradlew settings.gradle build.gradle ./
+RUN chmod +x gradlew
+
+COPY src ./src
+RUN ./gradlew --no-daemon bootJar
+
+# Runtime stage
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENV JAVA_OPTS="-Xms256m -Xmx512m -XX:+UseG1GC -XX:+ExitOnOutOfMemoryError"
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

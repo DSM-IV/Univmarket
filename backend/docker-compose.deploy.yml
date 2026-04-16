@@ -1,0 +1,11 @@
+services:
+  app:
+    build: .
+    container_name: univmarket-app
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./firebase-service-account.json:/app/firebase-service-account.json:ro
+    restart: unless-stopped
