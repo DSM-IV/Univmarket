@@ -31,7 +31,7 @@ interface Comment {
 
 export default function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [request, setRequest] = useState<MaterialRequest | null>(null);

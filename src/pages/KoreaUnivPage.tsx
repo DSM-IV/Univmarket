@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { apiGet, apiPost } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import MaterialCard from "../components/MaterialCard";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { categories, departments, departmentCourses, courseProfessors } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
-import { ChevronRight, Hand, Plus, X, Bell, MessageSquarePlus, Upload } from "lucide-react";
+import { ChevronRight, Hand, Plus, X, Bell, MessageSquarePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Material } from "../types";
 
@@ -30,7 +30,6 @@ interface MaterialRequest {
 
 export default function KoreaUnivPage() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [popularMaterials, setPopularMaterials] = useState<Material[]>([]);
   const [recentMaterials, setRecentMaterials] = useState<Material[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStats>({});
@@ -44,7 +43,7 @@ export default function KoreaUnivPage() {
   const [reqSubject, setReqSubject] = useState("");
   const [reqProfessor, setReqProfessor] = useState("");
   const [reqLoading, setReqLoading] = useState(false);
-  const [needLoading, setNeedLoading] = useState<string | null>(null);
+  const [, setNeedLoading] = useState<string | null>(null);
   const [showNeedAlert, setShowNeedAlert] = useState(false);
 
   const filteredRequests = materialRequests.filter(
