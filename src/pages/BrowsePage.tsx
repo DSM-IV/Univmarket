@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useLocation } from "react-router-dom";
 import { apiGet } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ const ITEMS_PER_PAGE = 12;
 
 export default function BrowsePage() {
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const refreshKey = (location.state as { refreshKey?: number } | null)?.refreshKey;
   const initialCategory = searchParams.get("category") as Category | null;
   const initialQuery = searchParams.get("q") || "";
   const initialSort = searchParams.get("sort") || "popular";
@@ -118,7 +120,7 @@ export default function BrowsePage() {
       }
     }
     fetchMaterials();
-  }, []);
+  }, [refreshKey]);
 
   const filtered = useMemo(() => {
     let result = materials.filter((m) => !(m as any).hidden && (m as any).scanStatus !== "infected");

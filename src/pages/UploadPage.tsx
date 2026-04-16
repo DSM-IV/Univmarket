@@ -478,7 +478,7 @@ export default function UploadPage() {
       // 바이러스 검사 (백그라운드 실행)
       apiPost(`/materials/${result.id}/scan`).catch(() => {});
 
-      navigate("/browse");
+      navigate("/browse", { state: { refreshKey: Date.now() } });
     } catch (err) {
       setError((err as Error).message || "업로드 중 오류가 발생했습니다.");
     } finally {
