@@ -48,14 +48,21 @@ public class FirebaseAuthFilter extends OncePerRequestFilter {
                 String name = decodedToken.getName();
 
                 // Firebase 인증된 사용자를 DB에 자동 생성 (첫 로그인 시)
-                userRepository.findByFirebaseUid(uid).orElseGet(() -> {
-                    User newUser = User.builder()
-                            .firebaseUid(uid)
-                            .email(email != null ? email : uid + "@firebase.local")
-                            .displayName(name != null ? name : (email != null ? email : "사용자"))
-                            .build();
-                    return userRepository.save(newUser);
-                });
+                try {
+                    userRepository.findByFirebaseUid(uid).orElseGet(() -> {
+                        log.info("Auto-creating user for uid={} email={}", uid, email);
+                        User newUser = User.builder()
+                                .firebaseUid(uid)
+                                .email(email != null ? email : uid + "@firebase.local")
+                                .displayName(name != null ? name : (email != null ? email : "사용자"))
+                                .build();
+                        User saved = userRepository.save(newUser);
+                        log.info("Auto-created user id={} uid={}", saved.getId(), saved.getFirebaseUid());
+                        return saved;
+                    });
+                } catch (Exception ex) {
+                    log.error("Auto-create user failed for uid={}: {}", uid, ex.toString(), ex);
+                }
 
                 // DB에서 역할 조회
                 List<SimpleGrantedAuthority> authorities = userRoleService.getAuthorities(uid);
