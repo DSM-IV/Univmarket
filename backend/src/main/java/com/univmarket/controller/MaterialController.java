@@ -9,13 +9,13 @@ import com.univmarket.service.MaterialService;
 import com.univmarket.service.MaterialScanService;
 import com.univmarket.service.PurchaseService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -33,12 +33,17 @@ public class MaterialController {
      * 자료 목록 (공개)
      */
     @GetMapping("/materials")
-    public ResponseEntity<Page<Material>> listMaterials(
+    public ResponseEntity<List<Material>> listMaterials(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        PageRequest pageRequest = PageRequest.of(page, Math.min(size, 50),
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Integer limit) {
+        int effectiveSize = Math.min(
+                (limit != null ? limit : (size != null ? size : 20)),
+                50);
+        PageRequest pageRequest = PageRequest.of(page, Math.max(effectiveSize, 1),
                 Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(materialRepository.findByHiddenFalseAndCopyrightDeletedFalse(pageRequest));
+        return ResponseEntity.ok(
+                materialRepository.findByHiddenFalseAndCopyrightDeletedFalse(pageRequest).getContent());
     }
 
     /**
