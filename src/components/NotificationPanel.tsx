@@ -28,7 +28,8 @@ export default function NotificationPanel({ onNavigate }: Props) {
 
     async function fetchNotifications() {
       try {
-        const items = await apiGet<Notification[]>("/users/me/notifications?limit=30");
+        const res = await apiGet<Notification[] | { content?: Notification[] }>("/users/me/notifications?limit=30");
+        const items = Array.isArray(res) ? res : (res?.content ?? []);
         if (!cancelled) {
           setNotifications(items);
           setUnreadCount(items.filter((n) => !n.read).length);
