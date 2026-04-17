@@ -5,11 +5,11 @@ import com.univmarket.entity.MaterialRequestComment;
 import com.univmarket.security.FirebaseUserPrincipal;
 import com.univmarket.service.MaterialRequestService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -23,11 +23,15 @@ public class MaterialRequestController {
      * 자료 요청 목록 (공개)
      */
     @GetMapping
-    public ResponseEntity<Page<MaterialRequest>> listRequests(
+    public ResponseEntity<List<MaterialRequest>> listRequests(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        Page<MaterialRequest> requests = materialRequestService.listRequests(page, size);
-        return ResponseEntity.ok(requests);
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Integer limit) {
+        int effectiveSize = Math.min(
+                (limit != null ? limit : (size != null ? size : 20)),
+                50);
+        return ResponseEntity.ok(
+                materialRequestService.listRequests(page, Math.max(effectiveSize, 1)).getContent());
     }
 
     /**
