@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import BetaEventPopup from "./components/BetaEventPopup";
+import ErrorBoundary from "./components/ErrorBoundary";
 import HomePage from "./pages/HomePage";
 import BrowsePage from "./pages/BrowsePage";
 import DetailPage from "./pages/DetailPage";
@@ -67,7 +68,8 @@ function App() {
         <div className="min-h-screen flex flex-col">
           <SuspensionBanner />
           <Navbar />
-          <Routes>
+          <ErrorBoundary>
+            <Routes>
             <Route path="/" element={<KoreaUnivPage />} />
             {/* 클로즈드 베타 종료 후 복원 */}
             <Route path="/home" element={<HomePage />} />
@@ -100,7 +102,8 @@ function App() {
             <Route path="/events" element={<EventsPage />} />
             <Route path="/events/closed-beta-raffle" element={<EventRafflePage />} />
             <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+            </Routes>
+          </ErrorBoundary>
           <Footer />
           <BetaEventPopup />
         </div>
