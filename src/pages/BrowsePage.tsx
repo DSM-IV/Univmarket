@@ -340,10 +340,12 @@ export default function BrowsePage() {
               className="h-9 px-3 rounded-lg border border-border bg-white text-sm text-foreground outline-none focus:border-primary transition-colors cursor-pointer"
             >
               <option value="">전체 학기</option>
-              {Array.from({ length: 6 }, (_, i) => 2025 - i).map((year) => (
+              {Array.from({ length: 7 }, (_, i) => 2026 - i).map((year) => (
                 <optgroup key={year} label={`${year}학년도`}>
                   <option value={`${year}-1`}>{year}학년도 1학기</option>
-                  <option value={`${year}-2`}>{year}학년도 2학기</option>
+                  {year < 2026 && (
+                    <option value={`${year}-2`}>{year}학년도 2학기</option>
+                  )}
                 </optgroup>
               ))}
             </select>

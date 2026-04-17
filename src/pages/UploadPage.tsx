@@ -714,10 +714,12 @@ export default function UploadPage() {
                     className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
                   >
                     <option value="">학기를 선택하세요</option>
-                    {Array.from({ length: 6 }, (_, i) => 2025 - i).map((year) => (
+                    {Array.from({ length: 7 }, (_, i) => 2026 - i).map((year) => (
                       <optgroup key={year} label={`${year}학년도`}>
                         <option value={`${year}-1`}>{year}학년도 1학기</option>
-                        <option value={`${year}-2`}>{year}학년도 2학기</option>
+                        {year < 2026 && (
+                          <option value={`${year}-2`}>{year}학년도 2학기</option>
+                        )}
                       </optgroup>
                     ))}
                   </select>
