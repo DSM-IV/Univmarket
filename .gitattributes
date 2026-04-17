@@ -1,1 +1,5 @@
 *.jar binary
+
+# Shell scripts must always have LF endings (Linux containers break on CRLF)
+*.sh text eol=lf
+gradlew text eol=lf

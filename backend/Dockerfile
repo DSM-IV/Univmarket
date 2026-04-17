@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY gradle ./gradle
 COPY gradlew settings.gradle build.gradle ./
-RUN chmod +x gradlew
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
 
 COPY src ./src
 RUN ./gradlew --no-daemon bootJar
