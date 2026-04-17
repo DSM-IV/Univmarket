@@ -97,11 +97,10 @@ public class UserController {
      * 알림 목록 조회
      */
     @GetMapping("/me/notifications")
-    public ResponseEntity<Page<Notification>> getNotifications(
+    public ResponseEntity<List<Notification>> getNotifications(
             @AuthenticationPrincipal FirebaseUserPrincipal principal,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        Page<Notification> notifications = userService.getNotifications(principal.getUid(), page, size);
+            @RequestParam(defaultValue = "30") int limit) {
+        List<Notification> notifications = userService.getNotifications(principal.getUid(), limit);
         return ResponseEntity.ok(notifications);
     }
 

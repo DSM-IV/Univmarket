@@ -105,13 +105,13 @@ public class UserService {
      * 알림 목록 조회
      */
     @Transactional(readOnly = true)
-    public Page<Notification> getNotifications(String firebaseUid, int page, int size) {
+    public List<Notification> getNotifications(String firebaseUid, int limit) {
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> ApiException.notFound("사용자를 찾을 수 없습니다."));
 
-        PageRequest pageRequest = PageRequest.of(page, Math.min(size, 50),
+        PageRequest pageRequest = PageRequest.of(0, Math.min(Math.max(limit, 1), 50),
                 Sort.by(Sort.Direction.DESC, "createdAt"));
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageRequest);
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(user.getId(), pageRequest).getContent();
     }
 
     /**
