@@ -13,8 +13,8 @@ const PRESET_AMOUNTS = [1000, 3000, 5000, 10000, 30000, 50000];
 const VAT_RATE = 0.10;
 
 // 입금 계좌 정보 (클로즈드 베타 기간 동안 수동 계좌이체)
-const BANK_NAME = "카카오뱅크";
-const BANK_ACCOUNT = "3333-28-8284657";
+const BANK_NAME = "토스뱅크";
+const BANK_ACCOUNT = "100011447452";
 const BANK_HOLDER = "장찬수";
 
 interface ChargeRequest {
