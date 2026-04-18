@@ -119,10 +119,7 @@ public class MaterialController {
     public ResponseEntity<Map<String, String>> getDownloadUrl(
             @AuthenticationPrincipal FirebaseUserPrincipal principal,
             @PathVariable Long id) {
-        Material material = materialRepository.findById(id)
-                .orElseThrow(() -> ApiException.notFound("자료를 찾을 수 없습니다."));
-
-        String downloadUrl = fileService.generateDownloadUrl(material.getFileKey(), material.getFileName());
+        String downloadUrl = purchaseService.issueDownloadUrl(principal.getUid(), id, fileService);
         return ResponseEntity.ok(Map.of("downloadUrl", downloadUrl));
     }
 

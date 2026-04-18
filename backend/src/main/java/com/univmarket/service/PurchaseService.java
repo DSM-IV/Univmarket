@@ -119,6 +119,33 @@ public class PurchaseService {
     }
 
     /**
+     * 다운로드 URL 발급 + 최초 다운로드 기록.
+     * 작성자는 누구든 다운 가능, 구매자는 본인 구매 건만 가능.
+     * 구매자가 처음 다운받으면 downloaded=true로 마킹해 환불 자격을 해제한다.
+     */
+    @Transactional
+    public String issueDownloadUrl(String firebaseUid, Long materialId, FileService fileService) {
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> ApiException.notFound("사용자 정보를 찾을 수 없습니다."));
+        Material material = materialRepository.findById(materialId)
+                .orElseThrow(() -> ApiException.notFound("자료를 찾을 수 없습니다."));
+
+        boolean isAuthor = material.getAuthor().getId().equals(user.getId());
+        if (!isAuthor) {
+            Purchase purchase = purchaseRepository
+                    .findByBuyerIdAndMaterialIdAndRefundedFalse(user.getId(), materialId)
+                    .orElseThrow(() -> ApiException.forbidden("구매하지 않은 자료입니다."));
+            if (!purchase.isDownloaded()) {
+                purchase.setDownloaded(true);
+                purchase.setDownloadedAt(LocalDateTime.now());
+                purchaseRepository.save(purchase);
+            }
+        }
+
+        return fileService.generateDownloadUrl(material.getFileKey(), material.getFileName());
+    }
+
+    /**
      * 환불 처리 (24시간 이내, 미다운로드)
      */
     @Transactional
