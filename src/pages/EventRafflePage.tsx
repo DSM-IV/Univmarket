@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Coins, Gift, CheckCircle } from "lucide-react";
-import { apiGet, apiGetList, apiPost } from "../api/client";
+import { apiGetList, apiPost } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 
 type RaffleProduct = {

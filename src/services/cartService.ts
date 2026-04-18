@@ -1,4 +1,4 @@
-import { apiGet, apiGetList, apiPost, apiDelete } from "../api/client";
+import { apiGetList, apiPost, apiDelete } from "../api/client";
 
 export interface CartItem {
   id: string;

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
-import { apiGet, apiGetList } from "../api/client";
+import { apiGetList } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

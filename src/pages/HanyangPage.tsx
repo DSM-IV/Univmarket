@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { apiGet, apiGetList } from "../api/client";
+import { apiGetList } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { Button } from "@/components/ui/button";
 import { categories } from "../data/mockData";

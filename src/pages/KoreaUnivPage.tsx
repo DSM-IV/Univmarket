@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { apiGet, apiGetList, apiPost } from "../api/client";
+import { apiGetList, apiPost } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import MaterialCard from "../components/MaterialCard";
 import { Button } from "@/components/ui/button";
