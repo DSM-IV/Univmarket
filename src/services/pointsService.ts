@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "../api/client";
+import { apiGet, apiGetList, apiPost } from "../api/client";
 import type { Transaction } from "../types";
 
 export type PaymentMethod = "kakaopay" | "toss" | "card";
@@ -30,7 +30,7 @@ export async function getTransactions(
   _userId: string,
   count: number = 20
 ): Promise<Transaction[]> {
-  return apiGet<Transaction[]>(`/users/me/transactions?limit=${count}`);
+  return apiGetList<Transaction>(`/users/me/transactions?limit=${count}`);
 }
 
 export async function hasPurchased(

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
 import { categories, departments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
-import { apiGet, apiPost } from "../api/client";
+import { apiGet, apiGetList, apiPost } from "../api/client";
 
 const UPLOAD_COOLDOWN_MS = 5 * 60 * 1000; // 5분
 import { Button } from "@/components/ui/button";
@@ -314,7 +314,7 @@ export default function UploadPage() {
 
     // 등록 쿨타임 확인 (5분)
     try {
-      const recent = await apiGet<{ createdAt?: string }[]>("/users/me/materials?sort=createdAt,desc&limit=1");
+      const recent = await apiGetList<{ createdAt?: string }>("/users/me/materials?sort=createdAt,desc&limit=1");
       if (recent.length > 0 && recent[0].createdAt) {
         const lastCreated = new Date(recent[0].createdAt);
         if (Date.now() - lastCreated.getTime() < UPLOAD_COOLDOWN_MS) {

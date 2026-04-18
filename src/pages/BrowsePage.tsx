@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
-import { apiGet } from "../api/client";
+import { apiGet, apiGetList } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -107,8 +107,7 @@ export default function BrowsePage() {
   useEffect(() => {
     async function fetchMaterials() {
       try {
-        const data = await apiGet<{ content: Material[] }>("/materials?size=50&sort=createdAt,desc");
-        const docs = Array.isArray(data) ? data : (data.content || []);
+        const docs = await apiGetList<Material>("/materials?size=50&sort=createdAt,desc");
         setMaterials(docs);
 
         const stats = await fetchReviewStats(docs.map((d) => d.id));

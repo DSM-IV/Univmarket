@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { apiGet, apiPost, apiDelete, apiPatch } from "../api/client";
+import { apiGet, apiGetList, apiPost, apiDelete, apiPatch } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -177,8 +177,8 @@ export default function AdminPage() {
     setLoading(true);
     setError("");
     try {
-      const data = await apiGet<{ reports: Report[] }>("/admin/reports");
-      setReports(data.reports);
+      const data = await apiGet<{ reports?: Report[] } | Report[]>("/admin/reports");
+      setReports(Array.isArray(data) ? data : (data?.reports ?? []));
     } catch (err) {
       const msg = (err as Error).message || "";
       if (msg.includes("관리자")) {
@@ -348,7 +348,7 @@ export default function AdminPage() {
   const fetchGradeRequests = async () => {
     setGradeLoading(true);
     try {
-      const list = await apiGet<GradeRequest[]>("/admin/grade-requests");
+      const list = await apiGetList<GradeRequest>("/admin/grade-requests");
       setGradeRequests(list);
     } catch (e) {
       console.error("[admin] fetchGradeRequests error", e);

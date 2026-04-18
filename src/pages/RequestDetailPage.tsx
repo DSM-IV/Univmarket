@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { apiGet, apiPost, apiDelete } from "../api/client";
+import { apiGet, apiGetList, apiPost, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,7 +61,7 @@ export default function RequestDetailPage() {
     let cancelled = false;
     const fetchComments = async () => {
       try {
-        const data = await apiGet<Comment[]>(`/material-requests/${id}/comments`);
+        const data = await apiGetList<Comment>(`/material-requests/${id}/comments`);
         if (!cancelled) setComments(data);
       } catch {
         // ignore
@@ -102,7 +102,7 @@ export default function RequestDetailPage() {
       });
       setCommentText("");
       // 댓글 목록 새로고침
-      const updated = await apiGet<Comment[]>(`/material-requests/${id}/comments`);
+      const updated = await apiGetList<Comment>(`/material-requests/${id}/comments`);
       setComments(updated);
     } catch {
       alert("댓글 등록에 실패했습니다.");

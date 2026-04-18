@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { apiGet, apiPost, apiPatch, apiDelete } from "../api/client";
+import { apiGet, apiGetList, apiPost, apiPatch, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
 import { addToCart, isInCart } from "../services/cartService";
@@ -100,7 +100,7 @@ export default function DetailPage() {
     if (!id) return;
     async function fetchReviews() {
       try {
-        const list = await apiGet<Review[]>(`/materials/${id}/reviews`);
+        const list = await apiGetList<Review>(`/materials/${id}/reviews`);
         setReviews(list);
         if (user) {
           const mine = list.find((r) => r.userId === user.uid);
@@ -138,7 +138,7 @@ export default function DetailPage() {
         }
       }
       // 새로고침
-      const list = await apiGet<Review[]>(`/materials/${id}/reviews`);
+      const list = await apiGetList<Review>(`/materials/${id}/reviews`);
       setReviews(list);
       setMyReview(list.find((r) => r.userId === user.uid) || null);
       setReviewContent("");

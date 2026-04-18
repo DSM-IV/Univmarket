@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiGet, apiPost, apiPatch } from "../api/client";
+import { apiGet, apiGetList, apiPost, apiPatch } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import type { Material } from "../types";
 import { Button } from "@/components/ui/button";
@@ -84,15 +84,21 @@ export default function MyPage() {
       setLoading(true);
       try {
         // 내가 올린 자료
-        const uploaded = await apiGet<Material[]>("/users/me/materials");
+        const uploaded = await apiGetList<Material>("/users/me/materials");
         setUploadedMaterials(uploaded);
 
         // 내가 구매한 자료 (purchases response includes material data)
         const purchasesResp = await apiGet<{
-          purchases: PurchaseInfo[];
-          materials: Material[];
-        }>("/users/me/purchases");
-        const purchaseInfos: PurchaseInfo[] = purchasesResp.purchases.map((p: any) => ({
+          purchases?: PurchaseInfo[];
+          materials?: Material[];
+        } | PurchaseInfo[]>("/users/me/purchases");
+        const rawPurchases = Array.isArray(purchasesResp)
+          ? purchasesResp
+          : (purchasesResp?.purchases ?? []);
+        const rawMaterials = Array.isArray(purchasesResp)
+          ? []
+          : (purchasesResp?.materials ?? []);
+        const purchaseInfos: PurchaseInfo[] = rawPurchases.map((p: any) => ({
           ...p,
           createdAt: p.createdAt ? new Date(p.createdAt) : null,
         }));
@@ -100,7 +106,7 @@ export default function MyPage() {
 
         const materialIds = purchaseInfos.filter((p) => !p.refunded).map((p) => p.materialId);
         if (materialIds.length > 0) {
-          const materialsData: Material[] = [...purchasesResp.materials];
+          const materialsData: Material[] = [...rawMaterials];
           // 삭제되어 조회되지 않는 자료도 placeholder로 추가
           for (const mid of materialIds) {
             if (!materialsData.find((m) => m.id === mid)) {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { apiGet, apiPost } from "../api/client";
+import { apiGet, apiGetList, apiPost } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import MaterialCard from "../components/MaterialCard";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ export default function KoreaUnivPage() {
 
   const fetchRequests = async () => {
     try {
-      const data = await apiGet<MaterialRequest[]>("/material-requests?status=open&sort=needCount&limit=20");
+      const data = await apiGetList<MaterialRequest>("/material-requests?status=open&sort=needCount&limit=20");
       setMaterialRequests(data);
     } catch (err) {
       console.error("자료 요청 목록 조회 실패:", err);
@@ -131,8 +131,8 @@ export default function KoreaUnivPage() {
     async function fetchMaterials() {
       try {
         const [recentDocs, popularDocs] = await Promise.all([
-          apiGet<Material[]>("/materials?sort=recent&limit=4"),
-          apiGet<Material[]>("/materials?sort=popular&limit=4"),
+          apiGetList<Material>("/materials?sort=recent&limit=4"),
+          apiGetList<Material>("/materials?sort=popular&limit=4"),
         ]);
 
         setRecentMaterials(recentDocs.filter((m) => !(m as any).hidden && (m as any).scanStatus !== "infected"));

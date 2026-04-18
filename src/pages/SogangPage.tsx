@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { apiGet } from "../api/client";
+import { apiGet, apiGetList } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { Button } from "@/components/ui/button";
 import { categories } from "../data/mockData";
@@ -20,8 +20,8 @@ export default function SogangPage() {
     async function fetchMaterials() {
       try {
         const [recentDocs, popularDocs] = await Promise.all([
-          apiGet<Material[]>("/materials?sort=recent&limit=4"),
-          apiGet<Material[]>("/materials?sort=popular&limit=4"),
+          apiGetList<Material>("/materials?sort=recent&limit=4"),
+          apiGetList<Material>("/materials?sort=popular&limit=4"),
         ]);
         setRecentMaterials(recentDocs.filter((m) => !(m as any).hidden));
         setPopularMaterials(popularDocs.filter((m) => !(m as any).hidden));

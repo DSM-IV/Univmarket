@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Coins, Gift, CheckCircle } from "lucide-react";
-import { apiGet, apiPost } from "../api/client";
+import { apiGet, apiGetList, apiPost } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 
 type RaffleProduct = {
@@ -37,7 +37,7 @@ export default function EventRafflePage() {
     let cancelled = false;
     async function fetchEntries() {
       try {
-        const data = await apiGet<{ productId: string; count: number }[]>("/raffle/my-entries");
+        const data = await apiGetList<{ productId: string; count: number }>("/raffle/my-entries");
         if (!cancelled) {
           const next: EntryMap = {};
           data.forEach((e) => { if (e.productId) next[e.productId] = Number(e.count || 0); });

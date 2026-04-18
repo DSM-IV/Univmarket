@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiDelete } from "../api/client";
+import { apiGet, apiGetList, apiPost, apiDelete } from "../api/client";
 
 export interface CartItem {
   id: string;
@@ -12,7 +12,7 @@ export interface CartItem {
 }
 
 export async function getCartItems(_userId: string): Promise<CartItem[]> {
-  return apiGet<CartItem[]>("/cart");
+  return apiGetList<CartItem>("/cart");
 }
 
 export async function addToCart(
