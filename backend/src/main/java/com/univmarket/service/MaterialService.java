@@ -79,6 +79,12 @@ public class MaterialService {
             throw ApiException.badRequest("자료 파일이 필요합니다.");
         }
 
+        // 파일 키가 본인 업로드 경로에 속하는지 검증 (다른 유저 파일 참조 방지)
+        String ownedPrefix = "materials/" + firebaseUid + "/";
+        if (!fileKey.startsWith(ownedPrefix)) {
+            throw ApiException.forbidden("본인이 업로드한 파일만 등록할 수 있습니다.");
+        }
+
         List<String> fileUrls = asStringList(payload.get("fileUrls"));
         List<String> fileKeys = asStringList(payload.get("fileKeys"));
         List<String> fileNames = asStringList(payload.get("fileNames"));
@@ -87,6 +93,12 @@ public class MaterialService {
 
         if (fileUrls.size() > MAX_FILES) {
             throw ApiException.badRequest("파일은 최대 " + MAX_FILES + "개까지 첨부할 수 있습니다.");
+        }
+
+        for (String fk : fileKeys) {
+            if (fk != null && !fk.startsWith(ownedPrefix)) {
+                throw ApiException.forbidden("본인이 업로드한 파일만 등록할 수 있습니다.");
+            }
         }
 
         List<MaterialFile> files = new ArrayList<>();

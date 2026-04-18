@@ -10,4 +10,6 @@ public interface ChargeRequestRepository extends JpaRepository<ChargeRequest, Lo
     Page<ChargeRequest> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     Page<ChargeRequest> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
+
+    Page<ChargeRequest> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 }
