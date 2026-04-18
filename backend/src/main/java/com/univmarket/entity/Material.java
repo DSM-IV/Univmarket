@@ -79,7 +79,7 @@ public class Material {
     private String contentType;
 
     // 다중 파일 (최대 10개)
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "material_files",
             joinColumns = @JoinColumn(name = "material_id"))
     @OrderColumn(name = "idx")
@@ -90,7 +90,7 @@ public class Material {
     @Column(name = "thumbnail", length = 1000)
     private String thumbnail;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(name = "material_preview_images",
             joinColumns = @JoinColumn(name = "material_id"))
     @OrderColumn(name = "idx")
