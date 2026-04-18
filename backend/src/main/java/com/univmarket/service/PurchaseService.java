@@ -98,14 +98,18 @@ public class PurchaseService {
                 .status("completed")
                 .build());
 
-        // 구매 기록
-        purchaseRepository.save(Purchase.builder()
-                .buyer(buyer)
-                .seller(seller)
-                .material(material)
-                .price(material.getPrice())
-                .settled(false)
-                .build());
+        // 구매 기록 (DB unique 제약이 동시 중복 구매를 최종 차단)
+        try {
+            purchaseRepository.saveAndFlush(Purchase.builder()
+                    .buyer(buyer)
+                    .seller(seller)
+                    .material(material)
+                    .price(material.getPrice())
+                    .settled(false)
+                    .build());
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw ApiException.conflict("이미 구매한 자료입니다.");
+        }
 
         // 판매자 알림
         notificationRepository.save(Notification.builder()

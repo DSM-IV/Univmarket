@@ -2,6 +2,7 @@ package com.univmarket.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -25,6 +26,7 @@ public class Material {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", nullable = false)
+    @BatchSize(size = 50)
     private User author;
 
     @Column(nullable = false, length = 200)
@@ -83,6 +85,7 @@ public class Material {
     @CollectionTable(name = "material_files",
             joinColumns = @JoinColumn(name = "material_id"))
     @OrderColumn(name = "idx")
+    @BatchSize(size = 50)
     @Builder.Default
     private List<MaterialFile> files = new ArrayList<>();
 
@@ -95,6 +98,7 @@ public class Material {
             joinColumns = @JoinColumn(name = "material_id"))
     @OrderColumn(name = "idx")
     @Column(name = "url", length = 1000)
+    @BatchSize(size = 50)
     @Builder.Default
     private List<String> previewImages = new ArrayList<>();
 

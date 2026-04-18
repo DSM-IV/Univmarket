@@ -83,7 +83,7 @@ public class MaterialScanService {
             scanAndUpdate(materialId);
         } catch (Exception e) {
             log.error("바이러스 검사 실패 (materialId={}): {}", materialId, e.getMessage(), e);
-            updateScanStatus(materialId, "error");
+            markScanError(materialId);
         }
     }
 
@@ -93,7 +93,7 @@ public class MaterialScanService {
 
         String fileKey = material.getFileKey();
         if (fileKey == null || r2Client == null) {
-            updateScanStatus(materialId, "error");
+            markScanError(materialId);
             return;
         }
 
@@ -105,7 +105,7 @@ public class MaterialScanService {
             bytes = obj.asByteArray();
         } catch (Exception e) {
             log.error("R2 파일 로드 실패: {}", e.getMessage());
-            updateScanStatus(materialId, "error");
+            markScanError(materialId);
             return;
         }
 
@@ -131,13 +131,13 @@ public class MaterialScanService {
                     .block(Duration.ofSeconds(60));
         } catch (Exception e) {
             log.error("VirusTotal 업로드 실패: {}", e.getMessage());
-            updateScanStatus(materialId, "error");
+            markScanError(materialId);
             return;
         }
 
         String analysisId = extractAnalysisId(uploadResponse);
         if (analysisId == null) {
-            updateScanStatus(materialId, "error");
+            markScanError(materialId);
             return;
         }
 
@@ -191,6 +191,18 @@ public class MaterialScanService {
     protected void updateScanStatus(Long materialId, String status) {
         materialRepository.findById(materialId).ifPresent(m -> {
             m.setScanStatus(status);
+            materialRepository.save(m);
+        });
+    }
+
+    /**
+     * 스캔 중 복구 불가능한 오류 발생 → 안전하게 숨김 처리.
+     */
+    @Transactional
+    protected void markScanError(Long materialId) {
+        materialRepository.findById(materialId).ifPresent(m -> {
+            m.setScanStatus("error");
+            m.setHidden(true);
             materialRepository.save(m);
         });
     }
