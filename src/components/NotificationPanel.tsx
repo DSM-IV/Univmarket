@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { apiGet, apiPatch, apiPost } from "../api/client";
+import { jitterMs } from "../utils/pollWithJitter";
 import { Bell, ShoppingBag, MessageSquare, FileText, Check } from "lucide-react";
 import type { Notification } from "../types";
 
@@ -43,8 +44,16 @@ export default function NotificationPanel({ onNavigate }: Props) {
     }
 
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000);
-    return () => { cancelled = true; clearInterval(interval); };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const schedule = () => {
+      timer = setTimeout(async () => {
+        if (cancelled) return;
+        await fetchNotifications();
+        if (!cancelled) schedule();
+      }, jitterMs(10000));
+    };
+    schedule();
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
   }, [user]);
 
   // 외부 클릭 시 패널 닫기

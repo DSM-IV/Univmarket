@@ -14,6 +14,7 @@ import {
 } from "firebase/auth";
 import { auth } from "../firebase";
 import { apiGet, apiPost } from "../api/client";
+import { jitterMs } from "../utils/pollWithJitter";
 import type { UserProfile } from "../types";
 
 interface AuthContextType {
@@ -78,9 +79,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     fetchProfile();
 
-    // 30초마다 프로필 갱신 (onSnapshot 대체)
-    const interval = setInterval(fetchProfile, 30000);
-    return () => { cancelled = true; clearInterval(interval); };
+    // 30초마다 프로필 갱신 (jitter ±20%)
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const schedule = () => {
+      timer = setTimeout(async () => {
+        if (cancelled) return;
+        await fetchProfile();
+        if (!cancelled) schedule();
+      }, jitterMs(30000));
+    };
+    schedule();
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
   }, [user]);
 
   async function refreshProfile() {

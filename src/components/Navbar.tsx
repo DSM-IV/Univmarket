@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { apiGet } from "../api/client";
+import { jitterMs } from "../utils/pollWithJitter";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Wallet, Menu, X } from "lucide-react";
 import NotificationPanel from "./NotificationPanel";
@@ -25,8 +26,16 @@ export default function Navbar() {
       } catch { if (!cancelled) setCartCount(0); }
     }
     fetchCount();
-    const interval = setInterval(fetchCount, 15000);
-    return () => { cancelled = true; clearInterval(interval); };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const schedule = () => {
+      timer = setTimeout(async () => {
+        if (cancelled) return;
+        await fetchCount();
+        if (!cancelled) schedule();
+      }, jitterMs(15000));
+    };
+    schedule();
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
   }, [user]);
 
   const handleLogout = async () => {
