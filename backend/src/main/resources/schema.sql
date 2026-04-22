@@ -1,7 +1,10 @@
 -- UniMarket Oracle Schema (23ai Free / ATP)
--- Spring JPA의 ddl-auto: validate를 사용하므로 이 스크립트로 수동 생성
 -- 참고: Oracle 23ai는 BOOLEAN, JSON 네이티브 타입을 지원
--- 실행: sqlplus 또는 SQL Developer로 univmarket 스키마에서 실행
+
+-- gvenzl/oracle-free의 init.d는 SYSDBA로 실행되므로, 기본 스키마를
+-- UNIVMARKET으로 변경해 테이블이 앱 유저 스키마에 생성되도록 한다.
+-- (ATP/운영 배포 시 UNIVMARKET 유저로 직접 접속해 실행하면 이 줄은 무해)
+ALTER SESSION SET CURRENT_SCHEMA = UNIVMARKET;
 
 -- =========================================================
 -- users
