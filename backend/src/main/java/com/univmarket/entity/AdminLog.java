@@ -25,8 +25,8 @@ public class AdminLog {
     @Column(nullable = false, length = 50)
     private String action;
 
-    @Column(columnDefinition = "JSONB")
-    private String details; // JSON 형태로 저장
+    @Column(columnDefinition = "JSON")
+    private String details; // Oracle 23ai 네이티브 JSON 타입
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

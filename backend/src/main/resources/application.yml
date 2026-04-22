@@ -2,22 +2,27 @@ server:
   port: 8080
 
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:univmarket}
-    username: ${DB_USERNAME:univmarket}
-    password: ${DB_PASSWORD:}
+    driver-class-name: oracle.jdbc.OracleDriver
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
       connection-timeout: 30000
+      connection-test-query: SELECT 1 FROM DUAL
+      pool-name: UnivmarketHikariCP
 
   jpa:
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.OracleDialect
         format_sql: false
+        jdbc:
+          time_zone: Asia/Seoul
     open-in-view: true
 
   data:
@@ -71,3 +76,26 @@ logging:
   level:
     com.univmarket: INFO
     org.springframework.security: WARN
+
+---
+# 개발: 로컬 Docker Oracle 23ai Free
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:oracle:thin:@//${DB_HOST:localhost}:${DB_PORT:1521}/${DB_SERVICE:FREEPDB1}
+    username: ${DB_USERNAME:univmarket}
+    password: ${DB_PASSWORD:devpass}
+
+---
+# 운영: Oracle Cloud Autonomous DB (ATP) — Wallet 기반
+# TNS_ADMIN에 Wallet 디렉토리 지정, URL은 tnsnames.ora의 서비스명 사용
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: jdbc:oracle:thin:@${DB_TNS_ALIAS}?TNS_ADMIN=${TNS_ADMIN}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
