@@ -26,7 +26,6 @@ public class Material {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", nullable = false)
-    @BatchSize(size = 50)
     private User author;
 
     @Column(nullable = false, length = 200)
