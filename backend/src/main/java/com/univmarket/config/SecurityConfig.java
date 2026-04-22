@@ -56,7 +56,7 @@ public class SecurityConfig {
             // URL별 접근 권한 설정
             .authorizeHttpRequests(auth -> auth
                 // 공개 엔드포인트
-                .requestMatchers("/health").permitAll()
+                .requestMatchers("/health", "/health/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/auth/kakao-verify/**").permitAll()
                 .requestMatchers("/api/payments/kakaopay/approve").permitAll() // 카카오 콜백
