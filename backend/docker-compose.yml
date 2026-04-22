@@ -11,7 +11,9 @@ services:
       - "127.0.0.1:1521:1521"
     volumes:
       - oracle_data:/opt/oracle/oradata
-      - ./src/main/resources/schema.sql:/container-entrypoint-initdb.d/01-schema.sql:ro
+      # schema.sql은 별도 경로에 두고, init-oracle.sh가 APP_USER로 접속해 실행
+      - ./src/main/resources/schema.sql:/opt/univmarket-init/schema.sql:ro
+      - ./init-oracle.sh:/container-entrypoint-initdb.d/01-init-oracle.sh:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh"]
       interval: 10s

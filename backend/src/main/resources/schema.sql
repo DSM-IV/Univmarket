@@ -1,10 +1,7 @@
 -- UniMarket Oracle Schema (23ai Free / ATP)
 -- 참고: Oracle 23ai는 BOOLEAN, JSON 네이티브 타입을 지원
-
--- gvenzl/oracle-free의 init.d는 SYSDBA로 실행되므로, 기본 스키마를
--- UNIVMARKET으로 변경해 테이블이 앱 유저 스키마에 생성되도록 한다.
--- (ATP/운영 배포 시 UNIVMARKET 유저로 직접 접속해 실행하면 이 줄은 무해)
-ALTER SESSION SET CURRENT_SCHEMA = UNIVMARKET;
+-- 실행 주체: APP_USER(UNIVMARKET)로 직접 접속해 실행해야 앱 스키마에 생성됨
+-- (로컬 Docker는 backend/init-oracle.sh 래퍼가 APP_USER로 실행)
 
 -- =========================================================
 -- users
