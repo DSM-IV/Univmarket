@@ -79,27 +79,9 @@ public class Material {
     @Column(name = "content_type", length = 100)
     private String contentType;
 
-    // 다중 파일 (최대 10개)
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "material_files",
-            joinColumns = @JoinColumn(name = "material_id"))
-    @OrderColumn(name = "idx")
-    @BatchSize(size = 50)
-    @Builder.Default
-    private List<MaterialFile> files = new ArrayList<>();
-
-    // 썸네일 + 미리보기 이미지
+    // 썸네일
     @Column(name = "thumbnail", length = 1000)
     private String thumbnail;
-
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(name = "material_preview_images",
-            joinColumns = @JoinColumn(name = "material_id"))
-    @OrderColumn(name = "idx")
-    @Column(name = "url", length = 1000)
-    @BatchSize(size = 50)
-    @Builder.Default
-    private List<String> previewImages = new ArrayList<>();
 
     // 통계
     @Column(name = "sales_count")
@@ -143,4 +125,27 @@ public class Material {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    // ---------- ElementCollections (엔티티 맨 끝에 모음) ----------
+    // 주의: @ElementCollection 사이에 일반 @Column 끼우면 Hibernate가
+    // 잘못된 alias(m1_1_0 등)를 생성하는 케이스가 있음.
+
+    // 다중 파일 (최대 10개)
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "material_files",
+            joinColumns = @JoinColumn(name = "material_id"))
+    @OrderColumn(name = "idx")
+    @BatchSize(size = 50)
+    @Builder.Default
+    private List<MaterialFile> files = new ArrayList<>();
+
+    // 미리보기 이미지
+    @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "material_preview_images",
+            joinColumns = @JoinColumn(name = "material_id"))
+    @OrderColumn(name = "idx")
+    @Column(name = "url", length = 1000)
+    @BatchSize(size = 50)
+    @Builder.Default
+    private List<String> previewImages = new ArrayList<>();
 }
