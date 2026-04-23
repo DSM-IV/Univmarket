@@ -34,7 +34,7 @@
  */
 
 import * as admin from "firebase-admin";
-import oracledb from "oracledb";
+import oracledb = require("oracledb");
 
 // ---------------------------------------------------------------------------
 // Init
