@@ -23,6 +23,9 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
+    "@types/oracledb": "^6.5.2",
+    "oracledb": "^6.7.1",
+    "ts-node": "^10.9.2",
     "typescript": "~5.5.0"
   }
 }
