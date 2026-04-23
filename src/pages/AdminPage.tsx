@@ -323,8 +323,8 @@ export default function AdminPage() {
   const fetchWithdrawals = async () => {
     setWdLoading(true);
     try {
-      const data = await apiGet<{ withdrawals: Withdrawal[] }>("/admin/withdrawals");
-      setWithdrawals(data.withdrawals);
+      const list = await apiGetList<Withdrawal>("/admin/withdrawals");
+      setWithdrawals(list);
     } catch {
       alert("출금 목록을 불러오는 데 실패했습니다.");
     } finally {
@@ -399,8 +399,8 @@ export default function AdminPage() {
   const fetchChargeRequests = async () => {
     setChargeLoading(true);
     try {
-      const data = await apiGet<{ chargeRequests: ChargeRequest[] }>("/admin/charge-requests");
-      setChargeRequests(data.chargeRequests);
+      const list = await apiGetList<ChargeRequest>("/admin/charge-requests");
+      setChargeRequests(list);
     } catch {
       alert("충전 요청 목록을 불러오는 데 실패했습니다.");
     } finally {

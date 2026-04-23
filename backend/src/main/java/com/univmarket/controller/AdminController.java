@@ -131,6 +131,15 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("success", true));
     }
 
+    // ─── 성적 인증 요청 관리 (스텁 — 미구현) ───
+
+    @GetMapping("/grade-requests")
+    public ResponseEntity<List<Map<String, Object>>> listGradeRequests() {
+        // TODO: 성적 인증 기능 미구현. 일단 빈 배열로 응답해 어드민 페이지가
+        // 깨지지 않게 함. 정식 구현 시 grade_requests 테이블/엔티티 필요.
+        return ResponseEntity.ok(List.of());
+    }
+
     // ─── 충전 요청 관리 ───
 
     @GetMapping("/charge-requests")
