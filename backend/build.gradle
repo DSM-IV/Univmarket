@@ -28,6 +28,9 @@ dependencies {
     // PostgreSQL JDBC
     runtimeOnly 'org.postgresql:postgresql'
 
+    // Jackson Hibernate 6 모듈 — Lazy 프록시 안전 직렬화 (초기화 안 된 건 null로)
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-hibernate6:2.17.1'
+
     // JWT (Firebase ID Token 검증)
     implementation 'com.google.firebase:firebase-admin:9.3.0'
 

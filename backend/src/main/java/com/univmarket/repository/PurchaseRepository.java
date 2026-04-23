@@ -1,6 +1,7 @@
 package com.univmarket.repository;
 
 import com.univmarket.entity.Purchase;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -15,6 +16,8 @@ public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
 
     boolean existsByBuyerIdAndMaterialId(Long buyerId, Long materialId);
 
+    // material을 같이 fetch해서 Jackson 직렬화 시점에 LazyInit 폭발 방지.
+    @EntityGraph(attributePaths = {"material"})
     List<Purchase> findByBuyerIdOrderByCreatedAtDesc(Long buyerId);
 
     @Query("SELECT p FROM Purchase p WHERE p.settled = false AND p.createdAt < :cutoff")
