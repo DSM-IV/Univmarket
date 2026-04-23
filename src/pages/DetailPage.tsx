@@ -78,7 +78,8 @@ export default function DetailPage() {
         const mat = await apiGet<Material & { authorNickname?: string; authorTotalSales?: number }>(`/materials/${id}`);
         setMaterial(mat);
         setAuthorSalesCount(mat.authorTotalSales || 0);
-        setAuthorNickname(mat.authorNickname || mat.author || "익명");
+        const authorObj = (mat.author && typeof mat.author === "object") ? mat.author as { nickname?: string; displayName?: string } : null;
+        setAuthorNickname(mat.authorNickname || authorObj?.nickname || authorObj?.displayName || "익명");
       } catch {
         // not found
       } finally {

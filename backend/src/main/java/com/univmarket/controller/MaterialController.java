@@ -3,6 +3,7 @@ package com.univmarket.controller;
 import com.univmarket.entity.Material;
 import com.univmarket.exception.ApiException;
 import com.univmarket.repository.MaterialRepository;
+import com.univmarket.repository.ReviewRepository;
 import com.univmarket.security.FirebaseUserPrincipal;
 import com.univmarket.service.FileService;
 import com.univmarket.service.MaterialService;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class MaterialController {
 
     private final MaterialRepository materialRepository;
+    private final ReviewRepository reviewRepository;
     private final FileService fileService;
     private final PurchaseService purchaseService;
     private final MaterialService materialService;
@@ -68,6 +70,19 @@ public class MaterialController {
             @RequestBody Map<String, Object> body) {
         Material created = materialService.createMaterial(principal.getUid(), body);
         return ResponseEntity.ok(Map.of("id", created.getId()));
+    }
+
+    /**
+     * 자료별 리뷰 목록 (공개)
+     */
+    @GetMapping("/materials/{id}/reviews")
+    public ResponseEntity<List<com.univmarket.entity.Review>> listReviewsForMaterial(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(
+                reviewRepository.findByMaterialIdOrderByCreatedAtDesc(
+                        id, PageRequest.of(page, Math.min(Math.max(size, 1), 50))).getContent());
     }
 
     /**
