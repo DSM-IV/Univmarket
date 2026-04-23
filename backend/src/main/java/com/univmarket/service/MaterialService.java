@@ -154,8 +154,10 @@ public class MaterialService {
     }
 
     /**
-     * 내 자료 삭제. 환불 안 된 구매가 있으면 하드 삭제 대신 숨김 처리해
-     * 기존 구매자들이 파일을 다운로드할 수 있도록 보존.
+     * 내 자료 삭제 — 항상 숨김(soft delete) 처리.
+     * 구매/리뷰/신고 이력의 FK 제약으로 하드 삭제는 사실상 불가능하고,
+     * 환불된 구매자도 거래내역에서 자료명을 봐야 하므로 행 자체는 보존.
+     * 사용자에겐 마이페이지·둘러보기에서 안 보이는 게 곧 "삭제"임.
      */
     @Transactional
     public void deleteMyMaterial(String firebaseUid, Long materialId) {
@@ -167,17 +169,9 @@ public class MaterialService {
             throw ApiException.forbidden("본인이 등록한 자료만 삭제할 수 있습니다.");
         }
 
-        boolean hasActivePurchases =
-                !purchaseRepository.findByMaterialIdAndRefundedFalse(materialId).isEmpty();
-        if (hasActivePurchases) {
-            // 구매자 다운로드 보존 위해 숨김만 처리
-            material.setHidden(true);
-            materialRepository.save(material);
-            log.info("자료 숨김 처리 (구매 이력 있음): materialId={}, authorId={}", materialId, user.getId());
-        } else {
-            materialRepository.delete(material);
-            log.info("자료 하드 삭제: materialId={}, authorId={}", materialId, user.getId());
-        }
+        material.setHidden(true);
+        materialRepository.save(material);
+        log.info("자료 숨김 처리: materialId={}, authorId={}", materialId, user.getId());
     }
 
     /**
