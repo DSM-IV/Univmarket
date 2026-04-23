@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiGet, apiGetList, apiPost, apiPatch } from "../api/client";
+import { apiGet, apiGetList, apiPost, apiPatch, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import type { Material } from "../types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Download, FileText, Upload, ShoppingBag, RotateCcw, AlertTriangle, Pencil, Check, X } from "lucide-react";
+import { Download, FileText, Upload, ShoppingBag, RotateCcw, AlertTriangle, Pencil, Check, X, Trash2 } from "lucide-react";
 
 type Tab = "uploaded" | "purchased";
 
@@ -31,6 +31,7 @@ export default function MyPage() {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [refunding, setRefunding] = useState<string | null>(null);
+  const [deletingMaterial, setDeletingMaterial] = useState<string | null>(null);
   const [editingNickname, setEditingNickname] = useState(false);
   const [nicknameDraft, setNicknameDraft] = useState("");
   const [savingNickname, setSavingNickname] = useState(false);
@@ -84,9 +85,9 @@ export default function MyPage() {
     async function fetchData() {
       setLoading(true);
       try {
-        // 내가 올린 자료
-        const uploaded = await apiGetList<Material>("/users/me/materials");
-        setUploadedMaterials(uploaded);
+        // 내가 올린 자료 — hidden(숨김 처리된 것) 제외
+        const uploaded = await apiGetList<Material & { hidden?: boolean }>("/users/me/materials");
+        setUploadedMaterials(uploaded.filter((m) => !m.hidden));
 
         // 내가 구매한 자료 — Spring은 List<Purchase>를 직접 반환,
         // 각 Purchase에 material 객체가 임베드됨.
@@ -190,6 +191,19 @@ export default function MyPage() {
       alert((err as { message?: string }).message || "환불 처리에 실패했습니다.");
     } finally {
       setRefunding(null);
+    }
+  };
+
+  const handleDeleteMaterial = async (materialId: string) => {
+    if (!confirm("정말 이 자료를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+    setDeletingMaterial(materialId);
+    try {
+      await apiDelete(`/materials/${materialId}`);
+      setUploadedMaterials((prev) => prev.filter((m) => m.id !== materialId));
+    } catch (err) {
+      alert((err as Error).message || "자료 삭제에 실패했습니다.");
+    } finally {
+      setDeletingMaterial(null);
     }
   };
 
@@ -418,16 +432,28 @@ export default function MyPage() {
                       </>
                     )}
                     {tab === "uploaded" && (
-                      <div className="text-right">
-                        {(m as any).scanStatus === "scanning" && (
-                          <span className="block text-xs text-amber-600 font-medium mb-0.5">검사 중</span>
-                        )}
-                        {(m as any).scanStatus === "infected" && (
-                          <span className="block text-xs text-destructive font-medium mb-0.5">위험 파일</span>
-                        )}
-                        <span className="text-xs text-gray-500">
-                          판매 {m.salesCount || 0}건
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          {(m as any).scanStatus === "scanning" && (
+                            <span className="block text-xs text-amber-600 font-medium mb-0.5">검사 중</span>
+                          )}
+                          {(m as any).scanStatus === "infected" && (
+                            <span className="block text-xs text-destructive font-medium mb-0.5">위험 파일</span>
+                          )}
+                          <span className="text-xs text-gray-500">
+                            판매 {m.salesCount || 0}건
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteMaterial(m.id)}
+                          disabled={deletingMaterial === m.id}
+                          className="text-destructive border-destructive/30 hover:bg-destructive/5"
+                        >
+                          <Trash2 className="mr-1 h-3.5 w-3.5" />
+                          {deletingMaterial === m.id ? "처리 중..." : "삭제"}
+                        </Button>
                       </div>
                     )}
                   </div>
