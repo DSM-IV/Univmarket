@@ -2,6 +2,11 @@ server:
   port: 8080
 
 spring:
+  # backend/.env 를 properties 형식으로 자동 로드 (gradlew bootRun 시).
+  # 파일이 없으면 무시(optional). 시스템 환경변수보다 우선순위 낮음.
+  config:
+    import: optional:file:.env[.properties]
+
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
