@@ -299,6 +299,11 @@ export default function MyPage() {
                   {(userProfile?.earnings ?? 0).toLocaleString()}원
                 </span>
                 <span className="text-xs text-gray-500">수익금</span>
+                {(userProfile?.pendingEarnings ?? 0) > 0 && (
+                  <span className="block text-[11px] text-amber-600 mt-0.5">
+                    +{(userProfile?.pendingEarnings ?? 0).toLocaleString()}원 정산대기
+                  </span>
+                )}
               </Link>
               <div>
                 <span className="block text-lg font-bold text-gray-900">
