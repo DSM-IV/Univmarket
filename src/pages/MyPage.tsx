@@ -87,7 +87,9 @@ export default function MyPage() {
         const uploaded = await apiGetList<Material>("/users/me/materials");
         setUploadedMaterials(uploaded);
 
-        // 내가 구매한 자료 (purchases response includes material data)
+        // 내가 구매한 자료 — Spring은 List<Purchase>를 직접 반환,
+        // 각 Purchase에 material 객체가 임베드됨.
+        // (구버전 Firebase Functions 응답 shape인 {purchases, materials} 분리도 호환 유지)
         const purchasesResp = await apiGet<{
           purchases?: PurchaseInfo[];
           materials?: Material[];
@@ -100,6 +102,8 @@ export default function MyPage() {
           : (purchasesResp?.materials ?? []);
         const purchaseInfos: PurchaseInfo[] = rawPurchases.map((p: any) => ({
           ...p,
+          // Spring은 material 객체 임베드 → materialId 평탄화
+          materialId: p.materialId ?? p.material?.id,
           createdAt: p.createdAt ? new Date(p.createdAt) : null,
         }));
         setPurchases(purchaseInfos);
@@ -107,6 +111,12 @@ export default function MyPage() {
         const materialIds = purchaseInfos.filter((p) => !p.refunded).map((p) => p.materialId);
         if (materialIds.length > 0) {
           const materialsData: Material[] = [...rawMaterials];
+          // Spring 응답에 임베드된 material 객체 추출
+          for (const p of rawPurchases as any[]) {
+            if (p.material && !materialsData.find((m) => m.id === p.material.id)) {
+              materialsData.push(p.material as Material);
+            }
+          }
           // 삭제되어 조회되지 않는 자료도 placeholder로 추가
           for (const mid of materialIds) {
             if (!materialsData.find((m) => m.id === mid)) {
