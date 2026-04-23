@@ -3,6 +3,8 @@ package com.univmarket.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -25,8 +27,9 @@ public class AdminLog {
     @Column(nullable = false, length = 50)
     private String action;
 
-    @Column(columnDefinition = "JSON")
-    private String details; // Oracle 23ai 네이티브 JSON 타입
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private String details;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

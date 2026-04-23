@@ -6,12 +6,11 @@ spring:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
   datasource:
-    driver-class-name: oracle.jdbc.OracleDriver
+    driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
       connection-timeout: 30000
-      connection-test-query: SELECT 1 FROM DUAL
       pool-name: UnivmarketHikariCP
 
   jpa:
@@ -77,24 +76,24 @@ logging:
     org.springframework.security: WARN
 
 ---
-# 개발: 로컬 Docker Oracle 23ai Free
+# 개발: 로컬 Docker PostgreSQL
 spring:
   config:
     activate:
       on-profile: dev
   datasource:
-    url: jdbc:oracle:thin:@//${DB_HOST:localhost}:${DB_PORT:1521}/${DB_SERVICE:FREEPDB1}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:univmarket}
     username: ${DB_USERNAME:univmarket}
     password: ${DB_PASSWORD:devpass}
 
 ---
-# 운영: Oracle Cloud Autonomous DB (ATP) — Wallet 기반
-# TNS_ADMIN에 Wallet 디렉토리 지정, URL은 tnsnames.ora의 서비스명 사용
+# 운영: 관리형 PostgreSQL (예: Supabase Seoul / Cloud SQL Seoul / Naver Cloud DB)
+# SSL 강제: URL에 ?sslmode=require 또는 환경변수로 ?sslmode=verify-full
 spring:
   config:
     activate:
       on-profile: prod
   datasource:
-    url: jdbc:oracle:thin:@${DB_TNS_ALIAS}?TNS_ADMIN=${TNS_ADMIN}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}?sslmode=require
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}

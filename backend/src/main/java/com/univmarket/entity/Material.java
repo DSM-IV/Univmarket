@@ -31,8 +31,7 @@ public class Material {
     @Column(nullable = false, length = 200)
     private String title;
 
-    @Lob
-    @Column(columnDefinition = "CLOB")
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Column(nullable = false)

@@ -25,8 +25,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-    // Oracle JDBC (23ai Free 로컬 / ATP 운영)
-    runtimeOnly 'com.oracle.database.jdbc:ojdbc11:23.4.0.24.05'
+    // PostgreSQL JDBC
+    runtimeOnly 'org.postgresql:postgresql'
 
     // JWT (Firebase ID Token 검증)
     implementation 'com.google.firebase:firebase-admin:9.3.0'

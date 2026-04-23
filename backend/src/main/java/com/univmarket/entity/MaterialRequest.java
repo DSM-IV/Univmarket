@@ -33,8 +33,7 @@ public class MaterialRequest {
     @Column(length = 50)
     private String professor;
 
-    @Lob
-    @Column(columnDefinition = "CLOB")
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Column(length = 20)

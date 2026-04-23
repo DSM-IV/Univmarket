@@ -34,8 +34,7 @@ public class Report {
     @Column(nullable = false, length = 100)
     private String reason;
 
-    @Lob
-    @Column(columnDefinition = "CLOB")
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "original_source", length = 500)

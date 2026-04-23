@@ -1,25 +1,23 @@
 services:
-  # Oracle Database 23ai Free (로컬 개발용)
+  # PostgreSQL 16 (로컬 개발용)
   # 포트는 127.0.0.1에만 바인딩 — 외부 네트워크 노출 차단
-  oracle:
-    image: gvenzl/oracle-free:23-slim-faststart
+  postgres:
+    image: postgres:16-alpine
     environment:
-      ORACLE_PASSWORD: ${DB_ADMIN_PASSWORD:-changeme}
-      APP_USER: univmarket
-      APP_USER_PASSWORD: ${DB_PASSWORD:-devpass}
+      POSTGRES_DB: univmarket
+      POSTGRES_USER: univmarket
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-devpass}
     ports:
-      - "127.0.0.1:1521:1521"
+      - "127.0.0.1:5432:5432"
     volumes:
-      - oracle_data:/opt/oracle/oradata
-      # schema.sql은 별도 경로에 두고, init-oracle.sh가 APP_USER로 접속해 실행
-      - ./src/main/resources/schema.sql:/opt/univmarket-init/schema.sql:ro
-      - ./init-oracle.sh:/container-entrypoint-initdb.d/01-init-oracle.sh:ro
+      - postgres_data:/var/lib/postgresql/data
+      # schema.sql은 /docker-entrypoint-initdb.d에 넣으면 최초 부팅 시 자동 실행
+      - ./src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
-      test: ["CMD", "healthcheck.sh"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U univmarket -d univmarket"]
+      interval: 5s
       timeout: 5s
       retries: 10
-      start_period: 60s
 
   # Redis 캐시/Rate Limiting
   redis:
@@ -41,15 +39,15 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      oracle:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      DB_HOST: oracle
-      DB_PORT: 1521
-      DB_SERVICE: FREEPDB1
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: univmarket
       DB_USERNAME: univmarket
       DB_PASSWORD: ${DB_PASSWORD:-devpass}
       REDIS_HOST: redis
@@ -74,5 +72,5 @@ services:
       - ./firebase-service-account.json:/app/firebase-service-account.json:ro
 
 volumes:
-  oracle_data:
+  postgres_data:
   redis_data:
