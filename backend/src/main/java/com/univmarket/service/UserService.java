@@ -102,6 +102,16 @@ public class UserService {
     }
 
     /**
+     * 특정 자료의 미환불 구매 여부 (장바구니 중복 방지)
+     */
+    @Transactional(readOnly = true)
+    public boolean hasPurchased(String firebaseUid, Long materialId) {
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> ApiException.notFound("사용자를 찾을 수 없습니다."));
+        return purchaseRepository.findByBuyerIdAndMaterialIdAndRefundedFalse(user.getId(), materialId).isPresent();
+    }
+
+    /**
      * 알림 목록 조회
      */
     @Transactional(readOnly = true)

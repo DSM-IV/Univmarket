@@ -94,6 +94,17 @@ public class UserController {
     }
 
     /**
+     * 특정 자료를 이미 구매했는지 체크 (장바구니 결제 전 중복 방지)
+     */
+    @GetMapping("/me/purchases/check")
+    public ResponseEntity<Map<String, Boolean>> checkPurchased(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @RequestParam("materialId") Long materialId) {
+        boolean purchased = userService.hasPurchased(principal.getUid(), materialId);
+        return ResponseEntity.ok(Map.of("purchased", purchased));
+    }
+
+    /**
      * 알림 목록 조회
      */
     @GetMapping("/me/notifications")

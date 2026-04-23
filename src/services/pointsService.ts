@@ -37,6 +37,12 @@ export async function hasPurchased(
   _userId: string,
   materialId: string
 ): Promise<boolean> {
-  const result = await apiGet<{ purchased: boolean }>(`/users/me/purchases/check?materialId=${materialId}`);
-  return result.purchased;
+  // 엔드포인트가 없거나 일시적 오류면 false로 fail-soft.
+  // 진짜 중복 구매는 백엔드 UNIQUE 제약(uq_buyer_material)이 막아줌.
+  try {
+    const result = await apiGet<{ purchased: boolean }>(`/users/me/purchases/check?materialId=${materialId}`);
+    return result.purchased;
+  } catch {
+    return false;
+  }
 }
