@@ -312,20 +312,21 @@ export default function UploadPage() {
       return;
     }
 
-    // 등록 쿨타임 확인 (5분)
-    try {
-      const recent = await apiGetList<{ createdAt?: string }>("/users/me/materials?sort=createdAt,desc&limit=1");
-      if (recent.length > 0 && recent[0].createdAt) {
-        const lastCreated = new Date(recent[0].createdAt);
-        if (Date.now() - lastCreated.getTime() < UPLOAD_COOLDOWN_MS) {
-          const remaining = Math.ceil((UPLOAD_COOLDOWN_MS - (Date.now() - lastCreated.getTime())) / 1000);
-          const min = Math.floor(remaining / 60);
-          const sec = remaining % 60;
-          setError(`자료 등록 후 5분간 재등록할 수 없습니다. (${min}분 ${sec}초 후 가능)`);
-          return;
-        }
-      }
-    } catch { /* ignore cooldown check failure */ }
+    // 등록 쿨타임 확인 — 베타 테스트 중 임시 비활성화
+    // TODO: 베타 종료 후 다시 켜기 (백엔드 MaterialService도 같이)
+    // try {
+    //   const recent = await apiGetList<{ createdAt?: string }>("/users/me/materials?sort=createdAt,desc&limit=1");
+    //   if (recent.length > 0 && recent[0].createdAt) {
+    //     const lastCreated = new Date(recent[0].createdAt);
+    //     if (Date.now() - lastCreated.getTime() < UPLOAD_COOLDOWN_MS) {
+    //       const remaining = Math.ceil((UPLOAD_COOLDOWN_MS - (Date.now() - lastCreated.getTime())) / 1000);
+    //       const min = Math.floor(remaining / 60);
+    //       const sec = remaining % 60;
+    //       setError(`자료 등록 후 5분간 재등록할 수 없습니다. (${min}분 ${sec}초 후 가능)`);
+    //       return;
+    //     }
+    //   }
+    // } catch { /* ignore cooldown check failure */ }
 
     if (files.length === 0) {
       setError("파일을 선택해주세요.");
