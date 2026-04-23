@@ -57,14 +57,14 @@ public class AdminController {
     }
 
     @PostMapping("/users/{uid}/grant-earnings")
-    public ResponseEntity<Map<String, Boolean>> grantEarnings(
+    public ResponseEntity<Map<String, Object>> grantEarnings(
             @AuthenticationPrincipal FirebaseUserPrincipal principal,
             @PathVariable String uid,
             @RequestBody Map<String, Object> body) {
         int amount = ((Number) body.get("amount")).intValue();
         String reason = (String) body.getOrDefault("reason", "");
-        adminService.grantEarnings(principal.getUid(), uid, amount, reason);
-        return ResponseEntity.ok(Map.of("success", true));
+        java.math.BigDecimal newBalance = adminService.grantEarnings(principal.getUid(), uid, amount, reason);
+        return ResponseEntity.ok(Map.of("success", true, "balanceAfter", newBalance));
     }
 
     @DeleteMapping("/materials/{id}")

@@ -138,13 +138,15 @@ export default function AdminPage() {
 
     setGrantLoading(true);
     try {
-      const result = await apiPost<{ success: boolean; balanceAfter: number }>(
+      const result = await apiPost<{ success: boolean; balanceAfter?: number }>(
         `/admin/users/${targetId}/grant-earnings`,
         { amount: amountNum, reason: grantReason.trim() }
       );
       setGrantResult({
         success: true,
-        message: `처리 완료. 현재 수익금 잔액: ${result.balanceAfter.toLocaleString()}원`,
+        message: result.balanceAfter !== undefined
+          ? `처리 완료. 현재 수익금 잔액: ${Number(result.balanceAfter).toLocaleString()}원`
+          : "처리 완료.",
       });
       setGrantAmount("");
       setGrantReason("");

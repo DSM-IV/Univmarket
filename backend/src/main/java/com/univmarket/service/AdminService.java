@@ -103,7 +103,7 @@ public class AdminService {
     }
 
     @Transactional
-    public void grantEarnings(String adminUid, String targetFirebaseUid, int amount, String reason) {
+    public BigDecimal grantEarnings(String adminUid, String targetFirebaseUid, int amount, String reason) {
         if (amount == 0 || Math.abs(amount) > 10_000_000) {
             throw ApiException.badRequest("지급 금액은 0이 아닌 정수여야 하며, 절대값 1,000만원 이하여야 합니다.");
         }
@@ -140,6 +140,8 @@ public class AdminService {
                 "amount", amount,
                 "reason", reason != null ? reason : "",
                 "balanceAfter", newEarnings));
+
+        return newEarnings;
     }
 
     @Transactional
