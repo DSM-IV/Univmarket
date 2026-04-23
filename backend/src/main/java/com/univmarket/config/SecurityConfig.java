@@ -61,7 +61,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/kakao-verify/**").permitAll()
                 .requestMatchers("/api/payments/kakaopay/approve").permitAll() // 카카오 콜백
                 .requestMatchers(HttpMethod.GET, "/api/materials", "/api/materials/{id}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/materials/{id}/reviews").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/material-requests", "/api/material-requests/{id}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/reviews/stats").permitAll()
 
                 // 관리자 전용 엔드포인트
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
