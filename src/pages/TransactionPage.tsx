@@ -63,8 +63,12 @@ function formatDate(iso: string): string {
   return `${year}.${month}.${day} ${hour}:${min}`;
 }
 
-function isIncome(type: string): boolean {
-  return type === "charge" || type === "sale" || type === "refund";
+function isIncome(type: string, amount: number): boolean {
+  // amount 부호가 진실의 원천 (refund는 구매자=+, 판매자=- 둘 다 가능)
+  // amount가 0인 경우(예외)에 한해 type 기반 fallback
+  if (amount > 0) return true;
+  if (amount < 0) return false;
+  return type === "charge" || type === "sale";
 }
 
 export default function TransactionPage() {
@@ -161,7 +165,7 @@ export default function TransactionPage() {
         ) : filtered.length > 0 ? (
           <div className="space-y-2">
             {filtered.map((t) => {
-              const income = isIncome(t.type);
+              const income = isIncome(t.type, t.amount);
               const isWithdraw = t.type === "withdraw";
               return (
                 <TransactionCard key={t.id} t={t} income={income} isWithdraw={isWithdraw} />
