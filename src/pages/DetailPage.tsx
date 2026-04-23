@@ -76,9 +76,13 @@ export default function DetailPage() {
       if (!id) return;
       try {
         const mat = await apiGet<Material & { authorNickname?: string; authorTotalSales?: number }>(`/materials/${id}`);
-        setMaterial(mat);
+        // Spring은 author를 객체로 보냄. 프론트 여러 곳에서 material.authorId 쓰니 평탄화.
+        const authorObj = (mat.author && typeof mat.author === "object")
+          ? mat.author as { firebaseUid?: string; nickname?: string; displayName?: string }
+          : null;
+        const flat = { ...mat, authorId: (mat as any).authorId || authorObj?.firebaseUid };
+        setMaterial(flat as Material);
         setAuthorSalesCount(mat.authorTotalSales || 0);
-        const authorObj = (mat.author && typeof mat.author === "object") ? mat.author as { nickname?: string; displayName?: string } : null;
         setAuthorNickname(mat.authorNickname || authorObj?.nickname || authorObj?.displayName || "익명");
       } catch {
         // not found

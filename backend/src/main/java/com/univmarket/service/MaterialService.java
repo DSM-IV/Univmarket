@@ -5,6 +5,7 @@ import com.univmarket.entity.MaterialFile;
 import com.univmarket.entity.User;
 import com.univmarket.exception.ApiException;
 import com.univmarket.repository.MaterialRepository;
+import com.univmarket.repository.PurchaseRepository;
 import com.univmarket.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class MaterialService {
 
     private final UserRepository userRepository;
     private final MaterialRepository materialRepository;
+    private final PurchaseRepository purchaseRepository;
 
     private static final Duration UPLOAD_COOLDOWN = Duration.ofMinutes(5);
     private static final int MAX_FILES = 10;
@@ -149,6 +151,33 @@ public class MaterialService {
                 .build();
 
         return materialRepository.save(material);
+    }
+
+    /**
+     * 내 자료 삭제. 환불 안 된 구매가 있으면 하드 삭제 대신 숨김 처리해
+     * 기존 구매자들이 파일을 다운로드할 수 있도록 보존.
+     */
+    @Transactional
+    public void deleteMyMaterial(String firebaseUid, Long materialId) {
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> ApiException.notFound("사용자 정보를 찾을 수 없습니다."));
+        Material material = materialRepository.findById(materialId)
+                .orElseThrow(() -> ApiException.notFound("자료를 찾을 수 없습니다."));
+        if (!material.getAuthor().getId().equals(user.getId())) {
+            throw ApiException.forbidden("본인이 등록한 자료만 삭제할 수 있습니다.");
+        }
+
+        boolean hasActivePurchases =
+                !purchaseRepository.findByMaterialIdAndRefundedFalse(materialId).isEmpty();
+        if (hasActivePurchases) {
+            // 구매자 다운로드 보존 위해 숨김만 처리
+            material.setHidden(true);
+            materialRepository.save(material);
+            log.info("자료 숨김 처리 (구매 이력 있음): materialId={}, authorId={}", materialId, user.getId());
+        } else {
+            materialRepository.delete(material);
+            log.info("자료 하드 삭제: materialId={}, authorId={}", materialId, user.getId());
+        }
     }
 
     /**

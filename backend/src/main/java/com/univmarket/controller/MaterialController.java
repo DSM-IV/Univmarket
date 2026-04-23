@@ -73,6 +73,17 @@ public class MaterialController {
     }
 
     /**
+     * 내 자료 삭제
+     */
+    @DeleteMapping("/materials/{id}")
+    public ResponseEntity<Map<String, Boolean>> deleteMyMaterial(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @PathVariable Long id) {
+        materialService.deleteMyMaterial(principal.getUid(), id);
+        return ResponseEntity.ok(Map.of("success", true));
+    }
+
+    /**
      * 자료별 리뷰 목록 (공개)
      */
     @GetMapping("/materials/{id}/reviews")

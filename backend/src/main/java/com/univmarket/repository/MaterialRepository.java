@@ -3,14 +3,21 @@ package com.univmarket.repository;
 import com.univmarket.entity.Material;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface MaterialRepository extends JpaRepository<Material, Long> {
+
+    // 단건 상세 조회 시 author 같이 fetch — 프론트가 authorId/nickname 필요.
+    @EntityGraph(attributePaths = {"author"})
+    @Override
+    Optional<Material> findById(Long id);
 
     Page<Material> findByHiddenFalseAndCopyrightDeletedFalse(Pageable pageable);
 
