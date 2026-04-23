@@ -44,19 +44,20 @@ public class MaterialService {
             throw ApiException.forbidden("정지된 계정은 자료를 등록할 수 없습니다.");
         }
 
-        // 쿨다운 검증
-        Page<Material> recent = materialRepository.findByAuthorId(
-                author.getId(),
-                PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "createdAt")));
-        if (!recent.isEmpty()) {
-            LocalDateTime lastCreated = recent.getContent().get(0).getCreatedAt();
-            if (lastCreated != null &&
-                    Duration.between(lastCreated, LocalDateTime.now()).compareTo(UPLOAD_COOLDOWN) < 0) {
-                long remaining = UPLOAD_COOLDOWN.minus(Duration.between(lastCreated, LocalDateTime.now())).toSeconds();
-                throw ApiException.tooManyRequests(
-                        "자료 등록 후 5분간 재등록할 수 없습니다. (" + remaining + "초 남음)");
-            }
-        }
+        // 쿨다운 검증 — 베타 테스트 중 임시 비활성화
+        // TODO: 베타 종료 후 다시 켜기
+        // Page<Material> recent = materialRepository.findByAuthorId(
+        //         author.getId(),
+        //         PageRequest.of(0, 1, Sort.by(Sort.Direction.DESC, "createdAt")));
+        // if (!recent.isEmpty()) {
+        //     LocalDateTime lastCreated = recent.getContent().get(0).getCreatedAt();
+        //     if (lastCreated != null &&
+        //             Duration.between(lastCreated, LocalDateTime.now()).compareTo(UPLOAD_COOLDOWN) < 0) {
+        //         long remaining = UPLOAD_COOLDOWN.minus(Duration.between(lastCreated, LocalDateTime.now())).toSeconds();
+        //         throw ApiException.tooManyRequests(
+        //                 "자료 등록 후 5분간 재등록할 수 없습니다. (" + remaining + "초 남음)");
+        //     }
+        // }
 
         String title = asString(payload.get("title"));
         String description = asString(payload.get("description"));
