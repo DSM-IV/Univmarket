@@ -37,9 +37,11 @@ public class WithdrawService {
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> ApiException.notFound("사용자를 찾을 수 없습니다."));
 
-        if (!user.isIdentityVerified()) {
-            throw ApiException.badRequest("본인인증이 필요합니다.");
-        }
+        // 본인인증 체크 — 베타 테스트 중 임시 비활성화
+        // TODO: 본인인증 UI + SMS(ALIGO) 키 준비 후 다시 켜기
+        // if (!user.isIdentityVerified()) {
+        //     throw ApiException.badRequest("본인인증이 필요합니다.");
+        // }
 
         BigDecimal amountBd = BigDecimal.valueOf(amount);
         if (amountBd.compareTo(MIN_WITHDRAW) < 0) {
