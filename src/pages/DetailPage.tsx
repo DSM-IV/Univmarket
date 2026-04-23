@@ -34,7 +34,7 @@ function formatDate(dateStr: string): string {
 
 export default function DetailPage() {
   const { id } = useParams();
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
   const [material, setMaterial] = useState<Material | null>(null);
@@ -329,6 +329,7 @@ export default function DetailPage() {
     setError("");
     try {
       await purchaseMaterial(material.id);
+      await refreshProfile();
       setOwned(true);
       setShowModal(false);
     } catch (err) {

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { X, ShoppingCart, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
 
 export default function CartPage() {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, refreshProfile } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -131,6 +131,7 @@ export default function CartPage() {
     const updated = await getCartItems(user.uid);
     setItems(updated);
     setSelected(new Set(updated.map((i) => i.id)));
+    if (purchased > 0) await refreshProfile();
     setBuying(false);
   };
 
