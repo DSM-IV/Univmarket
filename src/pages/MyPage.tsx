@@ -22,7 +22,7 @@ interface PurchaseInfo {
 const REFUND_DEADLINE_HOURS = 24;
 
 export default function MyPage() {
-  const { user, userProfile, loading: authLoading } = useAuth();
+  const { user, userProfile, refreshProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("uploaded");
   const [uploadedMaterials, setUploadedMaterials] = useState<Material[]>([]);
@@ -65,6 +65,7 @@ export default function MyPage() {
     setNicknameError("");
     try {
       await apiPatch("/users/nickname", { nickname: trimmed });
+      await refreshProfile();
       setEditingNickname(false);
     } catch (e) {
       setNicknameError((e as Error).message || "변경에 실패했습니다.");
