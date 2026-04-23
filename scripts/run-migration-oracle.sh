@@ -55,9 +55,10 @@ if [ ! -d "$FUNCTIONS_DIR/node_modules" ] || [ ! -d "$FUNCTIONS_DIR/node_modules
 fi
 
 # ---------- Run ----------
+#
+# Run from inside functions/ so Node resolves firebase-admin and oracledb
+# from functions/node_modules (root package.json has "type": "module" which
+# breaks ESM resolution from scripts/).
 
-cd "$PROJECT_DIR"
-exec npx --prefix "$FUNCTIONS_DIR" ts-node \
-  --project "$FUNCTIONS_DIR/tsconfig.json" \
-  --transpile-only \
-  "$SCRIPT_DIR/migrate-to-oracle.ts"
+cd "$FUNCTIONS_DIR"
+exec npx ts-node --transpile-only "$SCRIPT_DIR/migrate-to-oracle.ts"
