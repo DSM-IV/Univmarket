@@ -74,6 +74,8 @@ logging:
   level:
     com.univmarket: INFO
     org.springframework.security: WARN
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
 
 ---
 # 개발: 로컬 Docker PostgreSQL
