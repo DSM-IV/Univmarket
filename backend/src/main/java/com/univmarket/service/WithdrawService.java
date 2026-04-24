@@ -25,8 +25,12 @@ public class WithdrawService {
     private final TransactionRepository transactionRepository;
     private final WithdrawSecretRepository withdrawSecretRepository;
 
-    private static final BigDecimal COMMISSION_RATE = new BigDecimal("0.033"); // 3.3%
+    private static final BigDecimal COMMISSION_RATE = new BigDecimal("0.10"); // 플랫폼 수수료 10% (정상 40%에서 오픈 기념 할인)
+    private static final BigDecimal TAX_RATE = new BigDecimal("0.088");       // 세금 8.8% (사업소득 원천징수)
+    private static final BigDecimal TAX_THRESHOLD = BigDecimal.valueOf(125000); // 이 금액 초과 시 세금 부과
+    private static final BigDecimal WITHDRAW_FEE = BigDecimal.valueOf(500);    // 출금처리수수료
     private static final BigDecimal MIN_WITHDRAW = BigDecimal.valueOf(5000);
+    private static final BigDecimal MAX_WITHDRAW = BigDecimal.valueOf(5000000);
 
     /**
      * 출금 요청
@@ -44,18 +48,27 @@ public class WithdrawService {
         // }
 
         BigDecimal amountBd = BigDecimal.valueOf(amount);
-        if (amountBd.compareTo(MIN_WITHDRAW) < 0) {
-            throw ApiException.badRequest("최소 출금 금액은 " + MIN_WITHDRAW + "원입니다.");
+        if (amountBd.compareTo(MIN_WITHDRAW) < 0 || amountBd.compareTo(MAX_WITHDRAW) > 0) {
+            throw ApiException.badRequest(
+                    "출금 금액은 " + MIN_WITHDRAW + "원~" + MAX_WITHDRAW + "원이어야 합니다.");
         }
         if (amountBd.compareTo(user.getEarnings()) > 0) {
             throw ApiException.badRequest("수익금이 부족합니다.");
         }
 
-        // 수수료 계산
-        BigDecimal commission = amountBd.multiply(COMMISSION_RATE).setScale(0, RoundingMode.FLOOR);
-        BigDecimal tax = commission.multiply(new BigDecimal("0.1")).setScale(0, RoundingMode.FLOOR);
-        BigDecimal totalDeduction = commission.add(tax);
-        BigDecimal received = amountBd.subtract(totalDeduction);
+        // 수수료·세금 계산 (프론트 calcWithdrawDetails 와 동일)
+        // 신청 금액 = 수익금에서 차감되는 금액. 실수령 = 신청 금액 - 수수료 - 세금 - 출금처리수수료
+        BigDecimal commission = amountBd.multiply(COMMISSION_RATE).setScale(0, RoundingMode.CEILING);
+        BigDecimal tax = amountBd.compareTo(TAX_THRESHOLD) > 0
+                ? amountBd.multiply(TAX_RATE).setScale(0, RoundingMode.CEILING)
+                : BigDecimal.ZERO;
+        BigDecimal fee = WITHDRAW_FEE;
+        BigDecimal totalDeduction = amountBd; // 수익금에서 차감되는 금액
+        BigDecimal received = amountBd.subtract(commission).subtract(tax).subtract(fee);
+        if (received.signum() <= 0) {
+            throw ApiException.badRequest(
+                    "수수료·세금을 빼면 실수령액이 남지 않습니다. 더 큰 금액으로 신청해주세요.");
+        }
 
         // 수익금 차감
         int updated = userRepository.deductEarnings(user.getId(), amountBd);
@@ -76,7 +89,7 @@ public class WithdrawService {
                 .balanceAfter(user.getEarnings())
                 .balanceType("earnings")
                 .description("출금 요청")
-                .fee(BigDecimal.ZERO)
+                .fee(fee)
                 .commission(commission)
                 .tax(tax)
                 .totalDeduction(totalDeduction)
@@ -102,7 +115,10 @@ public class WithdrawService {
                 "amount", amount,
                 "commission", commission,
                 "tax", tax,
-                "received", received
+                "fee", fee,
+                "totalDeduction", totalDeduction,
+                "received", received,
+                "balanceAfter", user.getEarnings()
         );
     }
 
