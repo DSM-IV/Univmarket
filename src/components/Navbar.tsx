@@ -70,6 +70,13 @@ export default function Navbar() {
           >
             자료 판매
           </Link>
+          <Link
+            to="/events"
+            onClick={scrollTop}
+            className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            이벤트
+          </Link>
 
           {user ? (
             <>
@@ -180,6 +187,13 @@ export default function Navbar() {
             className="px-3 py-2.5 rounded-lg text-sm font-semibold text-primary hover:bg-primary/5 transition-colors"
           >
             자료 판매
+          </Link>
+          <Link
+            to="/events"
+            onClick={closeMobile}
+            className="px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            이벤트
           </Link>
 
           {user ? (

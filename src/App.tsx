@@ -2,7 +2,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import BetaEventPopup from "./components/BetaEventPopup";
 import ErrorBoundary from "./components/ErrorBoundary";
 import HomePage from "./pages/HomePage";
 import BrowsePage from "./pages/BrowsePage";
@@ -105,7 +104,6 @@ function App() {
             </Routes>
           </ErrorBoundary>
           <Footer />
-          <BetaEventPopup />
         </div>
       </AuthProvider>
     </BrowserRouter>
