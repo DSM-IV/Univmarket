@@ -463,9 +463,6 @@ export default function MyPage() {
                     {tab === "uploaded" && (
                       <div className="flex items-center gap-2">
                         <div className="text-right">
-                          {(m as any).scanStatus === "scanning" && (
-                            <span className="block text-xs text-amber-600 font-medium mb-0.5">검사 중</span>
-                          )}
                           {(m as any).scanStatus === "infected" && (
                             <span className="block text-xs text-destructive font-medium mb-0.5">위험 파일</span>
                           )}
