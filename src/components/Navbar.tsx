@@ -57,7 +57,6 @@ export default function Navbar() {
   const closeMobile = () => { setMobileOpen(false); scrollTop(); };
 
   const displayName = userProfile?.nickname || user?.displayName || user?.email || "유저";
-  const avatarChar = displayName.charAt(0).toUpperCase();
 
   return (
     <nav className="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-border">
@@ -139,12 +138,9 @@ export default function Navbar() {
                 <Link
                   to="/mypage"
                   onClick={scrollTop}
-                  className="flex items-center gap-1.5 px-1.5 py-1 rounded-full hover:bg-secondary transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-secondary transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold shrink-0">
-                    {avatarChar}
-                  </div>
-                  <span className="text-sm font-semibold text-foreground hidden lg:inline max-w-[100px] truncate">
+                  <span className="text-sm font-semibold text-foreground max-w-[140px] truncate">
                     {displayName}
                   </span>
                   <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
@@ -272,9 +268,6 @@ export default function Navbar() {
           {/* User header (logged in) */}
           {user && (
             <div className="flex items-center gap-3 px-3 py-3 mb-1 border-b border-border">
-              <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-base font-bold shrink-0">
-                {avatarChar}
-              </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
                 <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
