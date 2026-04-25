@@ -9,6 +9,7 @@ import com.univmarket.repository.UserRepository;
 import com.univmarket.repository.WithdrawSecretRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,9 @@ public class WithdrawService {
     private final WithdrawSecretRepository withdrawSecretRepository;
     private final EncryptionService encryptionService;
 
+    @Value("${app.beta-withdraw-disabled:true}")
+    private boolean betaWithdrawDisabled;
+
     private static final BigDecimal COMMISSION_RATE = new BigDecimal("0.10"); // 플랫폼 수수료 10% (정상 40%에서 오픈 기념 할인)
     private static final BigDecimal TAX_RATE = new BigDecimal("0.088");       // 세금 8.8% (사업소득 원천징수)
     private static final BigDecimal TAX_THRESHOLD = BigDecimal.valueOf(125000); // 이 금액 초과 시 세금 부과
@@ -39,6 +43,12 @@ public class WithdrawService {
     @Transactional
     public Map<String, Object> requestWithdraw(String firebaseUid, int amount,
                                                 String bankName, String accountNumber, String accountHolder) {
+        // 클로즈드 베타 기간 출금 차단. 베타 종료 시 BETA_WITHDRAW_DISABLED=false 설정.
+        if (betaWithdrawDisabled) {
+            throw ApiException.badRequest(
+                    "클로즈드 베타 기간에는 출금이 제한됩니다. 정식 오픈 후 가능합니다.");
+        }
+
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> ApiException.notFound("사용자를 찾을 수 없습니다."));
 

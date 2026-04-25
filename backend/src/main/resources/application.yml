@@ -76,6 +76,7 @@ app:
   frontend-url: ${FRONTEND_URL:https://unifile.store}
   encryption-key: ${ENCRYPTION_KEY:}  # base64 32 byte. openssl rand -base64 32 로 생성. 절대 변경 금지
   allow-localhost-cors: ${ALLOW_LOCALHOST_CORS:false}  # 로컬 개발 전용. 운영 false 유지 필수
+  beta-withdraw-disabled: ${BETA_WITHDRAW_DISABLED:true}  # 클로즈드 베타 동안 출금 차단. 정식 오픈 시 false
 
 # Rate Limiting defaults
 rate-limit:
