@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { categories, departments, departmentCourses, courseProfessors } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
-import { ChevronRight, Hand, Plus, X, Bell, MessageSquarePlus } from "lucide-react";
+import { ChevronRight, Hand, Plus, X, Bell, MessageSquarePlus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Material } from "../types";
 
@@ -42,13 +42,24 @@ export default function KoreaUnivPage() {
   const [reqDept, setReqDept] = useState("");
   const [reqSubject, setReqSubject] = useState("");
   const [reqProfessor, setReqProfessor] = useState("");
+  const [reqDescription, setReqDescription] = useState("");
   const [reqLoading, setReqLoading] = useState(false);
   const [, setNeedLoading] = useState<string | null>(null);
   const [showNeedAlert, setShowNeedAlert] = useState(false);
+  const [reqSearchQuery, setReqSearchQuery] = useState("");
 
-  const filteredRequests = materialRequests.filter(
-    (r) => (r.category || "수업") === selectedReqCategory
-  );
+  const isClassTab = selectedReqCategory === "수업";
+
+  const filteredRequests = materialRequests.filter((r) => {
+    if ((r.category || "수업") !== selectedReqCategory) return false;
+    const q = reqSearchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (r.subject || "").toLowerCase().includes(q) ||
+      (r.professor || "").toLowerCase().includes(q) ||
+      (r.description || "").toLowerCase().includes(q)
+    );
+  });
 
   const fetchRequests = async () => {
     try {
@@ -64,24 +75,34 @@ export default function KoreaUnivPage() {
     if (!reqSubject.trim()) return;
     setReqLoading(true);
     try {
-      // 이미 같은 과목+교수 요청이 있는지 확인
-      const existing = materialRequests.find(
-        (r) => r.subject === reqSubject.trim() && r.professor === (reqProfessor?.trim() || "")
-      );
+      // 같은 카테고리·subject·professor 요청이 있는지 확인 (수업 탭만 중복 검사)
+      const existing = isClassTab
+        ? materialRequests.find(
+            (r) =>
+              (r.category || "수업") === selectedReqCategory &&
+              r.subject === reqSubject.trim() &&
+              r.professor === (reqProfessor?.trim() || "")
+          )
+        : null;
       if (existing) {
-        // 이미 공감했으면 알림만
         if (existing.needUsers.includes(user.uid)) {
           alert("이미 공감한 요청입니다.");
         } else {
           await handleToggleNeed(existing.id);
         }
       } else {
-        await apiPost("/material-requests", { subject: reqSubject, professor: reqProfessor, description: "", category: selectedReqCategory });
+        await apiPost("/material-requests", {
+          subject: reqSubject.trim(),
+          professor: isClassTab ? reqProfessor : "",
+          description: reqDescription.trim(),
+          category: selectedReqCategory,
+        });
         fetchRequests();
       }
       setReqDept("");
       setReqSubject("");
       setReqProfessor("");
+      setReqDescription("");
       setShowRequestForm(false);
     } catch (err) {
       console.error("자료 요청 등록 실패:", err);
@@ -388,7 +409,9 @@ export default function KoreaUnivPage() {
             <Card className="mb-6 border-[#862633]/20">
               <CardContent className="p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-[15px] font-bold">필요한 과목 선택</h3>
+                  <h3 className="text-[15px] font-bold">
+                    {isClassTab ? "필요한 과목 선택" : `필요한 ${selectedReqCategory} 자료`}
+                  </h3>
                   <button
                     onClick={() => setShowRequestForm(false)}
                     className="text-muted-foreground hover:text-foreground bg-transparent border-none cursor-pointer"
@@ -396,75 +419,126 @@ export default function KoreaUnivPage() {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold mb-1.5">학과 *</label>
-                  <select
-                    value={reqDept}
-                    onChange={(e) => { setReqDept(e.target.value); setReqSubject(""); setReqProfessor(""); }}
-                    className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#862633] transition-colors"
-                  >
-                    <option value="">학과를 선택하세요</option>
-                    {departments.map((dept) => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
-                </div>
-                {reqDept && departmentCourses[reqDept] && (
-                  <div>
-                    <label className="block text-sm font-semibold mb-1.5">과목명 *</label>
-                    <select
-                      value={reqSubject}
-                      onChange={(e) => { setReqSubject(e.target.value); setReqProfessor(""); }}
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#862633] transition-colors"
-                    >
-                      <option value="">과목을 선택하세요</option>
-                      {departmentCourses[reqDept].map((course) => (
-                        <option key={course} value={course}>{course}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {reqSubject && courseProfessors[reqSubject] && (
-                  <div>
-                    <label className="block text-sm font-semibold mb-1.5">교수님 (선택)</label>
-                    <select
-                      value={reqProfessor}
-                      onChange={(e) => setReqProfessor(e.target.value)}
-                      className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#862633] transition-colors"
-                    >
-                      <option value="">전체 (교수 무관)</option>
-                      {courseProfessors[reqSubject].map((prof) => (
-                        <option key={prof} value={prof}>{prof}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {reqSubject && (() => {
-                  const existing = materialRequests.find(
-                    (r) => r.subject === reqSubject && r.professor === (reqProfessor || "")
-                  );
-                  if (existing) {
-                    const alreadyNeed = user && existing.needUsers.includes(user.uid);
-                    return (
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                        이미 <strong>{existing.needCount}명</strong>이 요청한 과목입니다.
-                        {alreadyNeed ? " (이미 공감함)" : " 아래 버튼을 눌러 공감해주세요!"}
+
+                {isClassTab ? (
+                  <>
+                    {/* 수업: 학과 → 과목 → 교수 (드롭다운) */}
+                    <div>
+                      <label className="block text-sm font-semibold mb-1.5">학과 *</label>
+                      <select
+                        value={reqDept}
+                        onChange={(e) => { setReqDept(e.target.value); setReqSubject(""); setReqProfessor(""); }}
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#862633] transition-colors"
+                      >
+                        <option value="">학과를 선택하세요</option>
+                        {departments.map((dept) => (
+                          <option key={dept} value={dept}>{dept}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {reqDept && departmentCourses[reqDept] && (
+                      <div>
+                        <label className="block text-sm font-semibold mb-1.5">과목명 *</label>
+                        <select
+                          value={reqSubject}
+                          onChange={(e) => { setReqSubject(e.target.value); setReqProfessor(""); }}
+                          className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#862633] transition-colors"
+                        >
+                          <option value="">과목을 선택하세요</option>
+                          {departmentCourses[reqDept].map((course) => (
+                            <option key={course} value={course}>{course}</option>
+                          ))}
+                        </select>
                       </div>
-                    );
-                  }
-                  return null;
-                })()}
+                    )}
+                    {reqSubject && courseProfessors[reqSubject] && (
+                      <div>
+                        <label className="block text-sm font-semibold mb-1.5">교수님 (선택)</label>
+                        <select
+                          value={reqProfessor}
+                          onChange={(e) => setReqProfessor(e.target.value)}
+                          className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#862633] transition-colors"
+                        >
+                          <option value="">전체 (교수 무관)</option>
+                          {courseProfessors[reqSubject].map((prof) => (
+                            <option key={prof} value={prof}>{prof}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {reqSubject && (() => {
+                      const existing = materialRequests.find(
+                        (r) =>
+                          (r.category || "수업") === "수업" &&
+                          r.subject === reqSubject &&
+                          r.professor === (reqProfessor || "")
+                      );
+                      if (existing) {
+                        const alreadyNeed = user && existing.needUsers.includes(user.uid);
+                        return (
+                          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                            이미 <strong>{existing.needCount}명</strong>이 요청한 과목입니다.
+                            {alreadyNeed ? " (이미 공감함)" : " 아래 버튼을 눌러 공감해주세요!"}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </>
+                ) : (
+                  <>
+                    {/* 비-수업 탭: 자유 텍스트 + 상세 설명 */}
+                    <div>
+                      <label className="block text-sm font-semibold mb-1.5">
+                        {selectedReqCategory === "이중전공 & 전과" && "지원하려는 학과/전공 *"}
+                        {selectedReqCategory === "교환학생" && "지원국가/대학 *"}
+                        {selectedReqCategory === "장학금" && "장학금 이름 *"}
+                      </label>
+                      <input
+                        type="text"
+                        value={reqSubject}
+                        onChange={(e) => setReqSubject(e.target.value)}
+                        placeholder={
+                          selectedReqCategory === "이중전공 & 전과"
+                            ? "예: 컴퓨터학과 이중전공"
+                            : selectedReqCategory === "교환학생"
+                            ? "예: 미국 UCLA"
+                            : "예: 국가우수장학금"
+                        }
+                        maxLength={60}
+                        className="w-full h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#862633] transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1.5">상세 설명 (선택)</label>
+                      <textarea
+                        value={reqDescription}
+                        onChange={(e) => setReqDescription(e.target.value)}
+                        placeholder="어떤 자료가 필요한지 자세히 적어주세요"
+                        rows={3}
+                        maxLength={300}
+                        className="w-full px-3 py-2 rounded-lg border border-border bg-background text-sm outline-none focus:border-[#862633] transition-colors resize-y"
+                      />
+                    </div>
+                  </>
+                )}
+
                 <Button
                   className="w-full bg-[#862633] hover:bg-[#6B1E29] text-white"
                   onClick={handleSubmitRequest}
                   disabled={reqLoading || !reqSubject.trim()}
                 >
                   {reqLoading ? "처리 중..." : (() => {
-                    const existing = materialRequests.find(
-                      (r) => r.subject === reqSubject && r.professor === (reqProfessor || "")
-                    );
-                    if (existing && user && existing.needUsers.includes(user.uid)) return "이미 공감함";
-                    if (existing) return "저도 필요해요 +1";
+                    if (isClassTab) {
+                      const existing = materialRequests.find(
+                        (r) =>
+                          (r.category || "수업") === "수업" &&
+                          r.subject === reqSubject &&
+                          r.professor === (reqProfessor || "")
+                      );
+                      if (existing && user && existing.needUsers.includes(user.uid)) return "이미 공감함";
+                      if (existing) return "저도 필요해요 +1";
+                    }
                     return "요청 등록";
                   })()}
                 </Button>
@@ -472,11 +546,41 @@ export default function KoreaUnivPage() {
             </Card>
           )}
 
+          {/* 검색바 */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              value={reqSearchQuery}
+              onChange={(e) => setReqSearchQuery(e.target.value)}
+              placeholder={`"${selectedReqCategory}" 카테고리 안에서 검색`}
+              className="w-full h-10 pl-10 pr-10 rounded-lg border border-border bg-white text-sm outline-none focus:border-[#862633] transition-colors"
+            />
+            {reqSearchQuery && (
+              <button
+                onClick={() => setReqSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground bg-transparent border-none cursor-pointer p-0.5"
+                aria-label="검색 지우기"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
           {/* 요청 목록 */}
           {filteredRequests.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              <MessageSquarePlus className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="text-sm">아직 요청이 없어요. 첫 번째 요청을 남겨보세요!</p>
+              {reqSearchQuery ? (
+                <>
+                  <Search className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p className="text-sm">"{reqSearchQuery}" 검색 결과가 없어요.</p>
+                </>
+              ) : (
+                <>
+                  <MessageSquarePlus className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                  <p className="text-sm">"{selectedReqCategory}" 요청이 아직 없어요. 첫 번째 요청을 남겨보세요!</p>
+                </>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
