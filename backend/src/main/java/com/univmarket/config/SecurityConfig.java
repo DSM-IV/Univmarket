@@ -17,6 +17,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Configuration
@@ -30,6 +31,9 @@ public class SecurityConfig {
 
     @Value("${app.frontend-url}")
     private String frontendUrl;
+
+    @Value("${app.allow-localhost-cors:false}")
+    private boolean allowLocalhostCors;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -82,13 +86,21 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of(
+
+        List<String> origins = new ArrayList<>(List.of(
                 frontendUrl,
                 "https://unifile.store",
-                "https://www.unifile.store",
-                "http://localhost:5173",
-                "http://localhost:3000"
+                "https://www.unifile.store"
         ));
+        // localhost는 ALLOW_LOCALHOST_CORS=true 일 때만 허용 (로컬 개발 전용).
+        // 운영 .env 에는 절대 설정 X — 켜면 공격자가 로컬에서 띄운 서비스가 사용자 브라우저 통해 API 호출 가능.
+        if (allowLocalhostCors) {
+            origins.add("http://localhost:5173");
+            origins.add("http://localhost:5174");
+            origins.add("http://localhost:3000");
+        }
+        config.setAllowedOrigins(origins);
+
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

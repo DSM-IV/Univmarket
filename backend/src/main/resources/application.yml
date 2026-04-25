@@ -7,6 +7,12 @@ spring:
   config:
     import: optional:file:.env[.properties]
 
+  # 파일 업로드 크기 제한 (자료 PDF 업로드 등)
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 55MB
+
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
@@ -68,6 +74,8 @@ virustotal:
 # App
 app:
   frontend-url: ${FRONTEND_URL:https://unifile.store}
+  encryption-key: ${ENCRYPTION_KEY:}  # base64 32 byte. openssl rand -base64 32 로 생성. 절대 변경 금지
+  allow-localhost-cors: ${ALLOW_LOCALHOST_CORS:false}  # 로컬 개발 전용. 운영 false 유지 필수
 
 # Rate Limiting defaults
 rate-limit:
@@ -82,6 +90,8 @@ logging:
 
 ---
 # 개발: 로컬 Docker PostgreSQL
+# ⚠️ 운영 단일 VM 배포(docker-compose.deploy.yml)도 이 dev 프로파일을 쓴다 (내부망 postgres SSL 불필요).
+# 따라서 localhost CORS 같은 "로컬 전용" 설정은 dev 프로파일이 아니라 별도 env var (ALLOW_LOCALHOST_CORS)로 통제할 것.
 spring:
   config:
     activate:

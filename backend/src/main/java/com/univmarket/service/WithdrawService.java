@@ -24,6 +24,7 @@ public class WithdrawService {
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
     private final WithdrawSecretRepository withdrawSecretRepository;
+    private final EncryptionService encryptionService;
 
     private static final BigDecimal COMMISSION_RATE = new BigDecimal("0.10"); // 플랫폼 수수료 10% (정상 40%에서 오픈 기념 할인)
     private static final BigDecimal TAX_RATE = new BigDecimal("0.088");       // 세금 8.8% (사업소득 원천징수)
@@ -105,7 +106,7 @@ public class WithdrawService {
                 .transaction(tx)
                 .userId(user.getId())
                 .bankName(bankName)
-                .accountNumber(accountNumber) // 실 운영에서는 AES 암호화
+                .accountNumber(encryptionService.encrypt(accountNumber)) // AES-GCM 암호화 후 저장
                 .accountHolder(accountHolder)
                 .build());
 

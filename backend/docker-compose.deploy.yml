@@ -64,6 +64,7 @@ services:
       ALIGO_SENDER_KEY: ${ALIGO_SENDER_KEY}
       ALIGO_SENDER_NUMBER: ${ALIGO_SENDER_NUMBER}
       VIRUSTOTAL_API_KEY: ${VIRUSTOTAL_API_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY must be set}
       FRONTEND_URL: ${FRONTEND_URL:-https://unifile.store}
     volumes:
       - ./firebase-service-account.json:/app/firebase-service-account.json:ro
