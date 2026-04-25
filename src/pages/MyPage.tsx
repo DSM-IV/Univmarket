@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Download, FileText, Upload, ShoppingBag, RotateCcw, AlertTriangle, Pencil, Check, X, Trash2 } from "lucide-react";
+import { Download, FileText, Upload, ShoppingBag, RotateCcw, AlertTriangle, Pencil, Check, X, Trash2, Shield } from "lucide-react";
 
 type Tab = "uploaded" | "purchased";
 
@@ -320,6 +320,30 @@ export default function MyPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Admin console - admin only */}
+        {userProfile?.role === "admin" && (
+          <Card className="mb-6 border-[#862633]/20 bg-[#862633]/[0.03]">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#862633]/10">
+                <Shield className="h-5 w-5 text-[#862633]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-[#862633]">관리자 권한</p>
+                <p className="text-xs text-gray-600">
+                  사용자/자료/충전·출금 요청을 관리할 수 있습니다
+                </p>
+              </div>
+              <Button
+                asChild
+                size="sm"
+                className="rounded-full bg-[#862633] text-white hover:bg-[#6B1E29]"
+              >
+                <Link to="/admin">관리자 콘솔</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tabs */}
         <div className="mb-4 flex border-b border-gray-200">

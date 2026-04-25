@@ -13,7 +13,16 @@ type EventItem = {
   link?: string;
 };
 
-const events: EventItem[] = [];
+const events: EventItem[] = [
+  {
+    id: "closed-beta-commission-zero",
+    title: "클로즈드 베타 기념 — 판매 수수료 0%",
+    description:
+      "클로즈드 베타 기간 동안 자료 판매 수수료를 받지 않습니다(평소 10%). 판매 수익 전액이 적립됩니다. 다만 적립된 수익금의 출금은 클로즈드 베타 종료 후에 가능합니다.",
+    period: "클로즈드 베타 기간",
+    status: "ongoing",
+  },
+];
 
 const statusStyle: Record<EventStatus, { label: string; className: string }> = {
   ongoing: {
