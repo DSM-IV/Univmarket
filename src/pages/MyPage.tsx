@@ -224,9 +224,6 @@ export default function MyPage() {
         {/* Profile Header */}
         <Card className="mb-6">
           <CardContent className="flex flex-col items-center gap-5 p-6 max-sm:p-4 sm:flex-row sm:items-start">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#862633] text-2xl font-bold text-white">
-              {(userProfile?.nickname || user.displayName || user.email || "U").charAt(0).toUpperCase()}
-            </div>
             <div className="flex-1 min-w-0 text-center sm:text-left">
               {editingNickname ? (
                 <div className="flex flex-col items-center gap-1.5 sm:items-start">
