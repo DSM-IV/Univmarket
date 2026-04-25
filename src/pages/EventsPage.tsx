@@ -13,18 +13,7 @@ type EventItem = {
   link?: string;
 };
 
-const events: EventItem[] = [
-  {
-    id: "midterm-event",
-    title: "중간고사 이벤트",
-    description:
-      "중간고사 시즌을 맞아 진행하는 특별 이벤트입니다. 지금 참여하고 특별한 혜택을 받아보세요!",
-    period: "2026.04.10 ~ 별도 공지 시까지",
-    status: "ongoing",
-    image: "/midterm-event.png",
-    link: "/events/closed-beta-raffle",
-  },
-];
+const events: EventItem[] = [];
 
 const statusStyle: Record<EventStatus, { label: string; className: string }> = {
   ongoing: {

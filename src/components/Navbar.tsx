@@ -70,13 +70,33 @@ export default function Navbar() {
           >
             자료 판매
           </Link>
-          <Link
-            to="/events"
-            onClick={scrollTop}
-            className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-          >
-            이벤트
-          </Link>
+          <div className="relative group">
+            <Link
+              to="/notices"
+              onClick={scrollTop}
+              className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors inline-flex"
+            >
+              공지사항
+            </Link>
+            <div className="absolute left-0 top-full pt-2 hidden group-hover:block">
+              <div className="min-w-[150px] rounded-lg border border-border bg-white py-1 shadow-lg">
+                <Link
+                  to="/notices"
+                  onClick={scrollTop}
+                  className="block px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                >
+                  공지사항
+                </Link>
+                <Link
+                  to="/events"
+                  onClick={scrollTop}
+                  className="block px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                >
+                  이벤트페이지
+                </Link>
+              </div>
+            </div>
+          </div>
 
           {user ? (
             <>
@@ -187,6 +207,13 @@ export default function Navbar() {
             className="px-3 py-2.5 rounded-lg text-sm font-semibold text-primary hover:bg-primary/5 transition-colors"
           >
             자료 판매
+          </Link>
+          <Link
+            to="/notices"
+            onClick={closeMobile}
+            className="px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+          >
+            공지사항
           </Link>
           <Link
             to="/events"
