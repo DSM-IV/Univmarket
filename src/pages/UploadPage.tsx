@@ -210,7 +210,7 @@ export default function UploadPage() {
 
   const addFiles = (incoming: File[]) => {
     if (incoming.length === 0) return;
-    console.log("[upload] addFiles incoming:", incoming.map((f) => `${f.name}(${f.size}B,${f.type})`));
+    const oversized: string[] = [];
     setFiles((prev) => {
       const remaining = MAX_FILES - prev.length;
       if (remaining <= 0) {
@@ -218,36 +218,42 @@ export default function UploadPage() {
         return prev;
       }
       const accepted: File[] = [];
-      const rejected: { name: string; reason: string }[] = [];
+      const otherRejections: string[] = [];
       for (const f of incoming) {
         if (accepted.length >= remaining) {
-          rejected.push({ name: f.name, reason: "남은 슬롯 초과" });
+          otherRejections.push(`${f.name} — 최대 ${MAX_FILES}개 초과`);
           break;
+        }
+        if (f.size > MAX_SIZE) {
+          oversized.push(`${f.name} (${formatFileSize(f.size)})`);
+          continue;
         }
         const err = validateFile(f);
         if (err) {
-          rejected.push({ name: f.name, reason: err });
+          otherRejections.push(`${f.name} — ${err}`);
           continue;
         }
         if (prev.some((p) => p.name === f.name && p.size === f.size)) {
-          rejected.push({ name: f.name, reason: "이미 추가된 파일" });
+          otherRejections.push(`${f.name} — 이미 추가된 파일`);
           continue;
         }
         accepted.push(f);
       }
-      console.log("[upload] addFiles accepted:", accepted.length, "rejected:", rejected);
-      if (accepted.length === 0) {
-        if (rejected.length > 0) setError(rejected[0].reason);
-        return prev;
+      if (otherRejections.length > 0 && accepted.length === 0) {
+        setError(otherRejections[0]);
+      } else {
+        setError("");
       }
-      setError("");
-      const next = [...prev, ...accepted];
-      if (incoming.length > remaining) {
-        setError(`파일은 최대 ${MAX_FILES}개까지 업로드할 수 있습니다.`);
-      }
-      return next;
+      return accepted.length > 0 ? [...prev, ...accepted] : prev;
     });
-    // 같은 파일을 다시 고를 수 있도록 input value 초기화
+    // 100MB 초과 파일 alert (가장 흔한 거절 사유라 별도 안내)
+    if (oversized.length > 0) {
+      alert(
+        `다음 파일은 100MB를 초과하여 업로드할 수 없습니다.\n\n` +
+        oversized.map((s) => `• ${s}`).join("\n") +
+        `\n\n파일을 압축하거나 분할해서 다시 시도해주세요.`
+      );
+    }
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
