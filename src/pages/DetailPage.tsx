@@ -5,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
 import { addToCart, isInCart } from "../services/cartService";
 import { departments, regularDepartments, convergenceMajors, exchangeCountries } from "../data/mockData";
-import type { Material } from "../types";
+import type { Material, MaterialFile } from "../types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,6 +41,21 @@ function formatBytes(bytes?: number): string {
   return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)}${units[i]}`;
 }
 
+function getFileList(material: Material): MaterialFile[] {
+  const list = (material.files || []).filter((f) => f.fileKey);
+  if (list.length > 0) return list;
+  // 다중 파일이 도입되기 전 등록된 자료(레거시) — 대표 파일 1건으로 간주
+  if (material.fileKey) {
+    return [{
+      fileKey: material.fileKey,
+      fileName: material.fileName || material.title,
+      fileSize: material.fileSize,
+      fileType: material.fileType,
+    }];
+  }
+  return [];
+}
+
 function DownloadSection({
   material,
   downloading,
@@ -50,8 +65,8 @@ function DownloadSection({
   downloading: boolean;
   onDownload: (fileKey?: string) => void;
 }) {
-  const list = (material.files || []).filter((f) => f.fileKey);
-  if (list.length <= 1) {
+  const list = getFileList(material);
+  if (list.length === 0) {
     return (
       <Button
         className="w-full mb-2.5 bg-success hover:bg-success/90 text-white"
@@ -66,7 +81,9 @@ function DownloadSection({
   }
   return (
     <div className="mb-2.5 space-y-2">
-      <p className="text-[12px] font-semibold text-muted-foreground">파일 {list.length}개</p>
+      <p className="text-[12px] font-semibold text-muted-foreground">
+        포함된 파일 {list.length}개
+      </p>
       {list.map((f, idx) => (
         <div
           key={`${f.fileKey}-${idx}`}
@@ -90,6 +107,36 @@ function DownloadSection({
         </div>
       ))}
     </div>
+  );
+}
+
+function FileListCard({ material }: { material: Material }) {
+  const list = getFileList(material);
+  if (list.length === 0) return null;
+  return (
+    <Card className="mb-6">
+      <CardContent className="p-6">
+        <h3 className="text-base font-semibold mb-3">포함된 파일 ({list.length}개)</h3>
+        <ul className="space-y-2">
+          {list.map((f, idx) => (
+            <li
+              key={`${f.fileKey}-${idx}`}
+              className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 px-3 py-2.5"
+            >
+              <div className="w-9 h-9 shrink-0 rounded-md bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold">
+                {(f.fileType || "").slice(0, 4) || `#${idx + 1}`}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[14px] font-semibold text-foreground truncate">{f.fileName || `파일 ${idx + 1}`}</p>
+                <p className="text-[12px] text-muted-foreground">
+                  {[f.fileType, formatBytes(f.fileSize)].filter(Boolean).join(" · ") || "-"}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -809,6 +856,8 @@ export default function DetailPage() {
                     <p className="text-[15px] text-muted-foreground leading-[1.7] whitespace-pre-wrap">{material.description}</p>
                   </CardContent>
                 </Card>
+
+                <FileListCard material={material} />
               </>
             )}
 
