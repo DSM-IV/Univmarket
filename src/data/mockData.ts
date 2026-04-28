@@ -243,6 +243,9 @@ export const departments = [
   "패션디자인및머천다이징융합전공",
 ];
 
+// 이중전공/전과용 학과만 (융합전공 제외)
+export const regularDepartments = departments.filter((d) => !d.endsWith("융합전공"));
+
 
 
 export const convergenceMajors = [

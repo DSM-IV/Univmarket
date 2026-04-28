@@ -4,7 +4,7 @@ import { apiGet, apiGetList, apiPost, apiPatch, apiDelete } from "../api/client"
 import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
 import { addToCart, isInCart } from "../services/cartService";
-import { departments, convergenceMajors, exchangeCountries } from "../data/mockData";
+import { departments, regularDepartments, convergenceMajors, exchangeCountries } from "../data/mockData";
 import type { Material } from "../types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -487,7 +487,7 @@ export default function DetailPage() {
                           <>
                             <option value="">학과/융합전공을 선택하세요</option>
                             <optgroup label="학과">
-                              {departments.map((dept) => (
+                              {regularDepartments.map((dept) => (
                                 <option key={dept} value={dept}>{dept}</option>
                               ))}
                             </optgroup>
