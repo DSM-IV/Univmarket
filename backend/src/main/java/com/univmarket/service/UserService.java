@@ -1,10 +1,12 @@
 package com.univmarket.service;
 
+import com.univmarket.entity.Material;
 import com.univmarket.entity.Notification;
 import com.univmarket.entity.Purchase;
 import com.univmarket.entity.Transaction;
 import com.univmarket.entity.User;
 import com.univmarket.exception.ApiException;
+import com.univmarket.repository.MaterialRepository;
 import com.univmarket.repository.NotificationRepository;
 import com.univmarket.repository.PurchaseRepository;
 import com.univmarket.repository.TransactionRepository;
@@ -30,6 +32,7 @@ public class UserService {
     private final TransactionRepository transactionRepository;
     private final PurchaseRepository purchaseRepository;
     private final NotificationRepository notificationRepository;
+    private final MaterialRepository materialRepository;
 
     private static final Pattern NICKNAME_PATTERN = Pattern.compile("^[가-힣a-zA-Z0-9_]{2,16}$");
 
@@ -75,6 +78,20 @@ public class UserService {
     public User getMyProfile(String firebaseUid) {
         return userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> ApiException.notFound("사용자를 찾을 수 없습니다."));
+    }
+
+    /**
+     * 판매자 공개 프로필 — 닉네임 + 판매중인 자료 목록 (숨김 제외).
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getSellerProfile(String firebaseUid) {
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> ApiException.notFound("판매자를 찾을 수 없습니다."));
+        List<Material> materials = materialRepository.findByAuthorIdAndHiddenFalse(user.getId());
+        return Map.of(
+                "nickname", user.getNickname() != null ? user.getNickname() : "익명",
+                "materials", materials
+        );
     }
 
     /**

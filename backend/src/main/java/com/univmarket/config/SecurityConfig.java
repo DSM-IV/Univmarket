@@ -68,6 +68,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/materials/{id}/reviews").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/material-requests", "/api/material-requests/{id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/reviews/stats").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/users/{firebaseUid}/profile").permitAll()
 
                 // 관리자 전용 엔드포인트
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

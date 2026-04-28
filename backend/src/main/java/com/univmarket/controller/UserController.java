@@ -62,6 +62,14 @@ public class UserController {
     }
 
     /**
+     * 판매자 공개 프로필 (인증 불필요) — 닉네임 + 판매중인 자료 목록
+     */
+    @GetMapping("/{firebaseUid}/profile")
+    public ResponseEntity<Map<String, Object>> getSellerProfile(@PathVariable String firebaseUid) {
+        return ResponseEntity.ok(userService.getSellerProfile(firebaseUid));
+    }
+
+    /**
      * 거래내역 조회
      */
     @GetMapping("/me/transactions")
