@@ -19,7 +19,7 @@ const ALLOWED_TYPES = [
   "application/x-hwp",
   "application/haansofthwp",
 ];
-const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_SIZE = 100 * 1024 * 1024; // 100MB
 const MAX_PREVIEWS = 5;
 const MAX_FILES = 10;
 
@@ -199,7 +199,7 @@ export default function UploadPage() {
   };
 
   const validateFile = (f: File): string | null => {
-    if (f.size > MAX_SIZE) return "파일 크기는 50MB를 초과할 수 없습니다.";
+    if (f.size > MAX_SIZE) return "파일 크기는 100MB를 초과할 수 없습니다.";
     const ext = f.name.split(".").pop()?.toLowerCase();
     const validExts = ["pdf", "ppt", "pptx", "doc", "docx", "hwp"];
     if (!ext || (!validExts.includes(ext) && !ALLOWED_TYPES.includes(f.type))) {
@@ -1224,7 +1224,7 @@ export default function UploadPage() {
                         : "파일을 더 추가하려면 드래그하거나 클릭하세요"}
                     </p>
                     <p className="text-xs text-muted-foreground/60 mt-1.5">
-                      PDF, PPT, DOCX, HWP (파일당 최대 50MB, 최대 {MAX_FILES}개)
+                      PDF, PPT, DOCX, HWP (파일당 최대 100MB, 최대 {MAX_FILES}개)
                     </p>
                   </div>
                 )}

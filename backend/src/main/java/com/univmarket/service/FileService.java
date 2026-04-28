@@ -38,7 +38,7 @@ public class FileService {
     @Value("${r2.public-url}")
     private String publicUrl;
 
-    private static final long MAX_UPLOAD_BYTES = 60 * 1024 * 1024; // 60MB
+    private static final long MAX_UPLOAD_BYTES = 110 * 1024 * 1024; // 110MB (프론트 한도 100MB + 여유)
 
     /**
      * 업로드용 Presigned URL 생성
@@ -48,7 +48,7 @@ public class FileService {
             throw ApiException.badRequest("파일 스토리지가 설정되지 않았습니다.");
         }
         if (fileSize <= 0 || fileSize > MAX_UPLOAD_BYTES) {
-            throw ApiException.badRequest("파일 크기가 유효하지 않습니다. (최대 60MB)");
+            throw ApiException.badRequest("파일 크기가 유효하지 않습니다. (최대 100MB)");
         }
 
         String safeName = sanitizeFileName(fileName);
