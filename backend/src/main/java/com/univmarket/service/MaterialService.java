@@ -104,6 +104,10 @@ public class MaterialService {
             }
         }
 
+        log.info("createMaterial: fileUrls.size={}, fileKeys.size={}, fileNames.size={}, fileSizes.size={}, fileTypes.size={}, fileCount(payload)={}",
+                fileUrls.size(), fileKeys.size(), fileNames.size(), fileSizes.size(), fileTypes.size(),
+                payload.get("fileCount"));
+
         List<MaterialFile> files = new ArrayList<>();
         int n = fileUrls.size();
         for (int i = 0; i < n; i++) {
@@ -115,6 +119,7 @@ public class MaterialService {
                     .fileType(i < fileTypes.size() ? fileTypes.get(i) : null)
                     .build());
         }
+        log.info("createMaterial: built {} MaterialFile entries to persist", files.size());
 
         List<String> previewImages = asStringList(payload.get("previewImages"));
         if (previewImages.size() > MAX_PREVIEW_IMAGES) {

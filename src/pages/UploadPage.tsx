@@ -210,6 +210,7 @@ export default function UploadPage() {
 
   const addFiles = (incoming: File[]) => {
     if (incoming.length === 0) return;
+    console.log("[upload] addFiles incoming:", incoming.map((f) => `${f.name}(${f.size}B,${f.type})`));
     setFiles((prev) => {
       const remaining = MAX_FILES - prev.length;
       if (remaining <= 0) {
@@ -217,18 +218,28 @@ export default function UploadPage() {
         return prev;
       }
       const accepted: File[] = [];
+      const rejected: { name: string; reason: string }[] = [];
       for (const f of incoming) {
-        if (accepted.length >= remaining) break;
+        if (accepted.length >= remaining) {
+          rejected.push({ name: f.name, reason: "남은 슬롯 초과" });
+          break;
+        }
         const err = validateFile(f);
         if (err) {
-          setError(err);
+          rejected.push({ name: f.name, reason: err });
           continue;
         }
-        // 중복 방지: 이름+크기 기준
-        if (prev.some((p) => p.name === f.name && p.size === f.size)) continue;
+        if (prev.some((p) => p.name === f.name && p.size === f.size)) {
+          rejected.push({ name: f.name, reason: "이미 추가된 파일" });
+          continue;
+        }
         accepted.push(f);
       }
-      if (accepted.length === 0) return prev;
+      console.log("[upload] addFiles accepted:", accepted.length, "rejected:", rejected);
+      if (accepted.length === 0) {
+        if (rejected.length > 0) setError(rejected[0].reason);
+        return prev;
+      }
       setError("");
       const next = [...prev, ...accepted];
       if (incoming.length > remaining) {
@@ -236,6 +247,8 @@ export default function UploadPage() {
       }
       return next;
     });
+    // 같은 파일을 다시 고를 수 있도록 input value 초기화
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const removeFile = (idx: number) => {
