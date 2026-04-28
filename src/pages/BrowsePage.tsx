@@ -103,7 +103,7 @@ export default function BrowsePage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCategory, selectedIsuType, selectedDepartment, selectedSubCategory, selectedCourse, selectedProfessor, selectedSemester, searchQuery, sortBy]);
+  }, [selectedCategory, selectedIsuType, selectedSubType, selectedDepartment, selectedSubCategory, selectedCourse, selectedProfessor, selectedSemester, searchQuery, sortBy]);
 
   useEffect(() => {
     async function fetchMaterials() {
@@ -126,6 +126,16 @@ export default function BrowsePage() {
     let result = materials.filter((m) => !(m as any).hidden && (m as any).scanStatus !== "infected");
 
     result = result.filter((m) => m.category === selectedCategory);
+
+    if (selectedCategory === "이중전공 & 융합전공 & 전과" && selectedSubType) {
+      const convergenceSet = new Set<string>(convergenceMajors);
+      if (selectedSubType === "융합전공") {
+        result = result.filter((m) => convergenceSet.has(m.department || ""));
+      } else {
+        // 이중전공 또는 전과: 융합전공이 아닌 학과
+        result = result.filter((m) => !convergenceSet.has(m.department || ""));
+      }
+    }
 
     if (selectedDepartment) {
       result = result.filter((m) => m.department === selectedDepartment);
@@ -174,7 +184,7 @@ export default function BrowsePage() {
     }
 
     return result;
-  }, [materials, reviewStats, selectedCategory, selectedDepartment, selectedCourse, selectedProfessor, selectedSemester, searchQuery, sortBy]);
+  }, [materials, reviewStats, selectedCategory, selectedSubType, selectedDepartment, selectedCourse, selectedProfessor, selectedSemester, searchQuery, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginatedItems = filtered.slice(
