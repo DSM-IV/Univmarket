@@ -1093,24 +1093,14 @@ export default function DetailPage() {
                     downloading={downloading}
                     onDownload={handleDownload}
                   />
-                  <div className="flex gap-2 mt-2.5 mb-2.5">
-                    <Button
-                      variant="ghost"
-                      className="flex-1 bg-primary/5 text-primary hover:bg-primary/10"
-                      onClick={handleStartEdit}
-                      disabled={editing}
-                    >
-                      수정
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="flex-1 bg-destructive/5 text-destructive hover:bg-destructive/10"
-                      onClick={handleDeleteMaterial}
-                      disabled={deleting}
-                    >
-                      {deleting ? "삭제 중..." : "삭제"}
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    className="w-full bg-destructive/5 text-destructive hover:bg-destructive/10 mt-2.5 mb-2.5"
+                    onClick={handleDeleteMaterial}
+                    disabled={deleting}
+                  >
+                    {deleting ? "삭제 중..." : "삭제"}
+                  </Button>
                 </>
               ) : owned ? (
                 <>

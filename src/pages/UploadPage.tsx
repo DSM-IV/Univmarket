@@ -725,8 +725,13 @@ export default function UploadPage() {
                 </div>
               </div>
 
-              {/* 과목명 검색 — 클릭 시 이수구분/학과/과목명 자동 채움 */}
-              {formData.category === "수업" && (
+              {/* 과목명 검색 — 학기 선택 후에만 노출, 클릭 시 이수구분/학과/과목명 자동 채움 */}
+              {formData.category === "수업" && !formData.semester && (
+                <div className="mb-4 px-4 py-3 rounded-lg bg-muted/50 border border-dashed border-border text-[13px] text-muted-foreground">
+                  학기를 먼저 선택하면 과목 검색창이 나타납니다.
+                </div>
+              )}
+              {formData.category === "수업" && formData.semester && (
                 <div className="mb-4">
                   <label htmlFor="courseSearch" className="block text-[13px] font-semibold mb-2 text-foreground">
                     과목명으로 빠르게 찾기
