@@ -70,6 +70,8 @@ export default function UploadPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
+  const [draggedPreviewIdx, setDraggedPreviewIdx] = useState<number | null>(null);
+  const [dragOverPreviewIdx, setDragOverPreviewIdx] = useState<number | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [gradeImage, setGradeImage] = useState<PreviewImage | null>(null);
   const [gradeClaim, setGradeClaim] = useState("");
@@ -319,6 +321,37 @@ export default function UploadPage() {
       URL.revokeObjectURL(prev[index].url);
       return prev.filter((_, i) => i !== index);
     });
+  };
+
+  // 미리보기 이미지 드래그 정렬 — 첫 번째가 자동으로 대표 이미지
+  const handlePreviewDragStart = (idx: number) => (e: React.DragEvent) => {
+    setDraggedPreviewIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handlePreviewDragOver = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverPreviewIdx !== idx) setDragOverPreviewIdx(idx);
+  };
+
+  const handlePreviewDrop = (targetIdx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverPreviewIdx(null);
+    const sourceIdx = draggedPreviewIdx;
+    setDraggedPreviewIdx(null);
+    if (sourceIdx === null || sourceIdx === targetIdx) return;
+    setPreviewImages((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(sourceIdx, 1);
+      next.splice(targetIdx, 0, moved);
+      return next;
+    });
+  };
+
+  const handlePreviewDragEnd = () => {
+    setDraggedPreviewIdx(null);
+    setDragOverPreviewIdx(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1242,14 +1275,26 @@ export default function UploadPage() {
                   미리보기 이미지 * ({previewImages.length}/{MAX_PREVIEWS})
                 </label>
                 <p className="text-[13px] text-muted-foreground mb-2.5 leading-relaxed">
-                  자료의 내용을 확인할 수 있는 이미지를 첨부해주세요. 첫 번째 이미지가 대표 미리보기로 사용됩니다.
+                  자료의 내용을 확인할 수 있는 이미지를 첨부해주세요. 드래그해서 순서를 바꿀 수 있고, 가장 앞에 있는 이미지가 대표 이미지가 됩니다.
                 </p>
 
                 {previewImages.length > 0 && (
                   <div className="flex gap-2.5 flex-wrap mb-3">
                     {previewImages.map((img, idx) => (
-                      <div key={idx} className="relative w-[120px] h-[150px] rounded-md overflow-hidden shadow-sm">
-                        <img src={img.url} alt={`미리보기 ${idx + 1}`} className="w-full h-full object-cover" />
+                      <div
+                        key={idx}
+                        draggable
+                        onDragStart={handlePreviewDragStart(idx)}
+                        onDragOver={handlePreviewDragOver(idx)}
+                        onDrop={handlePreviewDrop(idx)}
+                        onDragEnd={handlePreviewDragEnd}
+                        className={cn(
+                          "relative w-[120px] h-[150px] rounded-md overflow-hidden shadow-sm cursor-move transition-all",
+                          draggedPreviewIdx === idx && "opacity-40",
+                          dragOverPreviewIdx === idx && draggedPreviewIdx !== idx && "ring-2 ring-[#862633] ring-offset-1"
+                        )}
+                      >
+                        <img src={img.url} alt={`미리보기 ${idx + 1}`} className="w-full h-full object-cover pointer-events-none" />
                         {idx === 0 && (
                           <Badge className="absolute top-1.5 left-1.5 text-[10px] font-bold bg-[#862633] text-white hover:bg-[#862633]">
                             대표
