@@ -129,9 +129,14 @@ public class Material {
     // ---------- ElementCollections (엔티티 맨 끝에 모음) ----------
     // 주의: @ElementCollection 사이에 일반 @Column 끼우면 Hibernate가
     // 잘못된 alias(m1_1_0 등)를 생성하는 케이스가 있음.
+    //
+    // EAGER 사용 이유: JacksonConfig가 FORCE_LAZY_LOADING=off라 미초기화
+    // lazy 컬렉션은 응답에서 null로 직렬화됨. 이 두 컬렉션은 목록/상세 양쪽에서
+    // 항상 필요(파일 수/미리보기) → EAGER + @BatchSize(50)으로 묶어 로드.
+    // @ElementCollection EAGER는 JOIN이 아닌 별도 SELECT라 페이징 Cartesian 없음.
 
     // 다중 파일 (최대 10개)
-    @ElementCollection(fetch = FetchType.LAZY)
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "material_files",
             joinColumns = @JoinColumn(name = "material_id"))
     @OrderColumn(name = "idx")
@@ -140,7 +145,7 @@ public class Material {
     private List<MaterialFile> files = new ArrayList<>();
 
     // 미리보기 이미지
-    @ElementCollection(fetch = FetchType.LAZY)
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "material_preview_images",
             joinColumns = @JoinColumn(name = "material_id"))
     @OrderColumn(name = "idx")
