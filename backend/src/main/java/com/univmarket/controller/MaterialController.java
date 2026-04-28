@@ -73,6 +73,18 @@ public class MaterialController {
     }
 
     /**
+     * 내 자료 부분 수정
+     */
+    @PatchMapping("/materials/{id}")
+    public ResponseEntity<Material> updateMyMaterial(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> body) {
+        Material updated = materialService.updateMyMaterial(principal.getUid(), id, body);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
      * 내 자료 삭제
      */
     @DeleteMapping("/materials/{id}")

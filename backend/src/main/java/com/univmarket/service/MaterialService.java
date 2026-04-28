@@ -154,6 +154,64 @@ public class MaterialService {
     }
 
     /**
+     * 내 자료 부분 수정 — 본인 자료만, payload에 포함된 필드만 갱신.
+     * previewImages 가 들어오면 thumbnail 도 첫 번째로 자동 동기화.
+     */
+    @Transactional
+    public Material updateMyMaterial(String firebaseUid, Long materialId, Map<String, Object> payload) {
+        User user = userRepository.findByFirebaseUid(firebaseUid)
+                .orElseThrow(() -> ApiException.notFound("사용자 정보를 찾을 수 없습니다."));
+        Material material = materialRepository.findById(materialId)
+                .orElseThrow(() -> ApiException.notFound("자료를 찾을 수 없습니다."));
+        if (!material.getAuthor().getId().equals(user.getId())) {
+            throw ApiException.forbidden("본인이 등록한 자료만 수정할 수 있습니다.");
+        }
+
+        if (payload.containsKey("title")) {
+            String title = asString(payload.get("title"));
+            if (title == null || title.isBlank()) {
+                throw ApiException.badRequest("제목은 필수입니다.");
+            }
+            if (title.length() > 200) {
+                throw ApiException.badRequest("제목이 너무 깁니다. (최대 200자)");
+            }
+            material.setTitle(title.trim());
+        }
+        if (payload.containsKey("description")) {
+            String desc = asString(payload.get("description"));
+            material.setDescription(desc != null ? desc : "");
+        }
+        if (payload.containsKey("price")) {
+            Integer price = asInt(payload.get("price"));
+            if (price == null || price < 0 || price > 500_000) {
+                throw ApiException.badRequest("판매 가격은 0원 이상 500,000원 이하의 정수여야 합니다.");
+            }
+            material.setPrice(price);
+        }
+        if (payload.containsKey("subject")) {
+            material.setSubject(trimOrNull(asString(payload.get("subject")), 50));
+        }
+        if (payload.containsKey("professor")) {
+            material.setProfessor(trimOrNull(asString(payload.get("professor")), 50));
+        }
+        if (payload.containsKey("department")) {
+            material.setDepartment(trimOrNull(asString(payload.get("department")), 50));
+        }
+        if (payload.containsKey("previewImages")) {
+            List<String> previews = asStringList(payload.get("previewImages"));
+            if (previews.size() > MAX_PREVIEW_IMAGES) {
+                previews = previews.subList(0, MAX_PREVIEW_IMAGES);
+            }
+            material.setPreviewImages(new ArrayList<>(previews));
+            material.setThumbnail(previews.isEmpty() ? null : previews.get(0));
+        } else if (payload.containsKey("thumbnail")) {
+            material.setThumbnail(asString(payload.get("thumbnail")));
+        }
+
+        return materialRepository.save(material);
+    }
+
+    /**
      * 내 자료 삭제 — 항상 숨김(soft delete) 처리.
      * 구매/리뷰/신고 이력의 FK 제약으로 하드 삭제는 사실상 불가능하고,
      * 환불된 구매자도 거래내역에서 자료명을 봐야 하므로 행 자체는 보존.
