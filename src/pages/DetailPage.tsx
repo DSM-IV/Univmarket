@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ChevronLeft, ChevronRight, Download, ShoppingCart, GraduationCap } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, ShoppingCart, GraduationCap, X, ZoomIn } from "lucide-react";
 
 interface Review {
   id: string;
@@ -148,6 +148,7 @@ export default function DetailPage() {
   const [loading, setLoading] = useState(true);
   const [owned, setOwned] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [agreedToRefundPolicy, setAgreedToRefundPolicy] = useState(false);
   const [buying, setBuying] = useState(false);
@@ -198,6 +199,28 @@ export default function DetailPage() {
       isInCart(user.uid, material.id).then(setInCart);
     }
   }, [user, material]);
+
+  // 라이트박스: ESC 닫기 + ← / → 로 미리보기 이동, 열려 있는 동안 body 스크롤 잠금
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const previews = material?.previewImages ?? [];
+    const total = previews.length || (material?.thumbnail ? 1 : 0);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxOpen(false);
+      else if (e.key === "ArrowLeft" && total > 1) {
+        setPreviewIndex((i) => Math.max(0, i - 1));
+      } else if (e.key === "ArrowRight" && total > 1) {
+        setPreviewIndex((i) => Math.min(total - 1, i + 1));
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [lightboxOpen, material?.previewImages, material?.thumbnail]);
 
   // 후기 불러오기
   useEffect(() => {
@@ -425,19 +448,30 @@ export default function DetailPage() {
             </div>
             {previewImages?.length > 0 ? (
               <div className="relative bg-secondary flex flex-col items-center p-5">
-                <img
-                  src={previewImages[previewIndex]}
-                  alt={`미리보기 ${previewIndex + 1}`}
-                  className="w-full max-h-[600px] object-contain rounded-sm shadow-md bg-white"
-                  onError={(e) => {
-                    const target = e.currentTarget;
-                    target.style.display = "none";
-                    const fallback = document.createElement("div");
-                    fallback.className = "w-full h-[280px] flex items-center justify-center bg-muted rounded-sm text-muted-foreground text-sm";
-                    fallback.textContent = "이미지를 불러올 수 없습니다";
-                    target.parentElement?.insertBefore(fallback, target);
-                  }}
-                />
+                <button
+                  type="button"
+                  className="group relative w-full cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+                  onClick={() => setLightboxOpen(true)}
+                  aria-label="미리보기 이미지 확대"
+                >
+                  <img
+                    src={previewImages[previewIndex]}
+                    alt={`미리보기 ${previewIndex + 1}`}
+                    className="w-full max-h-[600px] object-contain rounded-sm shadow-md bg-white"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      target.style.display = "none";
+                      const fallback = document.createElement("div");
+                      fallback.className = "w-full h-[280px] flex items-center justify-center bg-muted rounded-sm text-muted-foreground text-sm";
+                      fallback.textContent = "이미지를 불러올 수 없습니다";
+                      target.parentElement?.insertBefore(fallback, target);
+                    }}
+                  />
+                  <span className="pointer-events-none absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md bg-black/55 text-white text-[11px] font-medium opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
+                    <ZoomIn className="w-3.5 h-3.5" />
+                    확대
+                  </span>
+                </button>
                 {previewImages.length > 1 && (
                   <div className="flex items-center justify-center gap-4 mt-3">
                     <button
@@ -462,12 +496,23 @@ export default function DetailPage() {
               </div>
             ) : material.thumbnail ? (
               <div className="relative bg-secondary flex flex-col items-center p-5">
-                <img
-                  src={material.thumbnail}
-                  alt="미리보기"
-                  className="w-full max-h-[600px] object-contain rounded-sm shadow-md bg-white"
-                  onError={(e) => { e.currentTarget.style.display = "none"; }}
-                />
+                <button
+                  type="button"
+                  className="group relative w-full cursor-zoom-in focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm"
+                  onClick={() => setLightboxOpen(true)}
+                  aria-label="미리보기 이미지 확대"
+                >
+                  <img
+                    src={material.thumbnail}
+                    alt="미리보기"
+                    className="w-full max-h-[600px] object-contain rounded-sm shadow-md bg-white"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                  <span className="pointer-events-none absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md bg-black/55 text-white text-[11px] font-medium opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity">
+                    <ZoomIn className="w-3.5 h-3.5" />
+                    확대
+                  </span>
+                </button>
               </div>
             ) : (
               <div className="h-[280px] max-sm:h-[180px] bg-gradient-to-br from-[#667eea] to-[#764ba2] flex flex-col items-center justify-center gap-3">
@@ -938,6 +983,77 @@ export default function DetailPage() {
           </Card>
         </div>
       )}
+
+      {/* 미리보기 확대 라이트박스 */}
+      {lightboxOpen && (() => {
+        const sources = previewImages.length > 0
+          ? previewImages
+          : (material.thumbnail ? [material.thumbnail] : []);
+        if (sources.length === 0) return null;
+        const safeIndex = Math.min(previewIndex, sources.length - 1);
+        const hasMany = sources.length > 1;
+        return (
+          <div
+            className="fixed inset-0 z-[300] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setLightboxOpen(false)}
+            role="dialog"
+            aria-label="미리보기 확대"
+          >
+            {/* 닫기 버튼 */}
+            <button
+              type="button"
+              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+              onClick={(e) => { e.stopPropagation(); setLightboxOpen(false); }}
+              aria-label="닫기"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* 좌측 화살표 */}
+            {hasMany && safeIndex > 0 && (
+              <button
+                type="button"
+                className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+                onClick={(e) => { e.stopPropagation(); setPreviewIndex((i) => Math.max(0, i - 1)); }}
+                aria-label="이전 이미지"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* 이미지 */}
+            <img
+              src={sources[safeIndex]}
+              alt={`미리보기 ${safeIndex + 1}`}
+              className="max-w-[95vw] max-h-[90vh] object-contain select-none"
+              onClick={(e) => e.stopPropagation()}
+              draggable={false}
+            />
+
+            {/* 우측 화살표 */}
+            {hasMany && safeIndex < sources.length - 1 && (
+              <button
+                type="button"
+                className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
+                onClick={(e) => { e.stopPropagation(); setPreviewIndex((i) => Math.min(sources.length - 1, i + 1)); }}
+                aria-label="다음 이미지"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            )}
+
+            {/* 페이지 인디케이터 */}
+            {hasMany && (
+              <div
+                className="absolute bottom-5 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-full bg-white/10 text-white text-sm font-medium"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {safeIndex + 1} / {sources.length}
+              </div>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
