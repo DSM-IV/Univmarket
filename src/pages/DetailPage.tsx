@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { apiGet, apiGetList, apiPost, apiPatch, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
 import { addToCart, isInCart } from "../services/cartService";
-import { departments, regularDepartments, convergenceMajors, exchangeCountries } from "../data/mockData";
 import type { Material, MaterialFile } from "../types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -168,20 +167,7 @@ export default function DetailPage() {
   const [inCart, setInCart] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
 
-  // 자료 수정/삭제
-  const [editing, setEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editPrice, setEditPrice] = useState(0);
-  const [editSubject, setEditSubject] = useState("");
-  const [editProfessor, setEditProfessor] = useState("");
-  const [editDepartment, setEditDepartment] = useState("");
-  type EditPreviewItem =
-    | { kind: "url"; url: string }
-    | { kind: "file"; file: File; url: string };
-  const [editPreviews, setEditPreviews] = useState<EditPreviewItem[]>([]);
-  const editPreviewInputRef = useRef<HTMLInputElement>(null);
-  const [saving, setSaving] = useState(false);
+  // 자료 삭제 (수정 기능은 제거됨)
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -357,115 +343,6 @@ export default function DetailPage() {
     );
   }
 
-  const handleStartEdit = () => {
-    if (!material) return;
-    setEditTitle(material.title);
-    setEditDescription(material.description);
-    setEditPrice(material.price);
-    setEditSubject(material.subject);
-    setEditProfessor(material.professor || "");
-    setEditDepartment(material.department || "");
-    setEditPreviews((material.previewImages ?? []).map((u) => ({ kind: "url" as const, url: u })));
-    setEditing(true);
-  };
-
-  const handleCancelEdit = () => {
-    editPreviews.forEach((p) => { if (p.kind === "file") URL.revokeObjectURL(p.url); });
-    setEditPreviews([]);
-    setEditing(false);
-  };
-
-  const handleAddEditPreviews = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    const remaining = 5 - editPreviews.length;
-    if (remaining <= 0) {
-      alert("미리보기 이미지는 최대 5장까지 첨부 가능합니다.");
-      return;
-    }
-    const accepted: EditPreviewItem[] = [];
-    for (let i = 0; i < Math.min(files.length, remaining); i++) {
-      const f = files[i];
-      if (!f.type.startsWith("image/")) continue;
-      if (f.size > 5 * 1024 * 1024) continue;
-      accepted.push({ kind: "file", file: f, url: URL.createObjectURL(f) });
-    }
-    setEditPreviews((prev) => [...prev, ...accepted]);
-    if (editPreviewInputRef.current) editPreviewInputRef.current.value = "";
-  };
-
-  const removeEditPreview = (idx: number) => {
-    setEditPreviews((prev) => {
-      const item = prev[idx];
-      if (item.kind === "file") URL.revokeObjectURL(item.url);
-      return prev.filter((_, i) => i !== idx);
-    });
-  };
-
-  const setEditPreviewAsThumbnail = (idx: number) => {
-    setEditPreviews((prev) => {
-      if (idx === 0) return prev;
-      const item = prev[idx];
-      return [item, ...prev.filter((_, i) => i !== idx)];
-    });
-  };
-
-  const handleSaveEdit = async () => {
-    if (!material || !id) return;
-    const priceInt = Math.floor(Number(editPrice));
-    if (!Number.isInteger(priceInt) || priceInt < 0 || priceInt > 500000) {
-      alert("가격은 0원 이상 500,000원 이하의 정수여야 합니다.");
-      return;
-    }
-    if (editPreviews.length === 0) {
-      alert("미리보기 이미지는 최소 1장이 필요합니다.");
-      return;
-    }
-    setSaving(true);
-    try {
-      // 신규 파일을 R2에 업로드해서 URL 확보 → 기존 URL과 순서 유지하며 합침
-      const finalUrls: string[] = [];
-      for (const item of editPreviews) {
-        if (item.kind === "url") {
-          finalUrls.push(item.url);
-        } else {
-          const f = item.file;
-          const ext = (f.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-          const fileName = `preview_${Date.now()}_${finalUrls.length}.${ext}`;
-          const data = await apiPost<{ uploadUrl: string; fileUrl: string; key: string }>(
-            "/materials/upload-url",
-            { fileName, contentType: f.type, fileSize: f.size }
-          );
-          const put = await fetch(data.uploadUrl, {
-            method: "PUT",
-            headers: { "Content-Type": f.type },
-            body: f,
-          });
-          if (!put.ok) throw new Error(`미리보기 업로드 실패: HTTP ${put.status}`);
-          finalUrls.push(data.fileUrl);
-        }
-      }
-
-      const updated = await apiPatch<Material>(`/materials/${id}`, {
-        title: editTitle.trim(),
-        description: editDescription.trim(),
-        price: priceInt,
-        subject: editSubject.trim(),
-        professor: editProfessor.trim(),
-        department: (material.category === "수업" || material.category === "이중전공 & 융합전공 & 전과" || material.category === "동아리 & 학회" || material.category === "교환학생") ? editDepartment : "",
-        previewImages: finalUrls,
-      });
-      // 신규 파일 blob URL 정리
-      editPreviews.forEach((p) => { if (p.kind === "file") URL.revokeObjectURL(p.url); });
-      setMaterial(updated);
-      setEditing(false);
-    } catch {
-      alert("자료 수정에 실패했습니다.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleDeleteMaterial = async () => {
     if (!material || !id) return;
     if (!confirm("정말 이 자료를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
@@ -603,194 +480,6 @@ export default function DetailPage() {
 
           {/* Info section */}
           <div>
-            {editing ? (
-              <Card className="border-2 border-primary-light">
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-bold mb-5">자료 수정</h3>
-                  <div className="mb-4">
-                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">제목</label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] transition-colors focus:outline-none focus:border-primary"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">과목</label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] transition-colors focus:outline-none focus:border-primary"
-                      value={editSubject}
-                      onChange={(e) => setEditSubject(e.target.value)}
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">교수</label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] transition-colors focus:outline-none focus:border-primary"
-                      value={editProfessor}
-                      onChange={(e) => setEditProfessor(e.target.value)}
-                    />
-                  </div>
-                  {(material.category === "수업" || material.category === "이중전공 & 융합전공 & 전과" || material.category === "동아리 & 학회" || material.category === "교환학생") && (
-                    <div className="mb-4">
-                      <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">
-                        {material.category === "교환학생"
-                          ? "국가"
-                          : material.category === "동아리 & 학회"
-                          ? "유형"
-                          : material.category === "이중전공 & 융합전공 & 전과"
-                          ? "학과 / 융합전공"
-                          : "학과"}
-                      </label>
-                      <select
-                        className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] transition-colors focus:outline-none focus:border-primary"
-                        value={editDepartment}
-                        onChange={(e) => setEditDepartment(e.target.value)}
-                      >
-                        {material.category === "교환학생" ? (
-                          <>
-                            <option value="">국가를 선택하세요</option>
-                            {Object.entries(exchangeCountries).map(([region, countries]) => (
-                              <optgroup key={region} label={region}>
-                                {countries.map((c) => (
-                                  <option key={c} value={c}>{c}</option>
-                                ))}
-                              </optgroup>
-                            ))}
-                          </>
-                        ) : material.category === "동아리 & 학회" ? (
-                          <>
-                            <option value="">유형을 선택하세요</option>
-                            <option value="동아리">동아리</option>
-                            <option value="학회">학회</option>
-                          </>
-                        ) : material.category === "이중전공 & 융합전공 & 전과" ? (
-                          <>
-                            <option value="">학과/융합전공을 선택하세요</option>
-                            <optgroup label="학과">
-                              {regularDepartments.map((dept) => (
-                                <option key={dept} value={dept}>{dept}</option>
-                              ))}
-                            </optgroup>
-                            <optgroup label="융합전공">
-                              {convergenceMajors.map((m) => (
-                                <option key={m} value={m}>{m}</option>
-                              ))}
-                            </optgroup>
-                          </>
-                        ) : (
-                          <>
-                            <option value="">학과를 선택하세요</option>
-                            {departments.map((dept) => (
-                              <option key={dept} value={dept}>{dept}</option>
-                            ))}
-                          </>
-                        )}
-                      </select>
-                    </div>
-                  )}
-                  <div className="mb-4">
-                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">가격 (P)</label>
-                    <input
-                      type="number"
-                      className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] transition-colors focus:outline-none focus:border-primary"
-                      value={editPrice}
-                      onChange={(e) => setEditPrice(Number(e.target.value))}
-                      min={0}
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">설명</label>
-                    <textarea
-                      className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] resize-y transition-colors focus:outline-none focus:border-primary"
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                      rows={5}
-                    />
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">
-                      미리보기 이미지 ({editPreviews.length}/5) — 첫 번째가 대표 이미지
-                    </label>
-                    <input
-                      ref={editPreviewInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      hidden
-                      onChange={handleAddEditPreviews}
-                    />
-                    {editPreviews.length > 0 && (
-                      <div className="grid grid-cols-3 gap-2 mb-2">
-                        {editPreviews.map((p, idx) => (
-                          <div
-                            key={`${p.kind}-${idx}-${p.url}`}
-                            className={cn(
-                              "relative aspect-[4/3] rounded-md overflow-hidden border-2 group",
-                              idx === 0 ? "border-primary" : "border-border"
-                            )}
-                          >
-                            <img src={p.url} alt={`미리보기 ${idx + 1}`} className="w-full h-full object-cover" />
-                            {idx === 0 && (
-                              <span className="absolute top-1 left-1 bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                대표
-                              </span>
-                            )}
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
-                              {idx !== 0 && (
-                                <button
-                                  type="button"
-                                  className="px-2 py-1 bg-white text-black text-[11px] font-semibold rounded hover:bg-primary hover:text-white transition-colors"
-                                  onClick={() => setEditPreviewAsThumbnail(idx)}
-                                >
-                                  대표로
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                className="px-2 py-1 bg-white text-destructive text-[11px] font-semibold rounded hover:bg-destructive hover:text-white transition-colors"
-                                onClick={() => removeEditPreview(idx)}
-                              >
-                                삭제
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {editPreviews.length < 5 && (
-                      <button
-                        type="button"
-                        className="w-full py-3 border-2 border-dashed border-border rounded-md text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-                        onClick={() => editPreviewInputRef.current?.click()}
-                      >
-                        + 이미지 추가 (JPG/PNG, 최대 5MB)
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex gap-2 justify-end mt-2">
-                    <Button
-                      variant="secondary"
-                      onClick={handleCancelEdit}
-                      disabled={saving}
-                    >
-                      취소
-                    </Button>
-                    <Button
-                      variant="primary"
-                      onClick={handleSaveEdit}
-                      disabled={saving || !editTitle.trim() || !editSubject.trim()}
-                    >
-                      {saving ? "저장 중..." : "저장"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <>
                 <div className="flex gap-2 mb-3 flex-wrap">
                   <Badge variant="primary">{material.category}</Badge>
                   {material.department && (
@@ -858,8 +547,6 @@ export default function DetailPage() {
                 </Card>
 
                 <FileListCard material={material} />
-              </>
-            )}
 
             {/* Specs grid */}
             <div className="grid grid-cols-2 gap-2.5 max-sm:grid-cols-1">
