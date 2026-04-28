@@ -36,7 +36,8 @@ export interface User {
 
 export type Category =
   | "수업"
-  | "이중전공 & 전과"
+  | "이중전공 & 융합전공 & 전과"
+  | "동아리 & 학회"
   | "교환학생"
   | "장학금";
 

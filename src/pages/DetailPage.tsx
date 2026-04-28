@@ -4,7 +4,7 @@ import { apiGet, apiGetList, apiPost, apiPatch, apiDelete } from "../api/client"
 import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
 import { addToCart, isInCart } from "../services/cartService";
-import { departments, convergenceMajors, microDegrees, exchangeCountries } from "../data/mockData";
+import { departments, convergenceMajors, exchangeCountries } from "../data/mockData";
 import type { Material } from "../types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -271,7 +271,7 @@ export default function DetailPage() {
         price: priceInt,
         subject: editSubject.trim(),
         professor: editProfessor.trim(),
-        department: (material.category === "수업" || material.category === "이중전공 & 전과" || material.category === "교환학생") ? editDepartment : "",
+        department: (material.category === "수업" || material.category === "이중전공 & 융합전공 & 전과" || material.category === "동아리 & 학회" || material.category === "교환학생") ? editDepartment : "",
       });
       setMaterial(updated);
       setEditing(false);
@@ -450,10 +450,16 @@ export default function DetailPage() {
                       onChange={(e) => setEditProfessor(e.target.value)}
                     />
                   </div>
-                  {(material.category === "수업" || material.category === "이중전공 & 전과" || material.category === "교환학생") && (
+                  {(material.category === "수업" || material.category === "이중전공 & 융합전공 & 전과" || material.category === "동아리 & 학회" || material.category === "교환학생") && (
                     <div className="mb-4">
                       <label className="block text-[13px] font-semibold text-muted-foreground mb-1.5">
-                        {material.category === "교환학생" ? "국가" : "학과"}
+                        {material.category === "교환학생"
+                          ? "국가"
+                          : material.category === "동아리 & 학회"
+                          ? "유형"
+                          : material.category === "이중전공 & 융합전공 & 전과"
+                          ? "학과 / 융합전공"
+                          : "학과"}
                       </label>
                       <select
                         className="w-full px-3 py-2.5 border border-border rounded-sm text-sm font-[inherit] transition-colors focus:outline-none focus:border-primary"
@@ -471,28 +477,32 @@ export default function DetailPage() {
                               </optgroup>
                             ))}
                           </>
-                        ) : (
+                        ) : material.category === "동아리 & 학회" ? (
                           <>
-                            <option value="">학과를 선택하세요</option>
+                            <option value="">유형을 선택하세요</option>
+                            <option value="동아리">동아리</option>
+                            <option value="학회">학회</option>
+                          </>
+                        ) : material.category === "이중전공 & 융합전공 & 전과" ? (
+                          <>
+                            <option value="">학과/융합전공을 선택하세요</option>
                             <optgroup label="학과">
                               {departments.map((dept) => (
                                 <option key={dept} value={dept}>{dept}</option>
                               ))}
                             </optgroup>
-                            {material.category === "이중전공 & 전과" && (
-                              <>
-                                <optgroup label="융합전공">
-                                  {convergenceMajors.map((m) => (
-                                    <option key={m} value={m}>{m}</option>
-                                  ))}
-                                </optgroup>
-                                <optgroup label="마이크로디그리">
-                                  {microDegrees.map((m) => (
-                                    <option key={m} value={m}>{m}</option>
-                                  ))}
-                                </optgroup>
-                              </>
-                            )}
+                            <optgroup label="융합전공">
+                              {convergenceMajors.map((m) => (
+                                <option key={m} value={m}>{m}</option>
+                              ))}
+                            </optgroup>
+                          </>
+                        ) : (
+                          <>
+                            <option value="">학과를 선택하세요</option>
+                            {departments.map((dept) => (
+                              <option key={dept} value={dept}>{dept}</option>
+                            ))}
                           </>
                         )}
                       </select>

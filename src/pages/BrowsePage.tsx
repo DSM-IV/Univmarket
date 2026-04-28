@@ -26,7 +26,7 @@ export default function BrowsePage() {
   const initialDept = searchParams.get("department") || "";
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const [selectedIsuType, setSelectedIsuType] = useState(""); // 전공, 학문의기초, 교양, 교직
-  const [selectedSubType, setSelectedSubType] = useState(""); // 이중전공, 전과
+  const [selectedSubType, setSelectedSubType] = useState(""); // 이중전공, 융합전공, 전과
   const [selectedDepartment, setSelectedDepartment] = useState(initialDept);
   const [selectedSubCategory, setSelectedSubCategory] = useState(""); // 학문의기초/교양/교직 하위분류
   const [selectedCourse, setSelectedCourse] = useState("");
@@ -39,10 +39,11 @@ export default function BrowsePage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const showIsuFilter = selectedCategory === "수업";
-  const showSubTypeFilter = selectedCategory === "이중전공 & 전과";
+  const showSubTypeFilter = selectedCategory === "이중전공 & 융합전공 & 전과";
+  const showClubTypeFilter = selectedCategory === "동아리 & 학회";
   const showDepartmentFilter =
     (selectedCategory === "수업" && selectedIsuType === "전공") ||
-    (selectedCategory === "이중전공 & 전과" && selectedSubType) ||
+    (selectedCategory === "이중전공 & 융합전공 & 전과" && !!selectedSubType) ||
     selectedCategory === "교환학생";
   const showSubCategoryFilter =
     selectedCategory === "수업" &&
@@ -261,19 +262,33 @@ export default function BrowsePage() {
               </select>
             )}
 
-            {/* 이중전공/전과 → 유형 선택 */}
+            {/* 이중전공 & 융합전공 & 전과 → 유형 드롭다운 */}
             {showSubTypeFilter && (
+              <select
+                value={selectedSubType}
+                onChange={(e) => setSelectedSubType(e.target.value)}
+                className="h-9 px-3 rounded-lg border border-border bg-white text-sm text-foreground max-w-[200px] outline-none focus:border-primary transition-colors cursor-pointer"
+              >
+                <option value="">유형 선택</option>
+                <option value="이중전공">이중전공</option>
+                <option value="융합전공">융합전공</option>
+                <option value="전과">전과</option>
+              </select>
+            )}
+
+            {/* 동아리/학회 유형 토글 */}
+            {showClubTypeFilter && (
               <div className="flex gap-1.5">
-                {["이중전공", "전과"].map((type) => (
+                {["동아리", "학회"].map((type) => (
                   <button
                     key={type}
                     className={cn(
                       "px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors border",
-                      selectedSubType === type
+                      selectedDepartment === type
                         ? "bg-primary text-white border-primary"
                         : "bg-white text-muted-foreground border-border hover:bg-accent hover:text-foreground"
                     )}
-                    onClick={() => setSelectedSubType(selectedSubType === type ? "" : type)}
+                    onClick={() => setSelectedDepartment(selectedDepartment === type ? "" : type)}
                   >
                     {type}
                   </button>
@@ -281,7 +296,7 @@ export default function BrowsePage() {
               </div>
             )}
 
-            {/* 전공 → 학과 선택 */}
+            {/* 학과/국가/융합전공 선택 */}
             {showDepartmentFilter && (
               <select
                 value={selectedDepartment}
@@ -299,21 +314,19 @@ export default function BrowsePage() {
                       </optgroup>
                     ))}
                   </>
+                ) : selectedCategory === "이중전공 & 융합전공 & 전과" && selectedSubType === "융합전공" ? (
+                  <>
+                    <option value="">전체 융합전공</option>
+                    {convergenceMajors.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </>
                 ) : (
                   <>
                     <option value="">전체 학과</option>
-                    <optgroup label="학과">
-                      {departments.map((dept) => (
-                        <option key={dept} value={dept}>{dept}</option>
-                      ))}
-                    </optgroup>
-                    {selectedCategory === "이중전공 & 전과" && (
-                      <optgroup label="융합전공">
-                        {convergenceMajors.map((m) => (
-                          <option key={m} value={m}>{m}</option>
-                        ))}
-                      </optgroup>
-                    )}
+                    {departments.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
                   </>
                 )}
               </select>

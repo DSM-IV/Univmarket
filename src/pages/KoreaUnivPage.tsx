@@ -490,7 +490,8 @@ export default function KoreaUnivPage() {
                     {/* 비-수업 탭: 자유 텍스트 + 상세 설명 */}
                     <div>
                       <label className="block text-sm font-semibold mb-1.5">
-                        {selectedReqCategory === "이중전공 & 전과" && "지원하려는 학과/전공 *"}
+                        {selectedReqCategory === "이중전공 & 융합전공 & 전과" && "지원하려는 학과/전공 *"}
+                        {selectedReqCategory === "동아리 & 학회" && "동아리/학회 이름 *"}
                         {selectedReqCategory === "교환학생" && "지원국가/대학 *"}
                         {selectedReqCategory === "장학금" && "장학금 이름 *"}
                       </label>
@@ -499,8 +500,10 @@ export default function KoreaUnivPage() {
                         value={reqSubject}
                         onChange={(e) => setReqSubject(e.target.value)}
                         placeholder={
-                          selectedReqCategory === "이중전공 & 전과"
-                            ? "예: 컴퓨터학과 이중전공"
+                          selectedReqCategory === "이중전공 & 융합전공 & 전과"
+                            ? "예: 컴퓨터학과 이중전공 / 인공지능응용 융합전공 / 경영학과 전과"
+                            : selectedReqCategory === "동아리 & 학회"
+                            ? "예: KUDA 광고 동아리"
                             : selectedReqCategory === "교환학생"
                             ? "예: 미국 UCLA"
                             : "예: 국가우수장학금"
