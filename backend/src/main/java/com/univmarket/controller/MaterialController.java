@@ -140,12 +140,15 @@ public class MaterialController {
 
     /**
      * 다운로드 URL 발급 (구매자 또는 작성자만)
+     * body.fileKey 가 있으면 해당 파일, 없으면 대표 파일.
      */
     @PostMapping("/materials/{id}/download-url")
     public ResponseEntity<Map<String, String>> getDownloadUrl(
             @AuthenticationPrincipal FirebaseUserPrincipal principal,
-            @PathVariable Long id) {
-        String downloadUrl = purchaseService.issueDownloadUrl(principal.getUid(), id, fileService);
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body) {
+        String fileKey = body != null ? (String) body.get("fileKey") : null;
+        String downloadUrl = purchaseService.issueDownloadUrl(principal.getUid(), id, fileKey, fileService);
         return ResponseEntity.ok(Map.of("downloadUrl", downloadUrl));
     }
 

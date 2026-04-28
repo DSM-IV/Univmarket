@@ -32,6 +32,67 @@ function formatDate(dateStr: string): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
+function formatBytes(bytes?: number): string {
+  if (!bytes || bytes <= 0) return "";
+  const units = ["B", "KB", "MB", "GB"];
+  let i = 0;
+  let n = bytes;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return `${n.toFixed(n < 10 && i > 0 ? 1 : 0)}${units[i]}`;
+}
+
+function DownloadSection({
+  material,
+  downloading,
+  onDownload,
+}: {
+  material: Material;
+  downloading: boolean;
+  onDownload: (fileKey?: string) => void;
+}) {
+  const list = (material.files || []).filter((f) => f.fileKey);
+  if (list.length <= 1) {
+    return (
+      <Button
+        className="w-full mb-2.5 bg-success hover:bg-success/90 text-white"
+        size="lg"
+        onClick={() => onDownload()}
+        disabled={downloading}
+      >
+        <Download className="w-4 h-4 mr-1" />
+        {downloading ? "준비 중..." : "다운로드"}
+      </Button>
+    );
+  }
+  return (
+    <div className="mb-2.5 space-y-2">
+      <p className="text-[12px] font-semibold text-muted-foreground">파일 {list.length}개</p>
+      {list.map((f, idx) => (
+        <div
+          key={`${f.fileKey}-${idx}`}
+          className="flex items-center gap-2 rounded-lg border border-border bg-secondary/50 px-3 py-2"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="text-[13px] font-semibold text-foreground truncate">{f.fileName || `파일 ${idx + 1}`}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {[f.fileType, formatBytes(f.fileSize)].filter(Boolean).join(" · ")}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="shrink-0 bg-success hover:bg-success/90 text-white"
+            onClick={() => onDownload(f.fileKey || undefined)}
+            disabled={downloading}
+          >
+            <Download className="w-3.5 h-3.5 mr-1" />
+            다운로드
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DetailPage() {
   const { id } = useParams();
   const { user, userProfile, refreshProfile } = useAuth();
@@ -173,11 +234,14 @@ export default function DetailPage() {
     setEditingReview(true);
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async (fileKey?: string) => {
     if (!material) return;
     setDownloading(true);
     try {
-      const data = await apiPost<{ downloadUrl: string }>(`/materials/${material.id}/download-url`);
+      const data = await apiPost<{ downloadUrl: string }>(
+        `/materials/${material.id}/download-url`,
+        fileKey ? { fileKey } : undefined
+      );
       const a = document.createElement("a");
       a.href = data.downloadUrl;
       a.download = "";
@@ -842,15 +906,11 @@ export default function DetailPage() {
               {material.authorId === user?.uid ? (
                 <>
                   <p className="text-center text-[13px] text-success font-medium mb-2.5">내가 등록한 자료입니다</p>
-                  <Button
-                    className="w-full mb-2.5 bg-success hover:bg-success/90 text-white"
-                    size="lg"
-                    onClick={handleDownload}
-                    disabled={downloading}
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    {downloading ? "준비 중..." : "다운로드"}
-                  </Button>
+                  <DownloadSection
+                    material={material}
+                    downloading={downloading}
+                    onDownload={handleDownload}
+                  />
                   <div className="flex gap-2 mt-2.5 mb-2.5">
                     <Button
                       variant="ghost"
@@ -872,15 +932,11 @@ export default function DetailPage() {
                 </>
               ) : owned ? (
                 <>
-                  <Button
-                    className="w-full mb-2.5 bg-success hover:bg-success/90 text-white"
-                    size="lg"
-                    onClick={handleDownload}
-                    disabled={downloading}
-                  >
-                    <Download className="w-4 h-4 mr-1" />
-                    {downloading ? "준비 중..." : "다운로드"}
-                  </Button>
+                  <DownloadSection
+                    material={material}
+                    downloading={downloading}
+                    onDownload={handleDownload}
+                  />
                   <p className="text-center text-[13px] text-success font-medium mb-2.5">구매 완료된 자료입니다</p>
                 </>
               ) : (

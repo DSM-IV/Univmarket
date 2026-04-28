@@ -129,6 +129,11 @@ public class PurchaseService {
      */
     @Transactional
     public String issueDownloadUrl(String firebaseUid, Long materialId, FileService fileService) {
+        return issueDownloadUrl(firebaseUid, materialId, null, fileService);
+    }
+
+    @Transactional
+    public String issueDownloadUrl(String firebaseUid, Long materialId, String fileKey, FileService fileService) {
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> ApiException.notFound("사용자 정보를 찾을 수 없습니다."));
         Material material = materialRepository.findById(materialId)
@@ -144,6 +149,21 @@ public class PurchaseService {
                 purchase.setDownloadedAt(LocalDateTime.now());
                 purchaseRepository.save(purchase);
             }
+        }
+
+        // fileKey가 지정되면 자료에 속한 파일인지 검증 후 해당 파일 다운로드 URL 발급
+        if (fileKey != null && !fileKey.isBlank()) {
+            MaterialFile target = material.getFiles().stream()
+                    .filter(f -> fileKey.equals(f.getFileKey()))
+                    .findFirst()
+                    .orElse(null);
+            if (target == null && fileKey.equals(material.getFileKey())) {
+                return fileService.generateDownloadUrl(material.getFileKey(), material.getFileName());
+            }
+            if (target == null) {
+                throw ApiException.badRequest("해당 파일이 자료에 포함되지 않습니다.");
+            }
+            return fileService.generateDownloadUrl(target.getFileKey(), target.getFileName());
         }
 
         return fileService.generateDownloadUrl(material.getFileKey(), material.getFileName());

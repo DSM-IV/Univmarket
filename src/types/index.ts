@@ -1,3 +1,11 @@
+export interface MaterialFile {
+  fileUrl?: string;
+  fileKey?: string;
+  fileName?: string;
+  fileSize?: number;
+  fileType?: string;
+}
+
 export interface Material {
   id: string;
   title: string;
@@ -18,6 +26,10 @@ export interface Material {
   createdAt: string;
   pages: number;
   fileType: string;
+  fileKey?: string;
+  fileName?: string;
+  fileSize?: number;
+  files?: MaterialFile[];
   previewImages?: string[];
   gradeImage?: string;
   gradeClaim?: string;
