@@ -107,7 +107,7 @@ export default function Navbar() {
                   onClick={scrollTop}
                   className="block px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
                 >
-                  이벤트페이지
+                  이벤트
                 </Link>
               </div>
             </div>
