@@ -497,7 +497,7 @@ export default function UploadPage() {
         title: formData.title,
         description: formData.description,
         category: formData.category,
-        department: (formData.category === "수업" || formData.category === "이중전공 & 융합전공 & 전과" || formData.category === "동아리 & 학회" || formData.category === "교환학생") ? formData.department : "",
+        department: (formData.category === "수업" || formData.category === "다중전공" || formData.category === "동아리 & 학회" || formData.category === "교환학생") ? formData.department : "",
         semester: formData.semester || "",
         subject: formData.subject,
         professor: formData.professor,
@@ -709,7 +709,11 @@ export default function UploadPage() {
                 <textarea
                   id="description"
                   name="description"
-                  placeholder="자료에 대한 상세한 설명을 작성해 주세요"
+                  placeholder={
+                    formData.category === "자격증"
+                      ? "합격수기, 준비방법 등을 자세히 작성해 주세요"
+                      : "자료에 대한 상세한 설명을 작성해 주세요"
+                  }
                   rows={5}
                   value={formData.description}
                   onChange={handleChange}
@@ -909,8 +913,8 @@ export default function UploadPage() {
                 </div>
               )}
 
-              {/* 이중전공 & 융합전공 & 전과 → 유형 선택 */}
-              {formData.category === "이중전공 & 융합전공 & 전과" && (
+              {/* 다중전공 → 유형 선택 */}
+              {formData.category === "다중전공" && (
                 <div className="mb-4">
                   <label className="block text-[13px] font-semibold mb-2 text-foreground">
                     유형 *
@@ -930,7 +934,7 @@ export default function UploadPage() {
               )}
 
               {/* 이중전공/전과 → 학과 선택 */}
-              {formData.category === "이중전공 & 융합전공 & 전과" && (formData.subType === "이중전공" || formData.subType === "전과") && (
+              {formData.category === "다중전공" && (formData.subType === "이중전공" || formData.subType === "전과") && (
                 <div className="mb-4">
                   <label htmlFor="department" className="block text-[13px] font-semibold mb-2 text-foreground">
                     학과 *
@@ -952,7 +956,7 @@ export default function UploadPage() {
               )}
 
               {/* 융합전공 → 융합전공 선택 */}
-              {formData.category === "이중전공 & 융합전공 & 전과" && formData.subType === "융합전공" && (
+              {formData.category === "다중전공" && formData.subType === "융합전공" && (
                 <div className="mb-4">
                   <label htmlFor="department" className="block text-[13px] font-semibold mb-2 text-foreground">
                     융합전공 *
@@ -1022,6 +1026,24 @@ export default function UploadPage() {
                       </optgroup>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {/* 자격증 → 자격증 이름 입력 */}
+              {formData.category === "자격증" && (
+                <div className="mb-4">
+                  <label htmlFor="subject" className="block text-[13px] font-semibold mb-2 text-foreground">
+                    자격증 이름 *
+                  </label>
+                  <Input
+                    type="text"
+                    id="subject"
+                    name="subject"
+                    placeholder="예: 정보처리기사, TOEIC, 한국사능력검정시험"
+                    value={formData.subject}
+                    onChange={handleChange}
+                    required
+                  />
                 </div>
               )}
 

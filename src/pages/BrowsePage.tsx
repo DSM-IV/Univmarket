@@ -39,11 +39,11 @@ export default function BrowsePage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const showIsuFilter = selectedCategory === "수업";
-  const showSubTypeFilter = selectedCategory === "이중전공 & 융합전공 & 전과";
+  const showSubTypeFilter = selectedCategory === "다중전공";
   const showClubTypeFilter = selectedCategory === "동아리 & 학회";
   const showDepartmentFilter =
     (selectedCategory === "수업" && selectedIsuType === "전공") ||
-    (selectedCategory === "이중전공 & 융합전공 & 전과" && !!selectedSubType) ||
+    (selectedCategory === "다중전공" && !!selectedSubType) ||
     selectedCategory === "교환학생";
   const showSubCategoryFilter =
     selectedCategory === "수업" &&
@@ -127,7 +127,7 @@ export default function BrowsePage() {
 
     result = result.filter((m) => m.category === selectedCategory);
 
-    if (selectedCategory === "이중전공 & 융합전공 & 전과" && selectedSubType) {
+    if (selectedCategory === "다중전공" && selectedSubType) {
       const convergenceSet = new Set<string>(convergenceMajors);
       if (selectedSubType === "융합전공") {
         result = result.filter((m) => convergenceSet.has(m.department || ""));
@@ -272,7 +272,7 @@ export default function BrowsePage() {
               </select>
             )}
 
-            {/* 이중전공 & 융합전공 & 전과 → 유형 드롭다운 */}
+            {/* 다중전공 → 유형 드롭다운 */}
             {showSubTypeFilter && (
               <select
                 value={selectedSubType}
@@ -324,14 +324,14 @@ export default function BrowsePage() {
                       </optgroup>
                     ))}
                   </>
-                ) : selectedCategory === "이중전공 & 융합전공 & 전과" && selectedSubType === "융합전공" ? (
+                ) : selectedCategory === "다중전공" && selectedSubType === "융합전공" ? (
                   <>
                     <option value="">전체 융합전공</option>
                     {convergenceMajors.map((m) => (
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </>
-                ) : selectedCategory === "이중전공 & 융합전공 & 전과" ? (
+                ) : selectedCategory === "다중전공" ? (
                   <>
                     <option value="">전체 학과</option>
                     {regularDepartments.map((dept) => (

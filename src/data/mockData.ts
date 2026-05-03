@@ -26,7 +26,7 @@ export const materials: Material[] = [
     description:
       "최근 2년간 미시경제학 기말고사 기출문제를 모아놓은 족보입니다. 풀이와 해설이 포함되어 있습니다.",
     price: 2500,
-    category: "이중전공 & 융합전공 & 전과",
+    category: "다중전공",
     subject: "미시경제학",
     professor: "박영희",
     author: "이서연",
@@ -45,7 +45,7 @@ export const materials: Material[] = [
     description:
       "이진 탐색 트리, 해시 테이블, 그래프 알고리즘 등 주요 자료구조를 구현한 과제 레포트입니다. 코드와 설명 포함.",
     price: 2000,
-    category: "이중전공 & 융합전공 & 전과",
+    category: "다중전공",
     subject: "데이터구조",
     professor: "이정호",
     author: "박준영",
@@ -121,7 +121,7 @@ export const materials: Material[] = [
     description:
       "주요 헌법 판례를 주제별로 정리한 노트입니다. 위헌심사기준, 기본권 제한, 통치구조 관련 핵심 판례를 포함합니다.",
     price: 5000,
-    category: "이중전공 & 융합전공 & 전과",
+    category: "다중전공",
     subject: "헌법",
     professor: "오태석",
     author: "오승우",
@@ -541,10 +541,11 @@ export const exchangeCountries = {
 
 export const categories = [
   { name: "수업" as const, icon: "📝", color: "#4F46E5", examples: "수업 필기, 발표 자료, 보고서" },
-  { name: "이중전공 & 융합전공 & 전과" as const, icon: "📋", color: "#DC2626", examples: "자기소개서, 지원서" },
+  { name: "다중전공" as const, icon: "📋", color: "#DC2626", examples: "자기소개서, 지원서" },
   { name: "동아리 & 학회" as const, icon: "🤝", color: "#0891B2", examples: "자기소개서, 면접 후기" },
   { name: "교환학생" as const, icon: "🌏", color: "#D97706", examples: "자기소개서, 지원서" },
   { name: "장학금" as const, icon: "💰", color: "#7C3AED", examples: "자기소개서, 지원서" },
+  { name: "자격증" as const, icon: "🏅", color: "#059669", examples: "합격수기, 준비방법" },
 ];
 export const coursesByIsuCategory: Record<string, Record<string, string[]>> = {
   "학문의기초": {

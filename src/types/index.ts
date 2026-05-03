@@ -48,10 +48,11 @@ export interface User {
 
 export type Category =
   | "수업"
-  | "이중전공 & 융합전공 & 전과"
+  | "다중전공"
   | "동아리 & 학회"
   | "교환학생"
-  | "장학금";
+  | "장학금"
+  | "자격증";
 
 export interface UserProfile {
   displayName: string;
