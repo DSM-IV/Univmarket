@@ -22,7 +22,7 @@ interface MaterialRequest {
   professor: string;
   description: string;
   needCount: number;
-  needUsers: string[];
+  needUsers?: string[];
   status: string;
   category?: string;
   createdAt: string;
@@ -85,7 +85,7 @@ export default function KoreaUnivPage() {
           )
         : null;
       if (existing) {
-        if (existing.needUsers.includes(user.uid)) {
+        if ((existing.needUsers ?? []).includes(user.uid)) {
           alert("이미 공감한 요청입니다.");
         } else {
           await handleToggleNeed(existing.id);
@@ -123,9 +123,10 @@ export default function KoreaUnivPage() {
         setMaterialRequests((prev) =>
           prev.map((r) => {
             if (r.id !== requestId) return r;
+            const current = r.needUsers ?? [];
             const newNeedUsers = data.added
-              ? [...r.needUsers, user.uid]
-              : r.needUsers.filter((u) => u !== user.uid);
+              ? [...current, user.uid]
+              : current.filter((u) => u !== user.uid);
             return { ...r, needCount: newNeedUsers.length, needUsers: newNeedUsers };
           })
         );
@@ -474,7 +475,7 @@ export default function KoreaUnivPage() {
                           r.professor === (reqProfessor || "")
                       );
                       if (existing) {
-                        const alreadyNeed = user && existing.needUsers.includes(user.uid);
+                        const alreadyNeed = user && (existing.needUsers ?? []).includes(user.uid);
                         return (
                           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
                             이미 <strong>{existing.needCount}명</strong>이 요청한 과목입니다.
@@ -542,7 +543,7 @@ export default function KoreaUnivPage() {
                           r.subject === reqSubject &&
                           r.professor === (reqProfessor || "")
                       );
-                      if (existing && user && existing.needUsers.includes(user.uid)) return "이미 공감함";
+                      if (existing && user && (existing.needUsers ?? []).includes(user.uid)) return "이미 공감함";
                       if (existing) return "저도 필요해요 +1";
                     }
                     return "요청 등록";
@@ -615,7 +616,7 @@ export default function KoreaUnivPage() {
                         <span
                           className={cn(
                             "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold",
-                            user && req.needUsers.includes(user.uid)
+                            user && (req.needUsers ?? []).includes(user.uid)
                               ? "bg-[#862633] text-white"
                               : "bg-[#862633]/5 text-[#862633]"
                           )}

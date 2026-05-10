@@ -15,7 +15,7 @@ interface MaterialRequest {
   professor: string;
   description: string;
   needCount: number;
-  needUsers: string[];
+  needUsers?: string[];
   status: string;
   category?: string;
   createdAt: string;
@@ -84,9 +84,10 @@ export default function RequestDetailPage() {
       // 로컬 상태 업데이트
       setRequest((prev) => {
         if (!prev) return prev;
+        const current = prev.needUsers ?? [];
         const newNeedUsers = data.added
-          ? [...prev.needUsers, user.uid]
-          : prev.needUsers.filter((u) => u !== user.uid);
+          ? [...current, user.uid]
+          : current.filter((u) => u !== user.uid);
         return { ...prev, needCount: newNeedUsers.length, needUsers: newNeedUsers };
       });
     } catch {}
@@ -145,7 +146,7 @@ export default function RequestDetailPage() {
     );
   }
 
-  const alreadyNeed = user && request.needUsers.includes(user.uid);
+  const alreadyNeed = user && (request.needUsers ?? []).includes(user.uid);
 
   return (
     <div className="min-h-[70vh] bg-muted/30">
