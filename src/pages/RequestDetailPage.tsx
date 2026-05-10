@@ -15,7 +15,7 @@ interface MaterialRequest {
   professor: string;
   description: string;
   needCount: number;
-  needUsers?: string[];
+  alreadyNeed?: boolean;
   status: string;
   category?: string;
   createdAt: string;
@@ -41,13 +41,14 @@ export default function RequestDetailPage() {
   const [needLoading, setNeedLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // 요청 데이터 로드
+  // 요청 데이터 로드 — 백엔드는 { request, comments } 래퍼로 응답함
   useEffect(() => {
     if (!id) return;
     (async () => {
       try {
-        const data = await apiGet<MaterialRequest>(`/material-requests/${id}`);
-        setRequest(data);
+        const data = await apiGet<{ request: MaterialRequest; comments: Comment[] }>(`/material-requests/${id}`);
+        setRequest(data.request);
+        if (Array.isArray(data.comments)) setComments(data.comments);
       } catch {
         // not found
       }
@@ -76,20 +77,16 @@ export default function RequestDetailPage() {
     if (!user || !id) return;
     setNeedLoading(true);
     try {
-      const data = await apiPost<{ added: boolean; deleted?: boolean }>(`/material-requests/${id}/toggle-need`);
+      const data = await apiPost<{ added?: boolean; deleted?: boolean; alreadyNeed?: boolean; needCount?: number }>(`/material-requests/${id}/toggle-need`);
       if (data.deleted) {
         navigate("/");
         return;
       }
-      // 로컬 상태 업데이트
-      setRequest((prev) => {
-        if (!prev) return prev;
-        const current = prev.needUsers ?? [];
-        const newNeedUsers = data.added
-          ? [...current, user.uid]
-          : current.filter((u) => u !== user.uid);
-        return { ...prev, needCount: newNeedUsers.length, needUsers: newNeedUsers };
-      });
+      setRequest((prev) =>
+        prev
+          ? { ...prev, alreadyNeed: data.alreadyNeed ?? prev.alreadyNeed, needCount: data.needCount ?? prev.needCount }
+          : prev,
+      );
     } catch {}
     setNeedLoading(false);
   };
@@ -146,7 +143,7 @@ export default function RequestDetailPage() {
     );
   }
 
-  const alreadyNeed = user && (request.needUsers ?? []).includes(user.uid);
+  const alreadyNeed = user && request.alreadyNeed;
 
   return (
     <div className="min-h-[70vh] bg-muted/30">

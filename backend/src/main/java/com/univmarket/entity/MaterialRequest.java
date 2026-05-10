@@ -50,4 +50,8 @@ public class MaterialRequest {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    /** 응답 전용 — 현재 인증된 사용자가 이미 "저도 필요해요"를 눌렀는지. 비로그인/계산 전이면 null. */
+    @Transient
+    private Boolean alreadyNeed;
 }

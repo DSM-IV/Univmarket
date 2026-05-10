@@ -20,18 +20,20 @@ public class MaterialRequestController {
     private final MaterialRequestService materialRequestService;
 
     /**
-     * 자료 요청 목록 (공개)
+     * 자료 요청 목록 (공개 — 비로그인도 OK, 로그인 시 alreadyNeed 채워서 반환)
      */
     @GetMapping
     public ResponseEntity<List<MaterialRequest>> listRequests(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) Integer limit) {
         int effectiveSize = Math.min(
                 (limit != null ? limit : (size != null ? size : 20)),
                 50);
+        String uid = principal != null ? principal.getUid() : null;
         return ResponseEntity.ok(
-                materialRequestService.listRequests(page, Math.max(effectiveSize, 1)).getContent());
+                materialRequestService.listRequests(page, Math.max(effectiveSize, 1), uid).getContent());
     }
 
     /**
@@ -62,11 +64,14 @@ public class MaterialRequestController {
     }
 
     /**
-     * 자료 요청 상세 + 댓글 (공개)
+     * 자료 요청 상세 + 댓글 (공개 — 로그인 시 alreadyNeed 채워서 반환)
      */
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getRequest(@PathVariable Long id) {
-        Map<String, Object> result = materialRequestService.getRequestWithComments(id);
+    public ResponseEntity<Map<String, Object>> getRequest(
+            @AuthenticationPrincipal FirebaseUserPrincipal principal,
+            @PathVariable Long id) {
+        String uid = principal != null ? principal.getUid() : null;
+        Map<String, Object> result = materialRequestService.getRequestWithComments(id, uid);
         return ResponseEntity.ok(result);
     }
 

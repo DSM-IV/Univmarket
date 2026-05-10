@@ -22,7 +22,7 @@ interface MaterialRequest {
   professor: string;
   description: string;
   needCount: number;
-  needUsers?: string[];
+  alreadyNeed?: boolean;
   status: string;
   category?: string;
   createdAt: string;
@@ -85,7 +85,7 @@ export default function KoreaUnivPage() {
           )
         : null;
       if (existing) {
-        if ((existing.needUsers ?? []).includes(user.uid)) {
+        if (existing.alreadyNeed) {
           alert("이미 공감한 요청입니다.");
         } else {
           await handleToggleNeed(existing.id);
@@ -115,20 +115,16 @@ export default function KoreaUnivPage() {
     if (!user) return;
     setNeedLoading(requestId);
     try {
-      const data = await apiPost<{ added: boolean; deleted?: boolean }>(`/material-requests/${requestId}/toggle-need`);
+      const data = await apiPost<{ added?: boolean; deleted?: boolean; alreadyNeed?: boolean; needCount?: number }>(`/material-requests/${requestId}/toggle-need`);
       if (data.deleted) {
-        // 공감자 0이면 요청 자체가 삭제됨 → 목록에서 제거
         setMaterialRequests((prev) => prev.filter((r) => r.id !== requestId));
       } else {
         setMaterialRequests((prev) =>
-          prev.map((r) => {
-            if (r.id !== requestId) return r;
-            const current = r.needUsers ?? [];
-            const newNeedUsers = data.added
-              ? [...current, user.uid]
-              : current.filter((u) => u !== user.uid);
-            return { ...r, needCount: newNeedUsers.length, needUsers: newNeedUsers };
-          })
+          prev.map((r) =>
+            r.id === requestId
+              ? { ...r, alreadyNeed: data.alreadyNeed ?? r.alreadyNeed, needCount: data.needCount ?? r.needCount }
+              : r
+          )
         );
       }
       if (data.added) {
@@ -475,7 +471,7 @@ export default function KoreaUnivPage() {
                           r.professor === (reqProfessor || "")
                       );
                       if (existing) {
-                        const alreadyNeed = user && (existing.needUsers ?? []).includes(user.uid);
+                        const alreadyNeed = user && existing.alreadyNeed;
                         return (
                           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
                             이미 <strong>{existing.needCount}명</strong>이 요청한 과목입니다.
@@ -543,7 +539,7 @@ export default function KoreaUnivPage() {
                           r.subject === reqSubject &&
                           r.professor === (reqProfessor || "")
                       );
-                      if (existing && user && (existing.needUsers ?? []).includes(user.uid)) return "이미 공감함";
+                      if (existing && user && existing.alreadyNeed) return "이미 공감함";
                       if (existing) return "저도 필요해요 +1";
                     }
                     return "요청 등록";
@@ -616,7 +612,7 @@ export default function KoreaUnivPage() {
                         <span
                           className={cn(
                             "flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-semibold",
-                            user && (req.needUsers ?? []).includes(user.uid)
+                            user && req.alreadyNeed
                               ? "bg-[#862633] text-white"
                               : "bg-[#862633]/5 text-[#862633]"
                           )}
