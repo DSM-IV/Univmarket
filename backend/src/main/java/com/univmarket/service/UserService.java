@@ -37,15 +37,27 @@ public class UserService {
     private static final Pattern NICKNAME_PATTERN = Pattern.compile("^[가-힣a-zA-Z0-9_]{2,16}$");
 
     /**
-     * 사용자 프로필 생성
+     * 사용자 프로필 생성.
+     *
+     * <p>인증 필터({@code FirebaseAuthFilter})가 모든 요청에서 빈 User 행을 미리
+     * 생성하기 때문에, 이 메서드가 실행될 시점에는 이미 닉네임이 비어 있는
+     * "껍데기" 행이 존재할 수 있다. 그 경우 충돌이 아니라 회원가입 정보로 채워 준다.
      */
     @Transactional
     public User createProfile(String firebaseUid, String email, String displayName, String nickname) {
-        if (userRepository.findByFirebaseUid(firebaseUid).isPresent()) {
+        User existing = userRepository.findByFirebaseUid(firebaseUid).orElse(null);
+        if (existing != null && existing.getNickname() != null && !existing.getNickname().isBlank()) {
             throw ApiException.conflict("이미 프로필이 존재합니다.");
         }
 
         validateNickname(nickname);
+
+        if (existing != null) {
+            existing.setEmail(email);
+            existing.setDisplayName(displayName);
+            existing.setNickname(nickname);
+            return userRepository.save(existing);
+        }
 
         User user = User.builder()
                 .firebaseUid(firebaseUid)
