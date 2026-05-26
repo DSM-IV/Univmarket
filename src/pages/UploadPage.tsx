@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
-import { categories, departments, regularDepartments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
+import { visibleCategories as categories, departments, regularDepartments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 import { apiPost } from "../api/client";
 import { Button } from "@/components/ui/button";

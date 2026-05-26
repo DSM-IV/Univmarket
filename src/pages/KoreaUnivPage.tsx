@@ -6,7 +6,7 @@ import MaterialCard from "../components/MaterialCard";
 import { Button } from "@/components/ui/button";
 // Input removed - using native selects
 import { Card, CardContent } from "@/components/ui/card";
-import { categories, departments, departmentCourses, courseProfessors } from "../data/mockData";
+import { visibleCategories as categories, departments, departmentCourses, courseProfessors } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import { ChevronRight, Hand, Plus, X, Bell, MessageSquarePlus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -37,7 +37,7 @@ export default function KoreaUnivPage() {
 
   // 자료 요청 관련
   const [materialRequests, setMaterialRequests] = useState<MaterialRequest[]>([]);
-  const [selectedReqCategory, setSelectedReqCategory] = useState<string>("수업");
+  const [selectedReqCategory, setSelectedReqCategory] = useState<string>("다중전공");
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [reqDept, setReqDept] = useState("");
   const [reqSubject, setReqSubject] = useState("");

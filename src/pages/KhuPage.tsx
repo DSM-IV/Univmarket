@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { apiGetList } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { Button } from "@/components/ui/button";
-import { categories } from "../data/mockData";
+import { visibleCategories as categories } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import { ChevronRight } from "lucide-react";
 import type { Material } from "../types";

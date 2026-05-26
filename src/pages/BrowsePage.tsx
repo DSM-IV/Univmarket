@@ -4,7 +4,7 @@ import { apiGetList } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { categories, departments, regularDepartments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
+import { visibleCategories as categories, departments, regularDepartments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import { BookOpen, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,7 @@ export default function BrowsePage() {
   const initialSort = searchParams.get("sort") || "popular";
 
   const [selectedCategory, setSelectedCategory] = useState<Category>(
-    initialCategory || "수업"
+    initialCategory || "다중전공"
   );
   const initialDept = searchParams.get("department") || "";
   const [searchQuery, setSearchQuery] = useState(initialQuery);

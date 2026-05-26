@@ -547,6 +547,12 @@ export const categories = [
   { name: "장학금" as const, icon: "💰", color: "#7C3AED", examples: "자기소개서, 지원서" },
   { name: "자격증" as const, icon: "🏅", color: "#059669", examples: "합격수기, 준비방법" },
 ];
+
+// 클로즈드 베타 기간 동안 노출할 카테고리. 베타 종료 시 BETA_VISIBLE_CATEGORIES = null 로 변경하면 전체 카테고리 복원.
+const BETA_VISIBLE_CATEGORIES: readonly string[] | null = ["다중전공", "교환학생"];
+export const visibleCategories = BETA_VISIBLE_CATEGORIES
+  ? categories.filter((c) => BETA_VISIBLE_CATEGORIES.includes(c.name))
+  : categories;
 export const coursesByIsuCategory: Record<string, Record<string, string[]>> = {
   "학문의기초": {
     "간호학과": ["가족건강과사회(영강)", "건강의사소통", "인간성장과발달", "인간심리와행동"],
