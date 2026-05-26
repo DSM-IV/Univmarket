@@ -42,15 +42,23 @@ public class UserService {
      * <p>인증 필터({@code FirebaseAuthFilter})가 모든 요청에서 빈 User 행을 미리
      * 생성하기 때문에, 이 메서드가 실행될 시점에는 이미 닉네임이 비어 있는
      * "껍데기" 행이 존재할 수 있다. 그 경우 충돌이 아니라 회원가입 정보로 채워 준다.
+     *
+     * <p>또한 회원가입 직후 네트워크/timeout 등으로 클라이언트가 같은 요청을 재시도하는
+     * 경우(인증 메일이 안 온 줄 알고 다시 누르는 등), 같은 firebaseUid + 같은 nickname
+     * 조합이면 conflict 대신 기존 프로필을 idempotent하게 돌려준다.
      */
     @Transactional
     public User createProfile(String firebaseUid, String email, String displayName, String nickname) {
         User existing = userRepository.findByFirebaseUid(firebaseUid).orElse(null);
+
+        if (existing != null && nickname != null && nickname.equals(existing.getNickname())) {
+            return existing;
+        }
         if (existing != null && existing.getNickname() != null && !existing.getNickname().isBlank()) {
             throw ApiException.conflict("이미 프로필이 존재합니다.");
         }
 
-        validateNickname(nickname);
+        validateNickname(nickname, firebaseUid);
 
         if (existing != null) {
             existing.setEmail(email);
@@ -77,7 +85,11 @@ public class UserService {
         User user = userRepository.findByFirebaseUid(firebaseUid)
                 .orElseThrow(() -> ApiException.notFound("사용자를 찾을 수 없습니다."));
 
-        validateNickname(newNickname);
+        if (newNickname != null && newNickname.equals(user.getNickname())) {
+            return user;
+        }
+
+        validateNickname(newNickname, firebaseUid);
 
         user.setNickname(newNickname);
         return userRepository.save(user);
@@ -172,11 +184,12 @@ public class UserService {
         notificationRepository.save(notification);
     }
 
-    private void validateNickname(String nickname) {
+    private void validateNickname(String nickname, String currentFirebaseUid) {
         if (nickname == null || !NICKNAME_PATTERN.matcher(nickname).matches()) {
             throw ApiException.badRequest("닉네임은 2~16자의 한글, 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.");
         }
-        if (userRepository.existsByNickname(nickname)) {
+        User owner = userRepository.findByNickname(nickname).orElse(null);
+        if (owner != null && !owner.getFirebaseUid().equals(currentFirebaseUid)) {
             throw ApiException.conflict("이미 사용 중인 닉네임입니다.");
         }
     }

@@ -10,6 +10,7 @@ import PrivacyContent from "@/components/legal/PrivacyContent";
 
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 60_000; // 1분
+const NICKNAME_PATTERN = /^[가-힣a-zA-Z0-9_]{2,16}$/;
 
 
 export default function LoginPage() {
@@ -106,8 +107,8 @@ export default function LoginPage() {
           setLoading(false);
           return;
         }
-        if (formData.nickname.trim().length < 2 || formData.nickname.trim().length > 16) {
-          setError("닉네임은 2~16자여야 합니다.");
+        if (!NICKNAME_PATTERN.test(formData.nickname.trim())) {
+          setError("닉네임은 2~16자의 한글, 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.");
           setLoading(false);
           return;
         }
