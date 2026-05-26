@@ -246,6 +246,25 @@ export const departments = [
 // 이중전공/전과용 학과만 (융합전공 제외)
 export const regularDepartments = departments.filter((d) => !d.endsWith("융합전공"));
 
+// 이중전공 선발 시 학업계획서가 포함된 전형의 학과만 (서울캠퍼스 기준)
+// 국제학부는 학업계획서 별도 작성 없이 면접 시 파악이므로 제외
+export const doubleMajorDepartments = [
+  "건축사회환경공학부",
+  "경영학과",
+  "경제학과",
+  "디자인조형학부",
+  "보건정책관리학부",
+  "산업경영공학부",
+  "스마트보안학부",
+  "심리학부",
+  "역사교육과",
+  "정치외교학과",
+  "컴퓨터학과",
+  "통계학과",
+  "행정학과",
+  "화공생명공학과",
+];
+
 
 
 export const convergenceMajors = [

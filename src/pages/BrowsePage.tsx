@@ -4,7 +4,7 @@ import { apiGetList } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { visibleCategories as categories, departments, regularDepartments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
+import { visibleCategories as categories, departments, regularDepartments, doubleMajorDepartments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import { BookOpen, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -334,7 +334,7 @@ export default function BrowsePage() {
                 ) : selectedCategory === "다중전공" ? (
                   <>
                     <option value="">전체 학과</option>
-                    {regularDepartments.map((dept) => (
+                    {(selectedSubType === "이중전공" ? doubleMajorDepartments : regularDepartments).map((dept) => (
                       <option key={dept} value={dept}>{dept}</option>
                     ))}
                   </>
