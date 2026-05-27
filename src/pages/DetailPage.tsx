@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { apiGet, apiGetList, apiPost, apiPatch, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
+import { startCheckout } from "../services/checkoutService";
 import { addToCart, isInCart } from "../services/cartService";
 import type { Material, MaterialFile } from "../types";
 import { cn } from "@/lib/utils";
@@ -410,6 +411,23 @@ export default function DetailPage() {
     setError("");
     setAgreedToRefundPolicy(false);
     setShowModal(true);
+  };
+
+  const handleDirectPurchase = async () => {
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    setError("");
+    try {
+      await startCheckout([material.id], {
+        customerKey: user.uid,
+        customerName: userProfile?.nickname,
+        customerEmail: userProfile?.email,
+      });
+    } catch (err) {
+      setError((err as Error).message || "결제를 시작할 수 없습니다.");
+    }
   };
 
   const handleConfirmPurchase = async () => {
@@ -849,9 +867,17 @@ export default function DetailPage() {
                     variant="primary"
                     size="lg"
                     className="w-full mb-2.5"
+                    onClick={handleDirectPurchase}
+                  >
+                    바로 구매
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full mb-2.5"
                     onClick={handleBuyClick}
                   >
-                    구매하기
+                    포인트로 구매
                   </Button>
                   <Button
                     variant="secondary"
@@ -865,7 +891,7 @@ export default function DetailPage() {
                   </Button>
                   {user && points < material.price && (
                     <div className="bg-amber-500/5 rounded-lg p-3.5 text-center mb-4">
-                      <p className="text-sm text-amber-600 font-semibold mb-1.5">포인트가 부족합니다.</p>
+                      <p className="text-sm text-amber-600 font-semibold mb-1.5">포인트가 부족합니다. (포인트 결제 시)</p>
                       <Link
                         to="/charge"
                         className="text-[13px] text-primary font-semibold hover:opacity-75 transition-opacity"

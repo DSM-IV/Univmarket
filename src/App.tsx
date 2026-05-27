@@ -10,6 +10,8 @@ import UploadPage from "./pages/UploadPage";
 import LoginPage from "./pages/LoginPage";
 import ChargePage from "./pages/ChargePage";
 import ChargeSuccessPage from "./pages/ChargeSuccessPage";
+import PurchaseSuccessPage from "./pages/PurchaseSuccessPage";
+import PurchaseFailPage from "./pages/PurchaseFailPage";
 import CartPage from "./pages/CartPage";
 import MyPage from "./pages/MyPage";
 import ReportPage from "./pages/ReportPage";
@@ -81,6 +83,8 @@ function App() {
             <Route path="/cart" element={<CartPage />} />
             <Route path="/charge" element={<ChargePage />} />
             <Route path="/charge/success" element={<ChargeSuccessPage />} />
+            <Route path="/purchase/success" element={<PurchaseSuccessPage />} />
+            <Route path="/purchase/fail" element={<PurchaseFailPage />} />
             <Route path="/mypage" element={<MyPage />} />
             <Route path="/report" element={<ReportPage />} />
             <Route path="/terms" element={<TermsPage />} />
