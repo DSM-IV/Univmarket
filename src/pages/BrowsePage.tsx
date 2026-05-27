@@ -4,7 +4,7 @@ import { apiGetList } from "../api/client";
 import MaterialCard from "../components/MaterialCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { visibleCategories as categories, departments, regularDepartments, doubleMajorDepartments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
+import { visibleCategories as categories, departments, regularDepartments, doubleMajorDepartments, transferDepartmentsByCollege, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import { BookOpen, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -331,10 +331,28 @@ export default function BrowsePage() {
                       <option key={m} value={m}>{m}</option>
                     ))}
                   </>
+                ) : selectedCategory === "다중전공" && selectedSubType === "이중전공" ? (
+                  <>
+                    <option value="">전체 학과</option>
+                    {doubleMajorDepartments.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </>
+                ) : selectedCategory === "다중전공" && selectedSubType === "전과" ? (
+                  <>
+                    <option value="">전체 학과</option>
+                    {Object.entries(transferDepartmentsByCollege).map(([college, depts]) => (
+                      <optgroup key={college} label={college}>
+                        {depts.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </>
                 ) : selectedCategory === "다중전공" ? (
                   <>
                     <option value="">전체 학과</option>
-                    {(selectedSubType === "이중전공" ? doubleMajorDepartments : regularDepartments).map((dept) => (
+                    {regularDepartments.map((dept) => (
                       <option key={dept} value={dept}>{dept}</option>
                     ))}
                   </>

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
-import { visibleCategories as categories, departments, regularDepartments, doubleMajorDepartments, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
+import { visibleCategories as categories, departments, regularDepartments, doubleMajorDepartments, transferDepartmentsByCollege, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 import { apiPost } from "../api/client";
 import { Button } from "@/components/ui/button";
@@ -948,9 +948,23 @@ export default function UploadPage() {
                     className="w-full px-4 py-3 border-none rounded-lg text-sm bg-secondary text-foreground outline-none transition-colors focus:bg-muted focus:ring-2 focus:ring-[#862633]/30"
                   >
                     <option value="">학과를 선택하세요</option>
-                    {(formData.subType === "이중전공" ? doubleMajorDepartments : regularDepartments).map((dept) => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
+                    {formData.subType === "이중전공" ? (
+                      doubleMajorDepartments.map((dept) => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))
+                    ) : formData.subType === "전과" ? (
+                      Object.entries(transferDepartmentsByCollege).map(([college, depts]) => (
+                        <optgroup key={college} label={college}>
+                          {depts.map((d) => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </optgroup>
+                      ))
+                    ) : (
+                      regularDepartments.map((dept) => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))
+                    )}
                   </select>
                 </div>
               )}
