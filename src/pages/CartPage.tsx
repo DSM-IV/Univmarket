@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getCartItems, removeFromCart, type CartItem } from "../services/cartService";
 import { purchaseMaterial, hasPurchased } from "../services/pointsService";
+import { startCheckout } from "../services/checkoutService";
 import { apiGet } from "../api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -133,6 +134,25 @@ export default function CartPage() {
     setSelected(new Set(updated.map((i) => i.id)));
     if (purchased > 0) await refreshProfile();
     setBuying(false);
+  };
+
+  const handleCheckoutSelected = async () => {
+    if (selectedItems.length === 0) return;
+    setError("");
+    setBuying(true);
+    try {
+      await startCheckout(
+        selectedItems.map((i) => i.materialId),
+        {
+          customerKey: user.uid,
+          customerName: userProfile?.nickname,
+          customerEmail: userProfile?.email,
+        }
+      );
+    } catch (err) {
+      setError((err as Error).message || "결제를 시작할 수 없습니다.");
+      setBuying(false);
+    }
   };
 
   const handleRemoveDeleted = async () => {
@@ -351,10 +371,18 @@ export default function CartPage() {
 
                   <Button
                     className="w-full mt-4 h-12 text-base font-bold"
+                    onClick={handleCheckoutSelected}
+                    disabled={buying || selectedItems.length === 0 || !agreedToRefundPolicy}
+                  >
+                    {buying ? "결제창 여는 중..." : `${selectedItems.length}건 결제하기`}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full mt-2 h-11 text-sm"
                     onClick={handleBuySelected}
                     disabled={buying || selectedItems.length === 0 || !agreedToRefundPolicy}
                   >
-                    {buying ? "구매 중..." : `${selectedItems.length}건 구매하기`}
+                    포인트로 구매
                   </Button>
                 </CardContent>
               </Card>
