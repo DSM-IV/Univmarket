@@ -123,6 +123,84 @@ public class PurchaseService {
     }
 
     /**
+     * 직접결제 후 자료 지급. 포인트 차감 없이 Purchase 레코드 생성 + 판매자 pendingEarnings 증가.
+     * 결제 검증은 호출 측(PaymentService.confirmCheckout)이 이미 완료했다고 가정.
+     */
+    @Transactional
+    public void recordPurchase(String buyerUid, Long materialId, String tossPaymentKey, long paidAmount) {
+        User buyer = userRepository.findByFirebaseUid(buyerUid)
+                .orElseThrow(() -> ApiException.notFound("사용자 정보를 찾을 수 없습니다."));
+        Material material = materialRepository.findById(materialId)
+                .orElseThrow(() -> ApiException.notFound("자료를 찾을 수 없습니다."));
+        User seller = material.getAuthor();
+
+        if (seller.getId().equals(buyer.getId())) {
+            throw ApiException.badRequest("본인의 자료는 구매할 수 없습니다.");
+        }
+        if (material.isHidden() || material.isCopyrightDeleted()) {
+            throw ApiException.badRequest("구매할 수 없는 자료입니다.");
+        }
+        if (purchaseRepository.existsByBuyerIdAndMaterialId(buyer.getId(), materialId)) {
+            throw ApiException.conflict("이미 구매한 자료입니다.");
+        }
+
+        BigDecimal price = BigDecimal.valueOf(material.getPrice());
+
+        userRepository.addPendingEarnings(seller.getId(), price);
+        materialRepository.incrementSalesCount(materialId);
+
+        buyer = userRepository.findById(buyer.getId()).orElseThrow();
+        seller = userRepository.findById(seller.getId()).orElseThrow();
+
+        transactionRepository.save(Transaction.builder()
+                .user(buyer)
+                .type("purchase")
+                .amount(price.negate())
+                .balanceType("cash")
+                .description("\"" + material.getTitle() + "\" 구매")
+                .relatedMaterialId(materialId)
+                .relatedUserId(seller.getId())
+                .tossPaymentKey(tossPaymentKey)
+                .tossPaymentAmount(BigDecimal.valueOf(paidAmount))
+                .status("completed")
+                .build());
+
+        transactionRepository.save(Transaction.builder()
+                .user(seller)
+                .type("sale")
+                .amount(price)
+                .balanceAfter(seller.getEarnings().add(seller.getPendingEarnings()))
+                .balanceType("earnings")
+                .description("\"" + material.getTitle() + "\" 판매 (정산 보류 중)")
+                .relatedMaterialId(materialId)
+                .relatedUserId(buyer.getId())
+                .tossPaymentKey(tossPaymentKey)
+                .status("completed")
+                .build());
+
+        try {
+            purchaseRepository.saveAndFlush(Purchase.builder()
+                    .buyer(buyer)
+                    .seller(seller)
+                    .material(material)
+                    .price(material.getPrice())
+                    .settled(false)
+                    .build());
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw ApiException.conflict("이미 구매한 자료입니다.");
+        }
+
+        notificationRepository.save(Notification.builder()
+                .user(seller)
+                .type("sale")
+                .title("자료가 판매되었어요!")
+                .message("\"" + material.getTitle() + "\" 자료가 판매되었습니다. (+" + price + "원)")
+                .materialId(materialId)
+                .materialTitle(material.getTitle())
+                .build());
+    }
+
+    /**
      * 다운로드 URL 발급 + 최초 다운로드 기록.
      * 작성자는 누구든 다운 가능, 구매자는 본인 구매 건만 가능.
      * 구매자가 처음 다운받으면 downloaded=true로 마킹해 환불 자격을 해제한다.
