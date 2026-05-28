@@ -54,6 +54,12 @@ public class Purchase {
     @Column(name = "refund_reason", length = 100)
     private String refundReason;
 
+    @Column(name = "toss_payment_key", length = 200)
+    private String tossPaymentKey;
+
+    @Column(name = "toss_payment_amount")
+    private Long tossPaymentAmount;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
