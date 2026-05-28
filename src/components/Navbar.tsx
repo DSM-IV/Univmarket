@@ -10,7 +10,6 @@ import {
   Menu,
   X,
   ChevronDown,
-  CreditCard,
   User as UserIcon,
   LogOut,
   Shield,
@@ -159,16 +158,12 @@ export default function Navbar() {
                     </div>
 
                     {/* Points - prominent display */}
-                    <Link
-                      to="/charge"
-                      onClick={scrollTop}
-                      className="block px-4 py-3 hover:bg-secondary transition-colors"
-                    >
+                    <div className="block px-4 py-3">
                       <p className="text-[11px] text-muted-foreground">내 포인트</p>
                       <p className="text-lg font-bold text-primary leading-tight mt-0.5">
                         {(userProfile?.points ?? 0).toLocaleString()}P
                       </p>
-                    </Link>
+                    </div>
 
                     <div className="h-px bg-border" />
 
@@ -180,14 +175,6 @@ export default function Navbar() {
                     >
                       <UserIcon className="w-4 h-4 text-muted-foreground" />
                       마이페이지
-                    </Link>
-                    <Link
-                      to="/charge"
-                      onClick={scrollTop}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
-                    >
-                      <CreditCard className="w-4 h-4 text-muted-foreground" />
-                      포인트 충전
                     </Link>
                     <Link
                       to="/withdraw"
@@ -272,16 +259,12 @@ export default function Navbar() {
                 <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
                 <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
               </div>
-              <Link
-                to="/charge"
-                onClick={closeMobile}
-                className="shrink-0 text-right"
-              >
+              <div className="shrink-0 text-right">
                 <p className="text-[10px] text-muted-foreground">내 포인트</p>
                 <p className="text-sm font-bold text-primary leading-tight">
                   {(userProfile?.points ?? 0).toLocaleString()}P
                 </p>
-              </Link>
+              </div>
             </div>
           )}
 
@@ -325,14 +308,6 @@ export default function Navbar() {
               >
                 <UserIcon className="w-4 h-4 text-muted-foreground" />
                 마이페이지
-              </Link>
-              <Link
-                to="/charge"
-                onClick={closeMobile}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-foreground hover:bg-secondary transition-colors"
-              >
-                <CreditCard className="w-4 h-4 text-muted-foreground" />
-                포인트 충전
               </Link>
               <Link
                 to="/withdraw"

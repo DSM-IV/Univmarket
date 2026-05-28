@@ -2,23 +2,21 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getCartItems, removeFromCart, type CartItem } from "../services/cartService";
-import { purchaseMaterial, hasPurchased } from "../services/pointsService";
 import { startCheckout } from "../services/checkoutService";
 import { apiGet } from "../api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { X, ShoppingCart, CheckCircle, AlertCircle, Trash2 } from "lucide-react";
+import { X, ShoppingCart, AlertCircle, Trash2 } from "lucide-react";
 
 export default function CartPage() {
-  const { user, userProfile, refreshProfile } = useAuth();
+  const { user, userProfile } = useAuth();
   const [items, setItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [buying, setBuying] = useState(false);
   const [error, setError] = useState("");
-  const [successCount, setSuccessCount] = useState(0);
   const [deletedItems, setDeletedItems] = useState<CartItem[]>([]);
   const [removingDeleted, setRemovingDeleted] = useState(false);
   const [agreedToRefundPolicy, setAgreedToRefundPolicy] = useState(false);
@@ -92,49 +90,6 @@ export default function CartPage() {
 
   const selectedItems = items.filter((i) => selected.has(i.id));
   const totalPrice = selectedItems.reduce((sum, i) => sum + i.price, 0);
-  const points = userProfile?.points ?? 0;
-
-  const handleBuySelected = async () => {
-    if (selectedItems.length === 0) return;
-    setBuying(true);
-    setError("");
-    setSuccessCount(0);
-
-    let purchased = 0;
-    for (const item of selectedItems) {
-      try {
-        const alreadyOwned = await hasPurchased(user.uid, item.materialId);
-        if (alreadyOwned) {
-          await removeFromCart(item.id);
-          purchased++;
-          continue;
-        }
-        await purchaseMaterial(item.materialId);
-        await removeFromCart(item.id);
-        purchased++;
-      } catch (err) {
-        const msg = (err as Error).message || "";
-        if (msg.includes("포인트가 부족")) {
-          setError("포인트가 부족합니다. 충전 후 다시 시도해주세요.");
-        } else if (msg.includes("이미 구매")) {
-          await removeFromCart(item.id);
-          purchased++;
-          continue;
-        } else {
-          setError(`"${item.title}" 구매 중 오류가 발생했습니다.`);
-        }
-        break;
-      }
-    }
-
-    setSuccessCount(purchased);
-    // 목록 새로고침
-    const updated = await getCartItems(user.uid);
-    setItems(updated);
-    setSelected(new Set(updated.map((i) => i.id)));
-    if (purchased > 0) await refreshProfile();
-    setBuying(false);
-  };
 
   const handleCheckoutSelected = async () => {
     if (selectedItems.length === 0) return;
@@ -278,7 +233,7 @@ export default function CartPage() {
                     </div>
                   </Link>
                   <span className="text-[15px] font-bold text-foreground whitespace-nowrap shrink-0">
-                    {item.price.toLocaleString()}P
+                    {item.price.toLocaleString()}원
                   </span>
                   <button
                     className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors shrink-0"
@@ -301,52 +256,16 @@ export default function CartPage() {
                     <span>선택한 자료</span>
                     <span>{selectedItems.length}건</span>
                   </div>
-                  <div className="flex justify-between py-1 text-sm text-muted-foreground">
-                    <span>총 금액</span>
-                    <span className="font-bold text-foreground">{totalPrice.toLocaleString()}P</span>
-                  </div>
-                  <div className="flex justify-between py-1 text-sm text-muted-foreground">
-                    <span>보유 포인트</span>
-                    <span>{points.toLocaleString()}P</span>
-                  </div>
                   <Separator />
                   <div className="flex justify-between py-1 text-sm font-semibold text-foreground">
-                    <span>결제 후 잔액</span>
-                    <span className={cn(points < totalPrice && "text-destructive")}>
-                      {(points - totalPrice).toLocaleString()}P
-                    </span>
+                    <span>총 결제 금액</span>
+                    <span>{totalPrice.toLocaleString()}원</span>
                   </div>
 
-                  {successCount > 0 && (
-                    <div className="flex items-center justify-center gap-2 bg-emerald-500/5 text-emerald-600 rounded-lg py-3 px-4 text-sm font-semibold mt-3">
-                      <CheckCircle className="h-4 w-4" />
-                      {successCount}건 구매 완료!
-                    </div>
-                  )}
                   {error && (
                     <div className="flex items-center justify-center gap-2 bg-destructive/5 text-destructive rounded-lg py-3 px-4 text-sm mt-3">
                       <AlertCircle className="h-4 w-4" />
                       {error}
-                    </div>
-                  )}
-                  {error.includes("포인트") && (
-                    <Link
-                      to="/charge"
-                      className="block text-center py-2 text-[13px] text-[#862633] font-semibold hover:opacity-75 transition-opacity"
-                    >
-                      포인트 충전하기
-                    </Link>
-                  )}
-
-                  {points < totalPrice && !error && selectedItems.length > 0 && (
-                    <div className="bg-amber-500/5 rounded-lg p-3.5 mt-3 text-center">
-                      <p className="text-sm text-amber-600 font-semibold mb-1.5">포인트가 부족합니다.</p>
-                      <Link
-                        to="/charge"
-                        className="text-[13px] text-[#862633] font-semibold hover:opacity-75 transition-opacity"
-                      >
-                        충전하러 가기
-                      </Link>
                     </div>
                   )}
 
@@ -375,14 +294,6 @@ export default function CartPage() {
                     disabled={buying || selectedItems.length === 0 || !agreedToRefundPolicy}
                   >
                     {buying ? "결제창 여는 중..." : `${selectedItems.length}건 결제하기`}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full mt-2 h-11 text-sm"
-                    onClick={handleBuySelected}
-                    disabled={buying || selectedItems.length === 0 || !agreedToRefundPolicy}
-                  >
-                    포인트로 구매
                   </Button>
                 </CardContent>
               </Card>

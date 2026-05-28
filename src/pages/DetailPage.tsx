@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { apiGet, apiGetList, apiPost, apiPatch, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
-import { purchaseMaterial, hasPurchased } from "../services/pointsService";
+import { hasPurchased } from "../services/pointsService";
 import { startCheckout } from "../services/checkoutService";
 import { addToCart, isInCart } from "../services/cartService";
 import type { Material, MaterialFile } from "../types";
@@ -142,7 +142,7 @@ function FileListCard({ material }: { material: Material }) {
 
 export default function DetailPage() {
   const { id } = useParams();
-  const { user, userProfile, refreshProfile } = useAuth();
+  const { user, userProfile } = useAuth();
   const navigate = useNavigate();
 
   const [material, setMaterial] = useState<Material | null>(null);
@@ -150,10 +150,6 @@ export default function DetailPage() {
   const [owned, setOwned] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [showModal, setShowModal] = useState(false);
-  const [agreedToRefundPolicy, setAgreedToRefundPolicy] = useState(false);
-  const [buying, setBuying] = useState(false);
-  const [error, setError] = useState("");
 
   // 후기
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -403,22 +399,11 @@ export default function DetailPage() {
     }
   };
 
-  const handleBuyClick = () => {
-    if (!user) {
-      navigate("/login");
-      return;
-    }
-    setError("");
-    setAgreedToRefundPolicy(false);
-    setShowModal(true);
-  };
-
   const handleDirectPurchase = async () => {
     if (!user) {
       navigate("/login");
       return;
     }
-    setError("");
     try {
       await startCheckout([material.id], {
         customerKey: user.uid,
@@ -426,31 +411,11 @@ export default function DetailPage() {
         customerEmail: userProfile?.email,
       });
     } catch (err) {
-      setError((err as Error).message || "결제를 시작할 수 없습니다.");
+      const msg = (err as Error).message || "결제를 시작할 수 없습니다.";
+      alert(msg);
     }
   };
 
-  const handleConfirmPurchase = async () => {
-    setBuying(true);
-    setError("");
-    try {
-      await purchaseMaterial(material.id);
-      await refreshProfile();
-      setOwned(true);
-      setShowModal(false);
-    } catch (err) {
-      const msg = (err as Error).message || "구매 중 오류가 발생했습니다.";
-      if (msg.includes("포인트가 부족")) {
-        setError("insufficient");
-      } else {
-        setError(msg);
-      }
-    } finally {
-      setBuying(false);
-    }
-  };
-
-  const points = userProfile?.points ?? 0;
   const canReview = owned && !myReview && !editingReview;
   const previewImages = material.previewImages ?? [];
 
@@ -828,13 +793,8 @@ export default function DetailPage() {
             <CardContent className="p-7">
               <div className="text-[32px] font-extrabold tracking-tight mb-5 max-md:text-[28px]">
                 {material.price.toLocaleString()}
-                <span className="text-lg font-medium text-muted-foreground">P</span>
+                <span className="text-lg font-medium text-muted-foreground">원</span>
               </div>
-              {user && (
-                <p className="text-sm text-muted-foreground mb-4">
-                  보유 포인트: {points.toLocaleString()}P
-                </p>
-              )}
               {material.authorId === user?.uid ? (
                 <>
                   <p className="text-center text-[13px] text-success font-medium mb-2.5">내가 등록한 자료입니다</p>
@@ -872,14 +832,6 @@ export default function DetailPage() {
                     바로 구매
                   </Button>
                   <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-full mb-2.5"
-                    onClick={handleBuyClick}
-                  >
-                    포인트로 구매
-                  </Button>
-                  <Button
                     variant="secondary"
                     size="lg"
                     className="w-full mb-4"
@@ -889,23 +841,11 @@ export default function DetailPage() {
                     <ShoppingCart className="w-4 h-4 mr-1" />
                     {addingToCart ? "추가 중..." : inCart ? "장바구니 보기" : "장바구니에 담기"}
                   </Button>
-                  {user && points < material.price && (
-                    <div className="bg-amber-500/5 rounded-lg p-3.5 text-center mb-4">
-                      <p className="text-sm text-amber-600 font-semibold mb-1.5">포인트가 부족합니다. (포인트 결제 시)</p>
-                      <Link
-                        to="/charge"
-                        className="text-[13px] text-primary font-semibold hover:opacity-75 transition-opacity"
-                      >
-                        충전하러 가기
-                      </Link>
-                    </div>
-                  )}
                 </>
               )}
               <Separator className="my-4" />
               <div className="space-y-1">
                 <p className="text-[13px] text-muted-foreground">{owned ? "파일을 다운로드할 수 있습니다" : "구매 후 즉시 다운로드 가능"}</p>
-                <p className="text-[13px] text-muted-foreground">포인트로 결제됩니다</p>
               </div>
               {owned && material.authorId !== user?.uid && (
                 <Link
@@ -925,90 +865,6 @@ export default function DetailPage() {
           </Card>
         </aside>
       </div>
-
-      {/* 구매 확인 모달 */}
-      {showModal && (
-        <div
-          className="fixed inset-0 bg-black/45 backdrop-blur-sm flex items-center justify-center z-[200] p-6"
-          onClick={() => setShowModal(false)}
-        >
-          <Card className="max-w-[420px] w-full shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <CardContent className="p-8">
-              <h2 className="text-xl font-bold mb-5 tracking-tight">구매 확인</h2>
-              <div>
-                <p className="font-semibold mb-4 text-[15px]">{material.title}</p>
-                <div className="flex justify-between py-2 text-sm text-muted-foreground">
-                  <span>가격</span>
-                  <span>{material.price.toLocaleString()}P</span>
-                </div>
-                <div className="flex justify-between py-2 text-sm text-muted-foreground">
-                  <span>보유 포인트</span>
-                  <span>{points.toLocaleString()}P</span>
-                </div>
-                <div className="flex justify-between py-3 text-sm font-semibold text-foreground border-t border-border mt-1">
-                  <span>구매 후 잔액</span>
-                  <span className={cn(points < material.price && "text-destructive")}>
-                    {(points - material.price).toLocaleString()}P
-                  </span>
-                </div>
-              </div>
-
-              {error === "insufficient" ? (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center my-4">
-                  <p className="text-destructive text-sm mb-3">포인트가 부족합니다.</p>
-                  <Link
-                    to="/charge"
-                    className="inline-block px-5 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors"
-                  >
-                    포인트 충전하기
-                  </Link>
-                </div>
-              ) : error ? (
-                <p className="text-destructive text-sm my-3">{error}</p>
-              ) : null}
-
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4 text-[13px] leading-relaxed text-amber-900">
-                <p className="font-semibold mb-1.5">환불 정책 안내</p>
-                <ul className="list-disc pl-4 space-y-0.5">
-                  <li>구매 후 <span className="font-semibold">24시간 이내에 다운로드하지 않으면 자동으로 환불</span>됩니다.</li>
-                  <li>한 번이라도 <span className="font-semibold">다운로드한 이후에는 환불이 불가능</span>합니다.</li>
-                </ul>
-                <label className="flex items-start gap-2 mt-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 w-4 h-4 accent-amber-600 cursor-pointer"
-                    checked={agreedToRefundPolicy}
-                    onChange={(e) => setAgreedToRefundPolicy(e.target.checked)}
-                  />
-                  <span className="text-[13px] font-medium text-amber-900">
-                    위 환불 정책을 이해하며 동의했습니다.
-                  </span>
-                </label>
-              </div>
-
-              <div className="flex gap-2.5 mt-5">
-                <Button
-                  variant="secondary"
-                  size="lg"
-                  className="flex-1"
-                  onClick={() => setShowModal(false)}
-                >
-                  취소
-                </Button>
-                <Button
-                  variant="primary"
-                  size="lg"
-                  className="flex-1"
-                  onClick={handleConfirmPurchase}
-                  disabled={buying || points < material.price || !agreedToRefundPolicy}
-                >
-                  {buying ? "처리 중..." : "구매하기"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* 미리보기 확대 라이트박스 */}
       {lightboxOpen && (() => {

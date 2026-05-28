@@ -328,7 +328,7 @@ export default function MyPage() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-[#862633]">관리자 권한</p>
                 <p className="text-xs text-gray-600">
-                  사용자/자료/충전·출금 요청을 관리할 수 있습니다
+                  사용자/자료/출금 요청을 관리할 수 있습니다
                 </p>
               </div>
               <Button

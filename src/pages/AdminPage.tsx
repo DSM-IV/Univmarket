@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { ShieldAlert, Trash2, Ban, Clock, XCircle, ExternalLink, Wallet, CheckCircle, X, GraduationCap, Coins } from "lucide-react";
+import { ShieldAlert, Trash2, Ban, Clock, XCircle, ExternalLink, Wallet, CheckCircle, X, GraduationCap } from "lucide-react";
 
 interface Report {
   id: string;
@@ -44,19 +44,6 @@ interface Withdrawal {
   createdAt: string;
 }
 
-interface ChargeRequest {
-  id: string;
-  userId: string;
-  email: string;
-  amount: number;
-  senderName: string;
-  senderPhone: string;
-  receiptNumber?: string;
-  receiptType?: string;
-  status: string;
-  createdAt: string;
-}
-
 interface GradeRequest {
   id: string;
   title: string;
@@ -69,7 +56,7 @@ interface GradeRequest {
   createdAt: string;
 }
 
-type Section = "reports" | "withdrawals" | "grades" | "charges" | "grants";
+type Section = "reports" | "withdrawals" | "grades" | "grants";
 type Tab = "pending" | "resolved";
 
 function formatDate(dateStr: string): string {
@@ -97,10 +84,6 @@ export default function AdminPage() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [wdLoading, setWdLoading] = useState(false);
   const [wdTab, setWdTab] = useState<"pending" | "completed" | "rejected">("pending");
-
-  const [chargeRequests, setChargeRequests] = useState<ChargeRequest[]>([]);
-  const [chargeLoading, setChargeLoading] = useState(false);
-  const [chargeTab, setChargeTab] = useState<"pending" | "approved" | "rejected">("pending");
 
   const [gradeRequests, setGradeRequests] = useState<GradeRequest[]>([]);
   const [gradeLoading, setGradeLoading] = useState(false);
@@ -341,9 +324,6 @@ export default function AdminPage() {
     if (section === "grades" && gradeRequests.length === 0 && !gradeLoading) {
       fetchGradeRequests();
     }
-    if (section === "charges" && chargeRequests.length === 0 && !chargeLoading) {
-      fetchChargeRequests();
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [section]);
 
@@ -397,47 +377,6 @@ export default function AdminPage() {
   };
 
   const filteredGradeRequests = gradeRequests.filter((r) => r.gradeStatus === gradeTab);
-
-  const fetchChargeRequests = async () => {
-    setChargeLoading(true);
-    try {
-      const list = await apiGetList<ChargeRequest>("/admin/charge-requests");
-      setChargeRequests(list);
-    } catch {
-      alert("충전 요청 목록을 불러오는 데 실패했습니다.");
-    } finally {
-      setChargeLoading(false);
-    }
-  };
-
-  const handleApproveCharge = async (id: string) => {
-    if (!confirm("입금을 확인하고 포인트를 지급하시겠습니까?")) return;
-    setActionLoading(id);
-    try {
-      await apiPost(`/admin/charge-requests/${id}/approve`);
-      setChargeRequests((prev) => prev.map((c) => c.id === id ? { ...c, status: "approved" } : c));
-    } catch {
-      alert("승인 처리에 실패했습니다.");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleRejectCharge = async (id: string) => {
-    const reason = prompt("거절 사유를 입력하세요:");
-    if (reason === null) return;
-    setActionLoading(id);
-    try {
-      await apiPost(`/admin/charge-requests/${id}/reject`, { reason });
-      setChargeRequests((prev) => prev.map((c) => c.id === id ? { ...c, status: "rejected" } : c));
-    } catch {
-      alert("거절 처리에 실패했습니다.");
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const filteredChargeRequests = chargeRequests.filter((c) => c.status === chargeTab);
 
   const handleCompleteWithdrawal = async (id: string) => {
     if (!confirm("입금 완료 처리하시겠습니까?")) return;
@@ -525,19 +464,6 @@ export default function AdminPage() {
             )}
           </Button>
           <Button
-            variant={section === "charges" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSection("charges")}
-          >
-            <Coins className="mr-1.5 h-4 w-4" />
-            충전 관리
-            {chargeRequests.filter((c) => c.status === "pending").length > 0 && (
-              <Badge variant="destructive" className="ml-1.5 px-1.5 py-0 text-[10px]">
-                {chargeRequests.filter((c) => c.status === "pending").length}
-              </Badge>
-            )}
-          </Button>
-          <Button
             variant={section === "grades" ? "default" : "outline"}
             size="sm"
             onClick={() => setSection("grades")}
@@ -560,108 +486,7 @@ export default function AdminPage() {
           </Button>
         </div>
 
-        {section === "charges" ? (
-          <>
-            {/* Charge Tabs */}
-            <div className="mb-4 flex border-b border-gray-200">
-              {(["pending", "approved", "rejected"] as const).map((t) => (
-                <button
-                  key={t}
-                  className={cn(
-                    "flex-1 py-3 text-center text-sm font-medium transition-colors",
-                    chargeTab === t
-                      ? "border-b-2 border-[#862633] text-[#862633]"
-                      : "text-gray-500 hover:text-gray-700"
-                  )}
-                  onClick={() => setChargeTab(t)}
-                >
-                  {t === "pending" ? "대기" : t === "approved" ? "승인" : "거절"}
-                  {" "}({chargeRequests.filter((c) => c.status === t).length})
-                </button>
-              ))}
-            </div>
-
-            {chargeLoading ? (
-              <p className="py-16 text-center text-gray-500">불러오는 중...</p>
-            ) : filteredChargeRequests.length === 0 ? (
-              <div className="py-16 text-center text-gray-400">
-                <Coins className="mx-auto mb-3 h-10 w-10" />
-                <p>해당 상태의 충전 요청이 없습니다.</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredChargeRequests.map((req) => (
-                  <Card key={req.id} className={cn(req.status === "pending" && "border-l-4 border-l-amber-400")}>
-                    <CardContent className="p-5">
-                      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2">
-                          <Badge variant={req.status === "pending" ? "destructive" : req.status === "approved" ? "success" : "secondary"}>
-                            {req.status === "pending" ? "대기" : req.status === "approved" ? "승인" : "거절"}
-                          </Badge>
-                          <span className="text-xs text-gray-400">{formatDate(req.createdAt)}</span>
-                        </div>
-                        <span className="text-lg font-extrabold text-[#862633]">
-                          {req.amount.toLocaleString()}원
-                        </span>
-                      </div>
-
-                      <div className="space-y-1.5 text-sm mb-4">
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">입금자명</span>
-                          <span className="font-semibold">{req.senderName}{req.senderPhone}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">이름</span>
-                          <span className="font-medium">{req.senderName}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">전화번호 뒷자리</span>
-                          <span className="font-medium">{req.senderPhone}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">이메일</span>
-                          <span className="font-medium text-xs">{req.email}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-500">현금영수증</span>
-                          <span className="font-medium">
-                            {req.receiptNumber
-                              ? `${req.receiptType === "phone" ? "휴대폰" : "사업자"} · ${req.receiptNumber}`
-                              : "미신청"}
-                          </span>
-                        </div>
-                      </div>
-
-                      {req.status === "pending" && (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            className="flex-1 bg-green-600 hover:bg-green-700"
-                            onClick={() => handleApproveCharge(req.id)}
-                            disabled={actionLoading === req.id}
-                          >
-                            <CheckCircle className="mr-1 h-4 w-4" />
-                            {actionLoading === req.id ? "처리 중..." : "승인 (포인트 지급)"}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-destructive border-destructive hover:bg-destructive/5"
-                            onClick={() => handleRejectCharge(req.id)}
-                            disabled={actionLoading === req.id}
-                          >
-                            <XCircle className="mr-1 h-4 w-4" />
-                            거절
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </>
-        ) : section === "grades" ? (
+        {section === "grades" ? (
           <>
             {/* Grade Verification Tabs */}
             <div className="mb-4 flex border-b border-gray-200">
