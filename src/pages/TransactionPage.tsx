@@ -1,27 +1,24 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { getTransactions } from "../services/pointsService";
 import type { Transaction } from "../types";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { CreditCard, Receipt, ChevronDown, ChevronUp } from "lucide-react";
+import { Receipt, ChevronDown, ChevronUp } from "lucide-react";
 
-type FilterTab = "all" | "charge" | "purchase" | "sale" | "withdraw";
+type FilterTab = "all" | "purchase" | "sale" | "withdraw";
 
 const TAB_LABELS: Record<FilterTab, string> = {
   all: "전체",
-  charge: "충전",
   purchase: "구매",
   sale: "판매",
   withdraw: "출금",
 };
 
 const BALANCE_TYPE_MAP: Record<string, { label: string; color: string; bg: string }> = {
-  charge: { label: "포인트", color: "text-blue-600", bg: "bg-blue-50" },
   purchase: { label: "포인트", color: "text-blue-600", bg: "bg-blue-50" },
   refund: { label: "포인트", color: "text-blue-600", bg: "bg-blue-50" },
   sale: { label: "수익금", color: "text-emerald-600", bg: "bg-emerald-50" },
@@ -30,7 +27,6 @@ const BALANCE_TYPE_MAP: Record<string, { label: string; color: string; bg: strin
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  charge: "충전",
   purchase: "구매",
   sale: "판매",
   refund: "환불",
@@ -38,7 +34,6 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const TYPE_BADGE_VARIANT: Record<string, "default" | "primary" | "secondary" | "success" | "destructive" | "outline"> = {
-  charge: "primary",
   purchase: "destructive",
   sale: "success",
   refund: "secondary",
@@ -68,7 +63,7 @@ function isIncome(type: string, amount: number): boolean {
   // amount가 0인 경우(예외)에 한해 type 기반 fallback
   if (amount > 0) return true;
   if (amount < 0) return false;
-  return type === "charge" || type === "sale";
+  return type === "sale";
 }
 
 export default function TransactionPage() {
@@ -113,15 +108,7 @@ export default function TransactionPage() {
       <div className="mx-auto max-w-3xl px-4">
         {/* Header */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-gray-900">거래 내역</h1>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/charge">
-                <CreditCard className="mr-1.5 h-4 w-4" />
-                포인트 충전
-              </Link>
-            </Button>
-          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">거래 내역</h1>
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-blue-50 p-4">
               <p className="text-xs font-semibold text-blue-500 mb-1">포인트</p>

@@ -1,31 +1,6 @@
 import { apiGet, apiGetList, apiPost } from "../api/client";
 import type { Transaction } from "../types";
 
-export type PaymentMethod = "kakaopay" | "toss" | "card";
-
-export async function chargeWithKakaopay(amount: number): Promise<string> {
-  const result = await apiPost<{ redirectUrl: string }>("/payments/kakaopay/ready", { amount });
-  return result.redirectUrl;
-}
-
-export async function chargeWithTossReady(
-  amount: number
-): Promise<{ orderId: string; paymentAmount: number; vat: number }> {
-  return apiPost("/payments/toss/ready", { amount });
-}
-
-export async function chargeWithTossApprove(
-  paymentKey: string,
-  orderId: string,
-  amount: number
-): Promise<{ pointAmount: number }> {
-  return apiPost("/payments/toss/approve", { paymentKey, orderId, amount });
-}
-
-export async function purchaseMaterial(materialId: string): Promise<void> {
-  await apiPost(`/materials/${materialId}/purchase`);
-}
-
 /**
  * 자료 직접결제 — orderId/금액 발급. 이후 Toss SDK 결제창에 사용.
  */
