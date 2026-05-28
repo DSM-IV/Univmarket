@@ -63,7 +63,6 @@ public class SecurityConfig {
                 .requestMatchers("/health", "/health/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/auth/kakao-verify/**").permitAll()
-                .requestMatchers("/api/payments/kakaopay/approve").permitAll() // 카카오 콜백
                 .requestMatchers(HttpMethod.GET, "/api/materials", "/api/materials/{id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/materials/{id}/reviews").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/material-requests", "/api/material-requests/{id}").permitAll()

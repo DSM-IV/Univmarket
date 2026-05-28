@@ -26,7 +26,7 @@ public class Transaction {
     private User user;
 
     @Column(nullable = false, length = 30)
-    private String type; // charge, purchase, sale, refund, withdraw, admin_grant, raffle_entry
+    private String type; // purchase, sale, refund, withdraw, admin_grant
 
     @Column(nullable = false, precision = 12, scale = 0)
     private BigDecimal amount;
@@ -35,7 +35,7 @@ public class Transaction {
     private BigDecimal balanceAfter;
 
     @Column(name = "balance_type", length = 10)
-    private String balanceType; // points | earnings
+    private String balanceType; // cash | earnings
 
     @Column(length = 500)
     private String description;
@@ -45,9 +45,6 @@ public class Transaction {
     private String status = "completed"; // pending | completed | rejected | failed
 
     // 결제 관련
-    @Column(name = "kakaopay_tid", length = 100)
-    private String kakaopayTid;
-
     @Column(name = "toss_payment_key", length = 200)
     private String tossPaymentKey;
 

@@ -18,14 +18,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByNickname(String nickname);
 
     @Modifying
-    @Query("UPDATE User u SET u.points = u.points + :amount, u.totalEarned = u.totalEarned + :amount WHERE u.id = :userId AND u.points + :amount >= 0")
-    int addPoints(@Param("userId") Long userId, @Param("amount") BigDecimal amount);
-
-    @Modifying
-    @Query("UPDATE User u SET u.points = u.points - :amount, u.totalSpent = u.totalSpent + :amount WHERE u.id = :userId AND u.points >= :amount")
-    int deductPoints(@Param("userId") Long userId, @Param("amount") BigDecimal amount);
-
-    @Modifying
     @Query("UPDATE User u SET u.pendingEarnings = u.pendingEarnings + :amount, u.totalEarned = u.totalEarned + :amount WHERE u.id = :userId")
     int addPendingEarnings(@Param("userId") Long userId, @Param("amount") BigDecimal amount);
 
