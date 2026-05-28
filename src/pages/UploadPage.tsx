@@ -729,7 +729,7 @@ export default function UploadPage() {
                       자료 설명 관련 주의
                     </strong>
                     <ul className="m-0 pl-4.5 list-disc">
-                      <li className="mb-0.5">자료 설명과 실제 내용이 다른 경우 구매자의 하자 신고 접수 시 관리자 검토 후 지급된 포인트가 회수되고 자료가 삭제될 수 있습니다.</li>
+                      <li className="mb-0.5">자료 설명과 실제 내용이 다른 경우 구매자의 하자 신고 접수 시 관리자 검토 후 지급된 수익금이 회수되고 자료가 삭제될 수 있습니다.</li>
                       <li className="mb-0.5">반복 적발 시 계정 제재가 이루어질 수 있으니 설명을 정확히 작성해 주세요.</li>
                     </ul>
                   </div>

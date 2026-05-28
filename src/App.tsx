@@ -30,7 +30,6 @@ import HufsPage from "./pages/HufsPage";
 import UosPage from "./pages/UosPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import EventsPage from "./pages/EventsPage";
-import EventRafflePage from "./pages/EventRafflePage";
 import NoticesPage from "./pages/NoticesPage";
 import SellerPage from "./pages/SellerPage";
 import RequestDetailPage from "./pages/RequestDetailPage";
@@ -100,7 +99,6 @@ function App() {
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/request/:id" element={<RequestDetailPage />} />
             <Route path="/events" element={<EventsPage />} />
-            <Route path="/events/closed-beta-raffle" element={<EventRafflePage />} />
             <Route path="/notices" element={<NoticesPage />} />
             <Route path="*" element={<NotFoundPage />} />
             </Routes>
