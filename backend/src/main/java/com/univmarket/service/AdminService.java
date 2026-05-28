@@ -31,7 +31,6 @@ public class AdminService {
     private final TransactionRepository transactionRepository;
     private final AdminLogRepository adminLogRepository;
     private final ReportRepository reportRepository;
-    private final ChargeRequestRepository chargeRequestRepository;
     private final PurchaseRepository purchaseRepository;
     private final FileService fileService;
     private final FirebaseAuth firebaseAuth;
@@ -294,69 +293,6 @@ public class AdminService {
         writeAdminLog(adminUid, "approve_defect_report", Map.of(
                 "reportId", reportId,
                 "materialId", report.getMaterial().getId()));
-    }
-
-    // ─── 충전 요청 관리 ───
-
-    @Transactional(readOnly = true)
-    public Page<ChargeRequest> listChargeRequests(int page, int size, String status) {
-        PageRequest pageRequest = PageRequest.of(page, Math.min(size, 50),
-                Sort.by(Sort.Direction.DESC, "createdAt"));
-        if ("all".equals(status)) {
-            return chargeRequestRepository.findAllByOrderByCreatedAtDesc(pageRequest);
-        }
-        return chargeRequestRepository.findByStatusOrderByCreatedAtDesc(status, pageRequest);
-    }
-
-    @Transactional
-    public void approveChargeRequest(String adminUid, Long requestId) {
-        ChargeRequest request = chargeRequestRepository.findById(requestId)
-                .orElseThrow(() -> ApiException.notFound("충전 요청을 찾을 수 없습니다."));
-
-        if (!"pending".equals(request.getStatus())) {
-            throw ApiException.badRequest("이미 처리된 요청입니다.");
-        }
-
-        request.setStatus("approved");
-        chargeRequestRepository.save(request);
-
-        // 포인트 충전
-        User user = request.getUser();
-        userRepository.addPoints(user.getId(), request.getAmount());
-
-        user = userRepository.findById(user.getId()).orElseThrow();
-
-        transactionRepository.save(Transaction.builder()
-                .user(user)
-                .type("charge")
-                .amount(request.getAmount())
-                .balanceAfter(user.getPoints())
-                .balanceType("points")
-                .description("계좌이체 충전 (관리자 승인)")
-                .status("completed")
-                .build());
-
-        writeAdminLog(adminUid, "approve_charge_request", Map.of(
-                "requestId", requestId,
-                "userId", user.getId(),
-                "amount", request.getAmount()));
-    }
-
-    @Transactional
-    public void rejectChargeRequest(String adminUid, Long requestId, String reason) {
-        ChargeRequest request = chargeRequestRepository.findById(requestId)
-                .orElseThrow(() -> ApiException.notFound("충전 요청을 찾을 수 없습니다."));
-
-        if (!"pending".equals(request.getStatus())) {
-            throw ApiException.badRequest("이미 처리된 요청입니다.");
-        }
-
-        request.setStatus("rejected");
-        chargeRequestRepository.save(request);
-
-        writeAdminLog(adminUid, "reject_charge_request", Map.of(
-                "requestId", requestId,
-                "reason", reason != null ? reason : ""));
     }
 
     // ─── 유틸리티 ───

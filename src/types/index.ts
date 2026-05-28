@@ -59,12 +59,9 @@ export interface UserProfile {
   nickname: string;
   email: string;
   university: string;
-  points: number;
   earnings: number;
   pendingEarnings: number;
-  pendingPoints: number;
   totalEarned: number;
-  totalSpent: number;
   role?: string;
   identityVerified?: boolean;
   identityVerifiedAt?: string;
@@ -78,10 +75,10 @@ export interface UserProfile {
 export interface Transaction {
   id: string;
   userId: string;
-  type: "charge" | "purchase" | "sale" | "refund" | "withdraw";
+  type: "purchase" | "sale" | "refund" | "withdraw" | "admin_grant";
   amount: number;
   balanceAfter: number;
-  balanceType?: "points" | "earnings";
+  balanceType?: "cash" | "earnings";
   description: string;
   relatedMaterialId?: string;
   status: "pending" | "completed" | "failed";

@@ -1,6 +1,5 @@
 package com.univmarket.controller;
 
-import com.univmarket.entity.ChargeRequest;
 import com.univmarket.entity.Report;
 import com.univmarket.entity.Transaction;
 import com.univmarket.security.FirebaseUserPrincipal;
@@ -138,34 +137,5 @@ public class AdminController {
         // TODO: 성적 인증 기능 미구현. 일단 빈 배열로 응답해 어드민 페이지가
         // 깨지지 않게 함. 정식 구현 시 grade_requests 테이블/엔티티 필요.
         return ResponseEntity.ok(List.of());
-    }
-
-    // ─── 충전 요청 관리 ───
-
-    @GetMapping("/charge-requests")
-    public ResponseEntity<Page<ChargeRequest>> listChargeRequests(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "pending") String status) {
-        Page<ChargeRequest> requests = adminService.listChargeRequests(page, size, status);
-        return ResponseEntity.ok(requests);
-    }
-
-    @PostMapping("/charge-requests/{id}/approve")
-    public ResponseEntity<Map<String, Boolean>> approveChargeRequest(
-            @AuthenticationPrincipal FirebaseUserPrincipal principal,
-            @PathVariable Long id) {
-        adminService.approveChargeRequest(principal.getUid(), id);
-        return ResponseEntity.ok(Map.of("success", true));
-    }
-
-    @PostMapping("/charge-requests/{id}/reject")
-    public ResponseEntity<Map<String, Boolean>> rejectChargeRequest(
-            @AuthenticationPrincipal FirebaseUserPrincipal principal,
-            @PathVariable Long id,
-            @RequestBody(required = false) Map<String, String> body) {
-        String reason = body != null ? body.getOrDefault("reason", "") : "";
-        adminService.rejectChargeRequest(principal.getUid(), id, reason);
-        return ResponseEntity.ok(Map.of("success", true));
     }
 }

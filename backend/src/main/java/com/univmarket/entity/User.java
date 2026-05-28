@@ -40,10 +40,6 @@ public class User {
 
     @Column(nullable = false, precision = 12, scale = 0)
     @Builder.Default
-    private BigDecimal points = BigDecimal.ZERO;
-
-    @Column(nullable = false, precision = 12, scale = 0)
-    @Builder.Default
     private BigDecimal earnings = BigDecimal.ZERO;
 
     @Column(name = "pending_earnings", nullable = false, precision = 12, scale = 0)
@@ -53,10 +49,6 @@ public class User {
     @Column(name = "total_earned", nullable = false, precision = 12, scale = 0)
     @Builder.Default
     private BigDecimal totalEarned = BigDecimal.ZERO;
-
-    @Column(name = "total_spent", nullable = false, precision = 12, scale = 0)
-    @Builder.Default
-    private BigDecimal totalSpent = BigDecimal.ZERO;
 
     @Column(length = 10)
     @Builder.Default

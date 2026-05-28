@@ -140,17 +140,6 @@ public class MaterialController {
     }
 
     /**
-     * 자료 구매 (인증 필요)
-     */
-    @PostMapping("/materials/{id}/purchase")
-    public ResponseEntity<Map<String, Boolean>> purchase(
-            @AuthenticationPrincipal FirebaseUserPrincipal principal,
-            @PathVariable Long id) {
-        purchaseService.purchaseMaterial(principal.getUid(), id);
-        return ResponseEntity.ok(Map.of("success", true));
-    }
-
-    /**
      * 다운로드 URL 발급 (구매자 또는 작성자만)
      * body.fileKey 가 있으면 해당 파일, 없으면 대표 파일.
      */
