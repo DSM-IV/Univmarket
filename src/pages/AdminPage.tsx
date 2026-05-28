@@ -206,7 +206,7 @@ export default function AdminPage() {
     if (
       !confirm(
         `"${report.materialTitle}" 자료의 하자 신고를 승인합니다.\n\n` +
-          `- 해당 자료의 환불되지 않은 모든 구매 건에 대해 포인트가 환불됩니다.\n` +
+          `- 해당 자료의 환불되지 않은 모든 구매 건에 대해 결제 금액이 환불됩니다.\n` +
           `- 판매자의 수익금에서 동일 금액이 회수됩니다.\n` +
           `- 자료가 완전히 삭제됩니다 (복구 불가).\n\n계속하시겠습니까?`
       )
@@ -392,7 +392,7 @@ export default function AdminPage() {
   };
 
   const handleRejectWithdrawal = async (id: string) => {
-    const reason = prompt("거절 사유를 입력하세요 (포인트가 환불됩니다):");
+    const reason = prompt("거절 사유를 입력하세요 (수익금이 복구됩니다):");
     if (reason === null) return;
     setActionLoading(id);
     try {

@@ -157,16 +157,6 @@ export default function Navbar() {
                       </p>
                     </div>
 
-                    {/* Points - prominent display */}
-                    <div className="block px-4 py-3">
-                      <p className="text-[11px] text-muted-foreground">내 포인트</p>
-                      <p className="text-lg font-bold text-primary leading-tight mt-0.5">
-                        {(userProfile?.points ?? 0).toLocaleString()}P
-                      </p>
-                    </div>
-
-                    <div className="h-px bg-border" />
-
                     {/* Main actions */}
                     <Link
                       to="/mypage"
@@ -258,12 +248,6 @@ export default function Navbar() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
                 <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-[10px] text-muted-foreground">내 포인트</p>
-                <p className="text-sm font-bold text-primary leading-tight">
-                  {(userProfile?.points ?? 0).toLocaleString()}P
-                </p>
               </div>
             </div>
           )}

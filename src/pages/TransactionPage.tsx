@@ -9,35 +9,26 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Receipt, ChevronDown, ChevronUp } from "lucide-react";
 
-type FilterTab = "all" | "purchase" | "sale" | "withdraw";
+type FilterTab = "all" | "sale" | "withdraw";
 
 const TAB_LABELS: Record<FilterTab, string> = {
   all: "전체",
-  purchase: "구매",
   sale: "판매",
   withdraw: "출금",
-};
-
-const BALANCE_TYPE_MAP: Record<string, { label: string; color: string; bg: string }> = {
-  purchase: { label: "포인트", color: "text-blue-600", bg: "bg-blue-50" },
-  refund: { label: "포인트", color: "text-blue-600", bg: "bg-blue-50" },
-  sale: { label: "수익금", color: "text-emerald-600", bg: "bg-emerald-50" },
-  withdraw: { label: "수익금", color: "text-emerald-600", bg: "bg-emerald-50" },
-  admin_grant: { label: "수익금", color: "text-emerald-600", bg: "bg-emerald-50" },
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  purchase: "구매",
   sale: "판매",
-  refund: "환불",
   withdraw: "출금",
+  admin_grant: "지급",
+  refund: "환불",
 };
 
 const TYPE_BADGE_VARIANT: Record<string, "default" | "primary" | "secondary" | "success" | "destructive" | "outline"> = {
-  purchase: "destructive",
   sale: "success",
-  refund: "secondary",
   withdraw: "outline",
+  admin_grant: "primary",
+  refund: "secondary",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -46,6 +37,9 @@ const STATUS_LABELS: Record<string, string> = {
   failed: "실패",
   rejected: "거절 (환불)",
 };
+
+// 수익금/출금 내역만 노출 — 포인트(purchase/refund/charge)는 숨김
+const EARNINGS_TYPES = new Set(["sale", "withdraw", "admin_grant"]);
 
 function formatDate(iso: string): string {
   if (!iso) return "-";
@@ -59,11 +53,9 @@ function formatDate(iso: string): string {
 }
 
 function isIncome(type: string, amount: number): boolean {
-  // amount 부호가 진실의 원천 (refund는 구매자=+, 판매자=- 둘 다 가능)
-  // amount가 0인 경우(예외)에 한해 type 기반 fallback
   if (amount > 0) return true;
   if (amount < 0) return false;
-  return type === "sale";
+  return type === "sale" || type === "admin_grant";
 }
 
 export default function TransactionPage() {
@@ -98,52 +90,45 @@ export default function TransactionPage() {
   if (authLoading) return <p className="py-20 text-center text-gray-500">불러오는 중...</p>;
   if (!user) return null;
 
+  const earningsOnly = transactions.filter((t) => EARNINGS_TYPES.has(t.type));
   const filtered =
     tab === "all"
-      ? transactions
-      : transactions.filter((t) => t.type === tab);
+      ? earningsOnly
+      : earningsOnly.filter((t) => t.type === tab);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="mx-auto max-w-3xl px-4">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">거래 내역</h1>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-blue-50 p-4">
-              <p className="text-xs font-semibold text-blue-500 mb-1">포인트</p>
-              <p className="text-xl font-extrabold text-blue-700">{(userProfile?.points ?? 0).toLocaleString()}<span className="text-sm font-bold ml-0.5">P</span></p>
-            </div>
-            <div className="rounded-xl bg-emerald-50 p-4">
-              <p className="text-xs font-semibold text-emerald-500 mb-1">수익금</p>
-              <p className="text-xl font-extrabold text-emerald-700">{(userProfile?.earnings ?? 0).toLocaleString()}<span className="text-sm font-bold ml-0.5">원</span></p>
-            </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">수익금 · 출금 내역</h1>
+          <div className="rounded-xl bg-emerald-50 p-4">
+            <p className="text-xs font-semibold text-emerald-500 mb-1">수익금</p>
+            <p className="text-xl font-extrabold text-emerald-700">{(userProfile?.earnings ?? 0).toLocaleString()}<span className="text-sm font-bold ml-0.5">원</span></p>
+            {(userProfile?.pendingEarnings ?? 0) > 0 && (
+              <p className="text-[11px] text-amber-600 mt-1">
+                +{(userProfile?.pendingEarnings ?? 0).toLocaleString()}원 정산대기
+              </p>
+            )}
           </div>
         </div>
 
         {/* Tabs */}
         <div className="mb-4 flex border-b border-gray-200">
-          {(Object.keys(TAB_LABELS) as FilterTab[]).map((key) => {
-            const bt = key !== "all" ? BALANCE_TYPE_MAP[key] : null;
-            return (
-              <button
-                key={key}
-                className={cn(
-                  "flex-1 py-3 text-center text-sm font-medium transition-colors",
-                  bt?.label === "포인트" && "bg-blue-50",
-                  bt?.label === "수익금" && "bg-emerald-50",
-                  tab === key
-                    ? bt?.label === "수익금" ? "border-b-2 border-emerald-500 text-emerald-600 font-bold"
-                    : bt?.label === "포인트" ? "border-b-2 border-blue-500 text-blue-600 font-bold"
-                    : "border-b-2 border-[#862633] text-[#862633]"
-                    : "text-gray-500 hover:text-gray-700"
-                )}
-                onClick={() => setTab(key)}
-              >
-                {TAB_LABELS[key]}
-              </button>
-            );
-          })}
+          {(Object.keys(TAB_LABELS) as FilterTab[]).map((key) => (
+            <button
+              key={key}
+              className={cn(
+                "flex-1 py-3 text-center text-sm font-medium transition-colors",
+                tab === key
+                  ? "border-b-2 border-emerald-500 text-emerald-600 font-bold"
+                  : "text-gray-500 hover:text-gray-700"
+              )}
+              onClick={() => setTab(key)}
+            >
+              {TAB_LABELS[key]}
+            </button>
+          ))}
         </div>
 
         {/* Content */}
@@ -162,7 +147,7 @@ export default function TransactionPage() {
         ) : (
           <div className="py-16 text-center text-gray-400">
             <Receipt className="mx-auto mb-3 h-10 w-10" />
-            <p>거래 내역이 없습니다.</p>
+            <p>내역이 없습니다.</p>
           </div>
         )}
       </div>
@@ -204,12 +189,12 @@ function TransactionCard({ t, income, isWithdraw }: { t: Transaction; income: bo
           </div>
           <div className="flex items-center gap-2">
             <div className="shrink-0 text-right">
-              <span className={cn("block text-sm font-bold", income ? "text-blue-600" : "text-red-500")}>
+              <span className={cn("block text-sm font-bold", income ? "text-emerald-600" : "text-red-500")}>
                 {income ? "+" : "-"}
-                {Math.abs(t.amount).toLocaleString()}{t.balanceType === "earnings" ? "원" : "P"}
+                {Math.abs(t.amount).toLocaleString()}원
               </span>
               <span className="text-xs text-gray-400">
-                {t.balanceType === "earnings" ? "수익금" : "포인트"} 잔액 {t.balanceAfter.toLocaleString()}{t.balanceType === "earnings" ? "원" : "P"}
+                수익금 잔액 {t.balanceAfter.toLocaleString()}원
               </span>
             </div>
             {isWithdraw && (

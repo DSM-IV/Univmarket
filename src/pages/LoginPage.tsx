@@ -446,12 +446,12 @@ export default function LoginPage() {
                             <div className="mt-2 ml-6.5 max-h-48 overflow-y-auto rounded border border-border bg-secondary/50 p-3 text-xs text-muted-foreground leading-relaxed space-y-2">
                               <p className="font-semibold text-foreground">이용약관 (시행일: 2026년 4월 1일)</p>
                               <p><strong>제 1 조 (목적)</strong> 이 약관은 UniFile(이하 "회사")이 제공하는 서비스 이용에 있어 회사와 "회원"의 권리 및 의무, 기타 필요한 사항을 규정함을 목적으로 합니다.</p>
-                              <p><strong>제 2 조 (정의)</strong> "회원"이란 회사와 이용계약을 체결하고 서비스를 이용하는 자, "판매회원"이란 자료를 등록하고 판매하는 회원, "구매회원"이란 자료를 구매하는 회원, "포인트"란 서비스 내에서 자료 구매 등에 사용할 수 있는 결제 수단을 말합니다.</p>
+                              <p><strong>제 2 조 (정의)</strong> "회원"이란 회사와 이용계약을 체결하고 서비스를 이용하는 자, "판매회원"이란 자료를 등록하고 판매하는 회원, "구매회원"이란 자료를 구매하는 회원, "적립금"이란 판매회원이 자료 판매를 통하여 적립한 금액을 말합니다.</p>
                               <p><strong>제 5 조 (이용계약의 성립)</strong> 이용자 가입 신청 내역을 작성 후 가입 버튼을 누름과 동시에 이 약관에 동의하는 것으로 간주됩니다.</p>
                               <p><strong>제 9 조 (회사의 의무)</strong> 회사는 계속적이고 안정적인 서비스의 제공을 위하여 최선을 다합니다.</p>
                               <p><strong>제 11 조 (회원의 의무)</strong> 회원은 허위내용 기재, 제3자의 개인정보 도용, 저작권 침해, 명예훼손 등의 행위를 하여서는 아니됩니다.</p>
                               <p><strong>제 14 조 (자료대금 및 수수료)</strong> 회사는 구매회원이 지급한 자료대금 중 수수료 및 제세공과금을 제외한 나머지 금액을 판매회원의 계정에 적립합니다.</p>
-                              <p><strong>제 19 조 (계약의 해지)</strong> 이용계약이 해지된 경우, 회원이 등록한 자료는 삭제되며, 보유한 포인트 기타 혜택은 모두 소멸합니다.</p>
+                              <p><strong>제 22 조 (계약의 해지)</strong> 이용계약이 해지된 경우, 회원이 등록한 자료는 삭제되며, 보유한 이용권·쿠폰 기타 권리는 모두 소멸합니다. 해지일 기준 적립금은 회사가 정한 절차에 따라 환급됩니다.</p>
                               <p className="text-[11px] pt-1 border-t border-border">
                                 <button
                                   type="button"
