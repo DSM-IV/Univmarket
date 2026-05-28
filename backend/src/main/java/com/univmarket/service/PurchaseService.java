@@ -3,8 +3,8 @@ package com.univmarket.service;
 import com.univmarket.entity.*;
 import com.univmarket.exception.ApiException;
 import com.univmarket.repository.*;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,7 +14,6 @@ import java.util.List;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class PurchaseService {
 
     private final UserRepository userRepository;
@@ -22,6 +21,22 @@ public class PurchaseService {
     private final PurchaseRepository purchaseRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
+    private final PaymentService paymentService;
+
+    public PurchaseService(
+            UserRepository userRepository,
+            MaterialRepository materialRepository,
+            PurchaseRepository purchaseRepository,
+            TransactionRepository transactionRepository,
+            NotificationRepository notificationRepository,
+            @Lazy PaymentService paymentService) {
+        this.userRepository = userRepository;
+        this.materialRepository = materialRepository;
+        this.purchaseRepository = purchaseRepository;
+        this.transactionRepository = transactionRepository;
+        this.notificationRepository = notificationRepository;
+        this.paymentService = paymentService;
+    }
 
     private static final int REFUND_DEADLINE_HOURS = 24;
 
@@ -185,6 +200,8 @@ public class PurchaseService {
                     .material(material)
                     .price(material.getPrice())
                     .settled(false)
+                    .tossPaymentKey(tossPaymentKey)
+                    .tossPaymentAmount(paidAmount)
                     .build());
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw ApiException.conflict("이미 구매한 자료입니다.");
@@ -248,7 +265,8 @@ public class PurchaseService {
     }
 
     /**
-     * 환불 처리 (24시간 이내, 미다운로드)
+     * 환불 처리 (24시간 이내, 미다운로드).
+     * Toss 부분환불 API 를 호출해 구매자 결제수단으로 직접 환불하고, 판매자 수익금에서 동일액 차감.
      */
     @Transactional
     public void refundPurchase(String buyerUid, Long purchaseId) {
@@ -272,6 +290,12 @@ public class PurchaseService {
             throw ApiException.badRequest("구매 후 " + REFUND_DEADLINE_HOURS + "시간이 지나 환불할 수 없습니다.");
         }
 
+        // 직접결제(Toss)로 결제된 구매만 자동 환불 가능. 옛 포인트 구매는 관리자 수동 처리.
+        String paymentKey = purchase.getTossPaymentKey();
+        if (paymentKey == null || paymentKey.isBlank()) {
+            throw ApiException.badRequest("결제 정보가 없어 자동 환불할 수 없습니다. 관리자에게 문의해 주세요.");
+        }
+
         BigDecimal price = BigDecimal.valueOf(purchase.getPrice());
         User seller = purchase.getSeller();
 
@@ -283,8 +307,8 @@ public class PurchaseService {
             throw ApiException.badRequest("판매자의 수익금이 부족하여 환불할 수 없습니다.");
         }
 
-        // 구매자 포인트 복구
-        userRepository.addPoints(buyer.getId(), price);
+        // Toss 부분환불 — 실패 시 예외로 트랜잭션 롤백 (DB 상태 변경 없음)
+        paymentService.cancelTossPayment(paymentKey, purchase.getPrice(), "구매 후 24시간 이내 환불");
 
         // 판매자 수익금 차감
         if (fromPending.compareTo(BigDecimal.ZERO) > 0) {
@@ -304,20 +328,19 @@ public class PurchaseService {
         purchase.setRefundedAt(LocalDateTime.now());
         purchaseRepository.save(purchase);
 
-        // 최신 잔액 조회
-        buyer = userRepository.findById(buyer.getId()).orElseThrow();
         seller = userRepository.findById(seller.getId()).orElseThrow();
 
-        // 환불 거래 내역 (구매자)
+        // 환불 거래 내역 (구매자) — 결제 카드/계좌로 직접 환불되므로 잔액 변동 없음
         transactionRepository.save(Transaction.builder()
                 .user(buyer)
                 .type("refund")
                 .amount(price)
-                .balanceAfter(buyer.getPoints())
-                .balanceType("points")
-                .description("환불 처리 (포인트 전액 환불)")
+                .balanceType("cash")
+                .description("환불 처리 (결제 수단으로 환불)")
                 .relatedMaterialId(purchase.getMaterial().getId())
                 .relatedUserId(seller.getId())
+                .tossPaymentKey(paymentKey)
+                .tossPaymentAmount(price)
                 .status("completed")
                 .build());
 
@@ -331,6 +354,7 @@ public class PurchaseService {
                 .description("환불 처리 (구매자 환불)")
                 .relatedMaterialId(purchase.getMaterial().getId())
                 .relatedUserId(buyer.getId())
+                .tossPaymentKey(paymentKey)
                 .status("completed")
                 .build());
     }

@@ -36,6 +36,7 @@ public class AdminService {
     private final FileService fileService;
     private final FirebaseAuth firebaseAuth;
     private final ObjectMapper objectMapper;
+    private final PaymentService paymentService;
 
     @Transactional
     public void banUser(String adminUid, String targetFirebaseUid, String reason) {
@@ -266,12 +267,16 @@ public class AdminService {
             throw ApiException.badRequest("불량 신고만 승인할 수 있습니다.");
         }
 
-        // 구매자 환불 처리
+        // 구매자 환불 처리 — Toss 부분환불 (Toss 결제 건만)
         if (report.getPurchaseId() != null) {
             Purchase purchase = purchaseRepository.findById(report.getPurchaseId()).orElse(null);
             if (purchase != null && !purchase.isRefunded()) {
-                BigDecimal price = BigDecimal.valueOf(purchase.getPrice());
-                userRepository.addPoints(purchase.getBuyer().getId(), price);
+                String paymentKey = purchase.getTossPaymentKey();
+                if (paymentKey != null && !paymentKey.isBlank()) {
+                    paymentService.cancelTossPayment(paymentKey, purchase.getPrice(),
+                            "관리자 불량 승인에 의한 환불");
+                }
+                // paymentKey 없는 옛 포인트 구매는 환불 처리 SKIP — 관리자가 별도 안내
 
                 purchase.setRefunded(true);
                 purchase.setRefundedAt(LocalDateTime.now());

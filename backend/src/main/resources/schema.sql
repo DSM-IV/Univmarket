@@ -107,6 +107,8 @@ CREATE TABLE purchases (
     refunded      BOOLEAN       DEFAULT FALSE NOT NULL,
     refunded_at   TIMESTAMP,
     refund_reason VARCHAR(100),
+    toss_payment_key    VARCHAR(200),
+    toss_payment_amount BIGINT,
     created_at    TIMESTAMP     DEFAULT NOW() NOT NULL,
     CONSTRAINT uq_buyer_material UNIQUE (buyer_id, material_id)
 );

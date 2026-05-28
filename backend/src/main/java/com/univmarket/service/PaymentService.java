@@ -411,4 +411,36 @@ public class PaymentService {
                 .map(Long::parseLong)
                 .toList();
     }
+
+    /**
+     * Toss 결제 부분/전액 취소. 한 paymentKey 에 대해 여러 번 부분취소 가능 (Toss가 잔액 추적).
+     */
+    public void cancelTossPayment(String paymentKey, long cancelAmount, String reason) {
+        requireTossConfigured();
+        if (paymentKey == null || paymentKey.isBlank()) {
+            throw ApiException.badRequest("결제 키가 없어 환불할 수 없습니다.");
+        }
+        if (cancelAmount <= 0) {
+            throw ApiException.badRequest("환불 금액이 올바르지 않습니다.");
+        }
+
+        String authHeader = Base64.getEncoder().encodeToString(
+                (tossSecretKey + ":").getBytes(StandardCharsets.UTF_8));
+        try {
+            tossClient.post()
+                    .uri("/v1/payments/" + paymentKey + "/cancel")
+                    .header("Authorization", "Basic " + authHeader)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(Map.of(
+                            "cancelReason", reason == null || reason.isBlank() ? "구매자 요청 환불" : reason,
+                            "cancelAmount", cancelAmount
+                    ))
+                    .retrieve()
+                    .bodyToMono(Map.class)
+                    .block(Duration.ofSeconds(10));
+        } catch (Exception e) {
+            log.error("Toss 환불 실패 (paymentKey={}, amount={}): {}", paymentKey, cancelAmount, e.getMessage());
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "환불 처리에 실패했습니다.");
+        }
+    }
 }
