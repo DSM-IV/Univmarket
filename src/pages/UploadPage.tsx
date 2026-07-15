@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useNavigate, Navigate, useSearchParams } from "react-router-dom";
+import { useNavigate, Navigate, useSearchParams, Link } from "react-router-dom";
 import { visibleCategories as categories, departments, regularDepartments, doubleMajorDepartments, transferDepartmentsByCollege, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
 import { apiPost } from "../api/client";
@@ -94,6 +94,7 @@ export default function UploadPage() {
     pages: "",
   });
   const [prefilledFromRequest, setPrefilledFromRequest] = useState(false);
+  const [copyrightConfirmed, setCopyrightConfirmed] = useState(false);
 
   useEffect(() => {
     const qpSubject = searchParams.get("subject");
@@ -400,6 +401,11 @@ export default function UploadPage() {
       return;
     }
 
+    if (!copyrightConfirmed) {
+      setError("자료가 본인 저작물임을 확인하는 항목에 동의해주세요.");
+      return;
+    }
+
     setUploading(true);
     setError("");
 
@@ -512,6 +518,7 @@ export default function UploadPage() {
         fileCount: uploadedFiles.length,
         thumbnail: uploadedPreviewUrls[0] || "",
         previewImages: uploadedPreviewUrls,
+        copyrightConfirmed: true,
       };
 
       if (gradeImageUrl && gradeClaim) {
@@ -748,7 +755,7 @@ export default function UploadPage() {
                     <option value="">선택하세요</option>
                     {categories.map((cat) => (
                       <option key={cat.name} value={cat.name}>
-                        {cat.icon} {cat.name}
+                        {cat.name}
                       </option>
                     ))}
                   </select>
@@ -1487,21 +1494,36 @@ export default function UploadPage() {
             </CardContent>
           </Card>}
 
-          {/* 저작권 배너 */}
-          <div className="flex gap-3 p-4.5 bg-amber-500/[0.06] rounded-lg">
-            <div className="flex-shrink-0 text-amber-500 mt-0.5">
-              <AlertTriangle className="w-5 h-5" />
+          {/* 저작권 동의 (필수) */}
+          <div>
+            <div className="flex gap-3 p-4.5 bg-amber-500/[0.06] rounded-lg">
+              <div className="flex-shrink-0 text-amber-500 mt-0.5">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="text-[13px] text-muted-foreground leading-relaxed">
+                <strong className="block text-sm font-bold mb-1.5 text-foreground">
+                  저작권 관련 주의사항
+                </strong>
+                <ul className="m-0 pl-4.5 list-disc">
+                  <li className="mb-0.5">타인의 저작물(교재, 논문, 강의자료 등)을 무단으로 복제하여 업로드하지 마세요.</li>
+                  <li className="mb-0.5">본인이 직접 작성한 자료만 판매할 수 있습니다.</li>
+                  <li className="mb-0.5">저작권 침해 자료는 사전 통보 없이 삭제될 수 있으며, 법적 책임은 업로더에게 있습니다.</li>
+                </ul>
+              </div>
             </div>
-            <div className="text-[13px] text-muted-foreground leading-relaxed">
-              <strong className="block text-sm font-bold mb-1.5 text-foreground">
-                저작권 관련 주의사항
-              </strong>
-              <ul className="m-0 pl-4.5 list-disc">
-                <li className="mb-0.5">타인의 저작물(교재, 논문, 강의자료 등)을 무단으로 복제하여 업로드하지 마세요.</li>
-                <li className="mb-0.5">본인이 직접 작성한 자료만 판매할 수 있습니다.</li>
-                <li className="mb-0.5">저작권 침해 자료는 사전 통보 없이 삭제될 수 있으며, 법적 책임은 업로더에게 있습니다.</li>
-              </ul>
-            </div>
+
+            <label className="mt-3 flex items-start gap-2.5 cursor-pointer select-none px-1">
+              <input
+                type="checkbox"
+                checked={copyrightConfirmed}
+                onChange={(e) => setCopyrightConfirmed(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 accent-[#862633] focus:ring-[#862633]"
+              />
+              <span className="text-[13px] text-muted-foreground leading-relaxed">
+                위 내용을 모두 확인했으며, 등록하는 자료가 <strong className="text-foreground">본인이 직접 작성·제작한 저작물</strong>로서 제3자의 저작권 등 권리를 침해하지 않음을 확인합니다. (
+                <Link to="/terms" className="text-[#862633] hover:underline">이용약관</Link> 제12·19·20조)
+              </span>
+            </label>
           </div>
 
           {error && (

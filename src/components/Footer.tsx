@@ -30,7 +30,7 @@ export default function Footer() {
             <span className="font-bold text-[15px]">UniFile</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            대학생을 위한 공부자료 마켓플레이스
+            대학생을 위한 자료 마켓플레이스
           </p>
         </div>
 

@@ -147,7 +147,7 @@ export default function PrivacyContent() {
           <li>
             귀하는 언제든지 등록되어 있는 귀하의 개인정보를 열람하거나 정정하실 수 있습니다.
             개인정보 열람 및 정정을 하고자 할 경우에는 마이페이지에서 직접 열람 또는
-            정정하거나, 개인정보관리책임자에게 서면, 전화 또는 이메일로 연락하시면 조치하겠습니다.
+            정정하거나, 개인정보 보호책임자에게 서면, 전화 또는 이메일로 연락하시면 조치하겠습니다.
           </li>
           <li>
             귀하가 개인정보의 오류에 대한 정정을 요청한 경우, 정정을 완료하기 전까지
@@ -168,7 +168,7 @@ export default function PrivacyContent() {
             내용을 귀하는 언제든지 철회하실 수 있습니다.
           </li>
           <li>
-            동의철회는 마이페이지에서 회원탈퇴를 클릭하거나 개인정보관리책임자에게
+            동의철회는 마이페이지에서 회원탈퇴를 클릭하거나 개인정보 보호책임자에게
             이메일 등으로 연락하시면, 회원탈퇴 신청 시점으로부터 90일 동안 재가입
             방지를 위한 개인정보보존 이후 개인정보의 삭제 등 필요한 조치를 하겠습니다.
           </li>
@@ -368,18 +368,19 @@ export default function PrivacyContent() {
       </section>
 
       <section>
-        <h2>제 12 조 (개인정보관리책임자)</h2>
+        <h2>제 12 조 (개인정보 보호책임자)</h2>
         <p>
           회사는 귀하가 좋은 정보를 안전하게 이용할 수 있도록 최선을 다하고 있습니다.
           개인정보를 보호하는데 있어 귀하께 고지한 사항들에 반하는 사고가 발생할 시에
-          개인정보관리책임자가 모든 책임을 집니다. 그러나 기술적인 보완조치를 했음에도
+          개인정보 보호책임자가 모든 책임을 집니다. 그러나 기술적인 보완조치를 했음에도
           불구하고, 해킹 등 기본적인 네트워크상의 위험성에 의해 발생하는 예기치 못한
           사고로 인한 정보의 훼손 및 방문자가 작성한 게시물에 의한 각종 분쟁에 관해서는
           책임이 없습니다.
         </p>
         <div className="my-4 rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm not-prose">
-          <p className="font-semibold text-gray-900">개인정보관리책임자</p>
-          <p className="mt-1 text-gray-600">이메일: unifileservice@gmail.com</p>
+          <p className="font-semibold text-gray-900">개인정보 보호책임자</p>
+          <p className="mt-1 text-gray-600">성명: 장찬수 (대표)</p>
+          <p className="mt-0.5 text-gray-600">이메일: unifileservice@gmail.com</p>
           <p className="mt-0.5 text-gray-600">개인정보 관련 문의사항에 신속하고 성실하게 답변해 드리고 있습니다.</p>
         </div>
       </section>

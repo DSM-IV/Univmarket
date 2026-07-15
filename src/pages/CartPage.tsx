@@ -54,7 +54,7 @@ export default function CartPage() {
         <div className="mx-auto max-w-5xl px-6 text-center py-20">
           <h2 className="text-xl font-bold tracking-tight mb-4">로그인이 필요합니다</h2>
           <Button asChild>
-            <Link to="/login">로그인하기</Link>
+            <Link to="/login" state={{ from: "/cart" }}>로그인하기</Link>
           </Button>
         </div>
       </div>
@@ -270,10 +270,10 @@ export default function CartPage() {
                   )}
 
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4 text-[13px] leading-relaxed text-amber-900">
-                    <p className="font-semibold mb-1.5">환불 정책 안내</p>
+                    <p className="font-semibold mb-1.5">환불·청약철회 정책 안내</p>
                     <ul className="list-disc pl-4 space-y-0.5">
                       <li>구매 후 <span className="font-semibold">24시간 이내에 다운로드하지 않으면 자동으로 환불</span>됩니다.</li>
-                      <li>한 번이라도 <span className="font-semibold">다운로드한 이후에는 환불이 불가능</span>합니다.</li>
+                      <li>한 번이라도 <span className="font-semibold">다운로드하면 디지털콘텐츠 특성상 청약철회·환불이 제한</span>됩니다.</li>
                     </ul>
                     <label className="flex items-start gap-2 mt-3 cursor-pointer select-none">
                       <input
@@ -283,7 +283,7 @@ export default function CartPage() {
                         onChange={(e) => setAgreedToRefundPolicy(e.target.checked)}
                       />
                       <span className="text-[13px] font-medium text-amber-900">
-                        위 환불 정책을 이해하며 동의했습니다.
+                        위 환불·청약철회 정책을 이해하며 동의했습니다.
                       </span>
                     </label>
                   </div>
