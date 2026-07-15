@@ -72,7 +72,7 @@ export default function EventsPage() {
                       <img
                         src={event.image}
                         alt={event.title}
-                        className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+                        className="h-full w-full object-cover"
                         onError={(e) => {
                           (e.currentTarget as HTMLImageElement).style.visibility = "hidden";
                         }}

@@ -585,12 +585,12 @@ export const exchangeCountries = {
 };
 
 export const categories = [
-  { name: "수업" as const, icon: "📝", color: "#4F46E5", examples: "수업 필기, 발표 자료, 보고서" },
-  { name: "다중전공" as const, icon: "📋", color: "#DC2626", examples: "자기소개서, 지원서" },
-  { name: "동아리 & 학회" as const, icon: "🤝", color: "#0891B2", examples: "자기소개서, 면접 후기" },
-  { name: "교환학생" as const, icon: "🌏", color: "#D97706", examples: "자기소개서, 지원서" },
-  { name: "장학금" as const, icon: "💰", color: "#7C3AED", examples: "자기소개서, 지원서" },
-  { name: "자격증" as const, icon: "🏅", color: "#059669", examples: "합격수기, 준비방법" },
+  { name: "수업" as const, color: "#4F46E5", examples: "수업 필기, 발표 자료, 보고서" },
+  { name: "다중전공" as const, color: "#DC2626", examples: "자기소개서, 지원서" },
+  { name: "동아리 & 학회" as const, color: "#0891B2", examples: "자기소개서, 면접 후기" },
+  { name: "교환학생" as const, color: "#D97706", examples: "자기소개서, 지원서" },
+  { name: "장학금" as const, color: "#7C3AED", examples: "자기소개서, 지원서" },
+  { name: "자격증" as const, color: "#059669", examples: "합격수기, 준비방법" },
 ];
 
 // 클로즈드 베타 기간 동안 노출할 카테고리. 베타 종료 시 BETA_VISIBLE_CATEGORIES = null 로 변경하면 전체 카테고리 복원.

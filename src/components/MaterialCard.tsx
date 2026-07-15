@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Star } from "lucide-react";
+import { Star, FileText } from "lucide-react";
 import type { Material } from "../types";
 
 interface Props {
@@ -33,10 +33,11 @@ export default function MaterialCard({ material, rating, reviewCount }: Props) {
   return (
     <Link
       to={`/material/${material.id}`}
-      className="group flex flex-col bg-card rounded-xl border border-border overflow-hidden transition-all hover:-translate-y-1 hover:shadow-lg hover:border-transparent"
+      className="group flex flex-col bg-card rounded-xl border border-border overflow-hidden transition-all hover:-translate-y-0.5 hover:shadow-md"
     >
       {/* Thumbnail */}
-      <div className="relative h-[148px] bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-start justify-between p-3 overflow-hidden">
+      <div className="relative h-[148px] bg-secondary flex items-start justify-between p-3 overflow-hidden">
+        <FileText className="absolute inset-0 m-auto w-9 h-9 text-muted-foreground/30" />
         {material.thumbnail && (
           <img
             src={material.thumbnail}
@@ -53,7 +54,7 @@ export default function MaterialCard({ material, rating, reviewCount }: Props) {
             <GradeBadge grade={material.verifiedGrade} />
           )}
         </div>
-        <Badge className="relative z-10 bg-black/35 text-white text-[11px] border-none">
+        <Badge className="relative z-10 bg-foreground/55 text-white text-[11px] border-none">
           {material.fileType}
         </Badge>
       </div>
@@ -84,7 +85,7 @@ export default function MaterialCard({ material, rating, reviewCount }: Props) {
         {/* Footer */}
         <div className="flex items-center justify-end mt-auto pt-2.5 border-t border-border/50">
           <span className="text-base font-bold text-primary tracking-tight">
-            {material.price.toLocaleString()}P
+            {material.price.toLocaleString()}원
           </span>
         </div>
       </div>

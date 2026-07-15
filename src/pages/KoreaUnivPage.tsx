@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { visibleCategories as categories, departments, departmentCourses, courseProfessors } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import { ChevronRight, Hand, Plus, X, Bell, MessageSquarePlus, Search } from "lucide-react";
+import CategoryIcon from "@/components/CategoryIcon";
 import { cn } from "@/lib/utils";
 import type { Material } from "../types";
 
@@ -244,7 +245,7 @@ export default function KoreaUnivPage() {
             더이상 자료 찾아서 헤메지 마세요.
           </p>
           <p className="text-lg text-muted-foreground mb-10 max-sm:text-[15px] max-sm:mb-8">
-            고려대 학생들이 만든 양질의 공부자료를 만나보세요.
+            고려대 학생들이 만든 양질의 자료를 만나보세요.
           </p>
           <div className="flex gap-3 justify-center max-sm:flex-col max-sm:items-stretch">
             <Button variant="primary" size="lg" asChild>
@@ -271,7 +272,9 @@ export default function KoreaUnivPage() {
                 key={cat.name}
                 className="flex flex-col items-center gap-2.5 py-7 px-4 bg-muted rounded-xl transition-all hover:bg-primary/5 hover:-translate-y-0.5"
               >
-                <span className="text-[32px]">{cat.icon}</span>
+                <div className="w-12 h-12 rounded-full bg-primary/8 text-primary flex items-center justify-center">
+                  <CategoryIcon name={cat.name} className="w-6 h-6" />
+                </div>
                 <span className="text-[15px] font-semibold">{cat.name}</span>
                 <span className="text-xs text-muted-foreground text-center leading-snug">
                   {cat.examples}
@@ -394,7 +397,6 @@ export default function KoreaUnivPage() {
                       : "bg-white text-black border-[#862633]/20 hover:bg-[#862633]/5"
                   )}
                 >
-                  <span>{cat.icon}</span>
                   {cat.name}
                 </button>
               );
@@ -636,13 +638,13 @@ export default function KoreaUnivPage() {
       <section className="py-24 bg-white max-sm:py-16">
         <div className="max-w-[560px] mx-auto text-center px-6">
           <h2 className="text-4xl font-extrabold tracking-[-0.04em] leading-[1.3] mb-4 max-sm:text-[28px]">
-            내 공부자료로<br />수익을 만들어 보세요
+            내 자료로<br />수익을 만들어 보세요
           </h2>
           <p className="text-base text-muted-foreground mb-9">
             노트, 자소서, 레포트 등 어떤 자료든 판매할 수 있어요
           </p>
           <Button size="xl" asChild>
-            <Link to="/upload">지금 시작하기</Link>
+            <Link to="/upload">지금 판매하기</Link>
           </Button>
         </div>
       </section>
