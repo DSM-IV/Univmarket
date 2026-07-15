@@ -63,6 +63,8 @@ public class SecurityConfig {
                 .requestMatchers("/health", "/health/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
                 .requestMatchers("/api/auth/kakao-verify/**").permitAll()
+                // 이니시스 결제 인증결과 콜백 — 이니시스가 토큰 없이 POST. 승인은 이니시스 서명+Checkout으로 검증.
+                .requestMatchers(HttpMethod.POST, "/api/payments/inicis/return").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/materials", "/api/materials/{id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/materials/{id}/reviews").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/material-requests", "/api/material-requests/{id}").permitAll()

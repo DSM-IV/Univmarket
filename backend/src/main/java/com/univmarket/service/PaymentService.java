@@ -15,12 +15,12 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +36,7 @@ public class PaymentService {
     private final MaterialRepository materialRepository;
     private final PurchaseRepository purchaseRepository;
     private final PurchaseService purchaseService;
+    private final CheckoutTxService checkoutTxService;
 
     private final String tossSecretKey;
     private final WebClient tossClient;
@@ -46,15 +47,18 @@ public class PaymentService {
             MaterialRepository materialRepository,
             PurchaseRepository purchaseRepository,
             PurchaseService purchaseService,
-            @Value("${payment.toss.secret-key:}") String tossSecretKey) {
+            CheckoutTxService checkoutTxService,
+            @Value("${payment.toss.secret-key:}") String tossSecretKey,
+            @Value("${payment.toss.base-url:https://api.tosspayments.com}") String tossBaseUrl) {
         this.userRepository = userRepository;
         this.checkoutRepository = checkoutRepository;
         this.materialRepository = materialRepository;
         this.purchaseRepository = purchaseRepository;
         this.purchaseService = purchaseService;
+        this.checkoutTxService = checkoutTxService;
         this.tossSecretKey = tossSecretKey;
         this.tossClient = WebClient.builder()
-                .baseUrl("https://api.tosspayments.com")
+                .baseUrl(tossBaseUrl)
                 .build();
     }
 
@@ -72,7 +76,15 @@ public class PaymentService {
     @Transactional
     public Map<String, Object> createCheckoutSession(String firebaseUid, List<Long> materialIds) {
         requireTossConfigured();
+        return createPendingCheckout(firebaseUid, materialIds);
+    }
 
+    /**
+     * PG 무관 결제 세션 생성: 자료 검증 + Checkout(pending) 저장 후 {orderId, amount, orderName} 반환.
+     * 어떤 PG 어댑터(Toss/이니시스)든 이 메서드로 oid·금액을 발급받는다 (PG 설정 체크 없음).
+     */
+    @Transactional
+    public Map<String, Object> createPendingCheckout(String firebaseUid, List<Long> materialIds) {
         if (materialIds == null || materialIds.isEmpty()) {
             throw ApiException.badRequest("결제할 자료를 선택해주세요.");
         }
@@ -129,34 +141,41 @@ public class PaymentService {
     }
 
     /**
-     * 결제 확정. Toss /v1/payments/confirm 호출 후 각 자료 지급.
-     * 중복 호출 방지를 위해 status=completed면 idempotent 응답.
+     * 결제 확정 (오케스트레이터, 비트랜잭션).
+     * "외부 비가역 호출(Toss 승인)"과 "DB 커밋"을 분리한다:
+     *   1) beginConfirm  — 검증 + idempotency 판정 (읽기 전용 tx)
+     *   2) Toss /confirm — tx 밖에서 호출. 성공 시 비가역 청구
+     *   3) markCompleted — 완료 상태 즉시 커밋 (재호출이 절대 재청구되지 않게 하는 앵커)
+     *   4) 자료 지급      — 자료별 독립 tx. 일부 실패해도 결제 확정/다른 자료는 보존
+     * 이미 completed면 2·3을 건너뛰고 4만 수행해 부분/누락 지급을 자가복구한다.
      */
-    @Transactional
     public Map<String, Object> confirmCheckout(String firebaseUid, String paymentKey, String orderId, long amount) {
         requireTossConfigured();
 
-        Checkout checkout = checkoutRepository.findByOrderId(orderId)
-                .orElseThrow(() -> ApiException.notFound("결제 정보를 찾을 수 없습니다."));
+        CheckoutTxService.ConfirmContext ctx = checkoutTxService.beginConfirm(firebaseUid, orderId, amount);
 
-        if (!checkout.getUser().getFirebaseUid().equals(firebaseUid)) {
-            throw ApiException.forbidden("본인의 결제만 확정할 수 있습니다.");
-        }
-
-        if ("completed".equals(checkout.getStatus())) {
-            return Map.of(
-                    "success", true,
-                    "orderId", orderId,
-                    "materialIds", parseMaterialIds(checkout.getMaterialIds())
-            );
-        }
-        if (!"pending".equals(checkout.getStatus())) {
-            throw ApiException.badRequest("이미 처리된 결제입니다.");
-        }
-        if (checkout.getAmount().longValue() != amount) {
-            throw ApiException.badRequest("결제 금액이 일치하지 않습니다.");
+        if (!ctx.alreadyCompleted()) {
+            callTossConfirm(paymentKey, orderId, amount);
+            checkoutTxService.markCompleted(orderId, paymentKey);
         }
 
+        String effectiveKey = ctx.paymentKey() != null ? ctx.paymentKey() : paymentKey;
+        List<Long> granted = grantMaterials(firebaseUid, ctx.materialIds(), effectiveKey, amount, orderId);
+
+        return Map.of(
+                "success", true,
+                "orderId", orderId,
+                "materialIds", granted
+        );
+    }
+
+    /**
+     * Toss 결제 승인 호출 (트랜잭션 밖).
+     * 이미 승인된 결제(ALREADY_PROCESSED_PAYMENT)는 이전 시도의 성공이므로 정상 처리한다.
+     * 그 외 실패 시 checkout은 pending으로 남겨 재시도를 허용한다
+     * (성공했을 수도 있는 청구를 failed로 단정하지 않음 — 재confirm이 ALREADY_PROCESSED로 자가복구).
+     */
+    private void callTossConfirm(String paymentKey, String orderId, long amount) {
         String authHeader = Base64.getEncoder().encodeToString(
                 (tossSecretKey + ":").getBytes(StandardCharsets.UTF_8));
         try {
@@ -172,36 +191,53 @@ public class PaymentService {
                     .retrieve()
                     .bodyToMono(Map.class)
                     .block(Duration.ofSeconds(10));
+        } catch (WebClientResponseException e) {
+            if (isAlreadyProcessed(e)) {
+                log.warn("Toss 이미 승인된 결제 — 재확인으로 정상 처리 (orderId={})", orderId);
+                return;
+            }
+            log.error("Toss 결제 승인 실패 (orderId={}): {} {}", orderId, e.getStatusCode(), e.getResponseBodyAsString());
+            throw new ApiException(HttpStatus.BAD_GATEWAY, "결제 승인에 실패했습니다.");
         } catch (Exception e) {
             log.error("Toss 결제 승인 실패 (orderId={}): {}", orderId, e.getMessage());
-            checkout.setStatus("failed");
-            checkoutRepository.save(checkout);
             throw new ApiException(HttpStatus.BAD_GATEWAY, "결제 승인에 실패했습니다.");
         }
-
-        checkout.setStatus("completed");
-        checkout.setPaymentKey(paymentKey);
-        checkout.setCompletedAt(LocalDateTime.now());
-        checkoutRepository.save(checkout);
-
-        List<Long> materialIds = parseMaterialIds(checkout.getMaterialIds());
-        for (Long materialId : materialIds) {
-            purchaseService.recordPurchase(firebaseUid, materialId, paymentKey, amount);
-        }
-
-        return Map.of(
-                "success", true,
-                "orderId", orderId,
-                "materialIds", materialIds
-        );
     }
 
-    private List<Long> parseMaterialIds(String ids) {
-        return Arrays.stream(ids.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .map(Long::parseLong)
-                .toList();
+    private boolean isAlreadyProcessed(WebClientResponseException e) {
+        String body = e.getResponseBodyAsString();
+        return body != null && body.contains("ALREADY_PROCESSED_PAYMENT");
+    }
+
+    /**
+     * 각 자료를 독립 트랜잭션으로 지급한다(recordPurchase 는 @Transactional).
+     * 이미 지급된 자료(CONFLICT)는 멱등하게 성공 처리, 그 외 실패는 수집·로깅한다.
+     * 결제는 이미 확정됐으므로 일부 지급 실패는 롤백 대상이 아니라 사후 복구(재confirm/CS) 대상이다.
+     */
+    public List<Long> grantMaterials(String firebaseUid, List<Long> materialIds, String paymentKey, long amount, String orderId) {
+        List<Long> granted = new ArrayList<>();
+        List<Long> failed = new ArrayList<>();
+        for (Long materialId : materialIds) {
+            try {
+                purchaseService.recordPurchase(firebaseUid, materialId, paymentKey, amount);
+                granted.add(materialId);
+            } catch (ApiException e) {
+                if (e.getStatus() == HttpStatus.CONFLICT) {
+                    granted.add(materialId); // 이미 지급됨 — 멱등 처리
+                } else {
+                    log.error("[결제] 자료 지급 실패 (orderId={}, materialId={}): {}", orderId, materialId, e.getMessage());
+                    failed.add(materialId);
+                }
+            } catch (Exception e) {
+                log.error("[결제] 자료 지급 실패 (orderId={}, materialId={}): {}", orderId, materialId, e.getMessage());
+                failed.add(materialId);
+            }
+        }
+        if (!failed.isEmpty()) {
+            log.error("[결제] 결제는 완료됐으나 일부 자료 미지급 — 수동 확인 필요 (orderId={}, paymentKey={}, 미지급={})",
+                    orderId, paymentKey, failed);
+        }
+        return granted;
     }
 
     /**

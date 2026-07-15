@@ -210,9 +210,6 @@ public class PurchaseService {
             throw ApiException.badRequest("판매자의 수익금이 부족하여 환불할 수 없습니다.");
         }
 
-        // Toss 부분환불 — 실패 시 예외로 트랜잭션 롤백 (DB 상태 변경 없음)
-        paymentService.cancelTossPayment(paymentKey, purchase.getPrice(), "구매 후 24시간 이내 환불");
-
         // 판매자 수익금 차감
         if (fromPending.compareTo(BigDecimal.ZERO) > 0) {
             seller.setPendingEarnings(seller.getPendingEarnings().subtract(fromPending));
@@ -260,6 +257,11 @@ public class PurchaseService {
                 .tossPaymentKey(paymentKey)
                 .status("completed")
                 .build());
+
+        // Toss 부분환불 — 회복 가능한 DB 변경을 모두 마친 뒤 마지막(비가역)에 호출.
+        // DB 작업이 먼저 실패하면 환불 전에 트랜잭션이 롤백되고, cancel 실패 시엔 위 DB 변경도 전부 롤백된다.
+        // (cancel 성공 후 commit 실패의 잔여 창은 webhook 도입 전까지 대사 쿼리로 탐지 — 환불됐는데 미차감.)
+        paymentService.cancelTossPayment(paymentKey, purchase.getPrice(), "구매 후 24시간 이내 환불");
     }
 
     /**
