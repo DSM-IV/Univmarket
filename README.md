@@ -29,4 +29,4 @@ C2C 거래 플랫폼입니다.
 - `functions/` — Firebase Cloud Functions
 
 ## 맡은 부분
-(팀이면 본인 담당만 / 혼자면 전체 기획·개발)
+전체 기획, 개발
