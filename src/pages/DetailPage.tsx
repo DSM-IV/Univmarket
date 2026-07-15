@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { apiGet, apiGetList, apiPost, apiPatch, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
-import { hasPurchased } from "../services/pointsService";
+import { hasPurchased } from "../services/paymentService";
 import { startCheckout } from "../services/checkoutService";
 import { addToCart, isInCart } from "../services/cartService";
 import type { Material, MaterialFile } from "../types";
@@ -144,6 +144,7 @@ export default function DetailPage() {
   const { id } = useParams();
   const { user, userProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [material, setMaterial] = useState<Material | null>(null);
   const [loading, setLoading] = useState(true);
@@ -378,7 +379,7 @@ export default function DetailPage() {
 
   const handleAddToCart = async () => {
     if (!user) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname } });
       return;
     }
     setAddingToCart(true);
@@ -401,7 +402,7 @@ export default function DetailPage() {
 
   const handleDirectPurchase = async () => {
     if (!user) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname } });
       return;
     }
     try {
@@ -498,10 +499,10 @@ export default function DetailPage() {
                 </button>
               </div>
             ) : (
-              <div className="h-[280px] max-sm:h-[180px] bg-gradient-to-br from-[#667eea] to-[#764ba2] flex flex-col items-center justify-center gap-3">
-                <span className="bg-white/90 px-4 py-2 rounded-sm font-bold text-lg">{material.fileType}</span>
-                <span className="text-white text-base font-medium">{material.pages}페이지</span>
-                <span className="text-white/70 text-[13px]">미리보기가 없습니다</span>
+              <div className="h-[280px] max-sm:h-[180px] bg-secondary flex flex-col items-center justify-center gap-3">
+                <span className="px-4 py-2 rounded-sm font-bold text-lg text-muted-foreground">{material.fileType}</span>
+                <span className="text-muted-foreground text-base font-medium">{material.pages}페이지</span>
+                <span className="text-muted-foreground text-[13px]">미리보기가 없습니다</span>
               </div>
             )}
           </Card>
@@ -695,7 +696,7 @@ export default function DetailPage() {
                   <div className="p-4 border border-primary-light bg-primary/5 rounded-lg mb-3">
                     <div className="flex justify-between items-center mb-2">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#862633] to-[#A83344] text-white flex items-center justify-center text-[13px] font-bold">
+                        <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-[13px] font-bold">
                           {myReview.userName.charAt(0)}
                         </div>
                         <div>
@@ -760,7 +761,7 @@ export default function DetailPage() {
                         <div key={review.id} className="p-4 border border-border rounded-lg">
                           <div className="flex justify-between items-center mb-2">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#862633] to-[#A83344] text-white flex items-center justify-center text-[13px] font-bold">
+                              <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-[13px] font-bold">
                                 {review.userName.charAt(0)}
                               </div>
                               <div>
@@ -823,6 +824,10 @@ export default function DetailPage() {
                 </>
               ) : (
                 <>
+                  <div className="mb-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12px] leading-relaxed text-amber-900">
+                    결제 시 <span className="font-semibold">환불·청약철회 정책</span>에 동의하는 것으로 간주됩니다. 자료를 <span className="font-semibold">다운로드하면 청약철회가 제한</span>됩니다.{" "}
+                    <Link to="/terms" className="underline hover:no-underline">자세히</Link>
+                  </div>
                   <Button
                     variant="primary"
                     size="lg"

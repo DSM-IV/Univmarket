@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { apiGet, apiGetList, apiPost, apiPatch, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
 import type { Material } from "../types";
@@ -24,6 +24,7 @@ const REFUND_DEADLINE_HOURS = 24;
 export default function MyPage() {
   const { user, userProfile, refreshProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [tab, setTab] = useState<Tab>("uploaded");
   const [uploadedMaterials, setUploadedMaterials] = useState<Material[]>([]);
   const [purchasedMaterials, setPurchasedMaterials] = useState<Material[]>([]);
@@ -78,7 +79,7 @@ export default function MyPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname } });
       return;
     }
 
@@ -421,7 +422,7 @@ export default function MyPage() {
                       <p className="mt-0.5 truncate text-xs text-gray-500">
                         {m.subject}
                         {m.professor ? ` · ${m.professor} 교수` : ""} ·{" "}
-                        {m.price.toLocaleString()}P
+                        {m.price.toLocaleString()}원
                       </p>
                     </div>
                   </Link>

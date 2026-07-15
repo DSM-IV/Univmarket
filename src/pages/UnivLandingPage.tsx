@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { visibleCategories as categories } from "../data/mockData";
 import { fetchReviewStats, type ReviewStats } from "../services/reviewStats";
 import { ChevronRight } from "lucide-react";
+import CategoryIcon from "@/components/CategoryIcon";
 import type { Material } from "../types";
+import type { UnivConfig } from "../data/univConfig";
 
-export default function SnuPage() {
+export default function UnivLandingPage({ config }: { config: UnivConfig }) {
   const [popularMaterials, setPopularMaterials] = useState<Material[]>([]);
   const [recentMaterials, setRecentMaterials] = useState<Material[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStats>({});
@@ -42,7 +44,7 @@ export default function SnuPage() {
   }, []);
 
   return (
-    <div className="snu-theme">
+    <div className={config.themeClass}>
       {/* Hero */}
       <section className="pt-24 pb-20 px-6 text-center max-sm:pt-16 max-sm:pb-14">
         <div className="max-w-[640px] mx-auto">
@@ -52,7 +54,7 @@ export default function SnuPage() {
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{
                   color: "#2E8BC0",
-                  transform: transformed ? "translateX(0)" : "translateX(2.2em)",
+                  transform: transformed ? "translateX(0)" : `translateX(${config.fileOffsetEm}em)`,
                 }}
               >
                 File
@@ -83,35 +85,36 @@ export default function SnuPage() {
                 className="inline-block transition-all duration-700 ease-in-out"
                 style={{ width: transformed ? "0.3em" : "0" }}
               />
-              <span
-                className="inline-block transition-all duration-700 ease-in-out overflow-hidden"
-                style={{
-                  maxWidth: transformed ? "0.65em" : "0",
-                  opacity: transformed ? 1 : 0,
-                  color: "#003458",
-                }}
-              >
-                S
-              </span>
-              <span
-                className="inline-block transition-all duration-700 ease-in-out overflow-hidden"
-                style={{
-                  maxWidth: transformed ? "0.65em" : "0",
-                  opacity: transformed ? 1 : 0,
-                  color: "#003458",
-                }}
-              >
-                N
-              </span>
-              <span
-                className="inline-block transition-all duration-700 ease-in-out"
-                style={{
-                  color: transformed ? "#003458" : "#1B3A5C",
-                  transform: transformed ? "translateX(0)" : "translateX(-2.5em)",
-                }}
-              >
-                U
-              </span>
+              {config.letters.map((letter, i) =>
+                letter.kind === "slide" ? (
+                  <span
+                    key={i}
+                    className="inline-block transition-all duration-700 ease-in-out"
+                    style={{
+                      color: transformed ? letter.colorTo : letter.colorFrom,
+                      transform: transformed ? "translateX(0)" : `translateX(${letter.offsetEm}em)`,
+                    }}
+                  >
+                    {letter.char}
+                  </span>
+                ) : (
+                  <span
+                    key={i}
+                    className="inline-block transition-all duration-700 ease-in-out overflow-hidden"
+                    style={{
+                      maxWidth: transformed
+                        ? `${letter.widthEm}em`
+                        : letter.initiallyVisible
+                          ? `${letter.widthEm}em`
+                          : "0",
+                      opacity: transformed ? 1 : letter.initiallyVisible ? 1 : 0,
+                      color: letter.color,
+                    }}
+                  >
+                    {letter.char}
+                  </span>
+                )
+              )}
             </span>
           </h1>
           <p
@@ -121,7 +124,7 @@ export default function SnuPage() {
             더이상 자료 찾아서 헤메지 마세요.
           </p>
           <p className="text-lg text-muted-foreground mb-10 max-sm:text-[15px] max-sm:mb-8">
-            서울대 학생들이 만든 양질의 공부자료를 만나보세요.
+            {config.univName} 학생들이 만든 양질의 자료를 만나보세요.
           </p>
           <div className="flex gap-3 justify-center max-sm:flex-col max-sm:items-stretch">
             <Button variant="primary" size="lg" asChild>
@@ -148,7 +151,9 @@ export default function SnuPage() {
                 key={cat.name}
                 className="flex flex-col items-center gap-2.5 py-7 px-4 bg-muted rounded-xl transition-all hover:bg-primary/5 hover:-translate-y-0.5"
               >
-                <span className="text-[32px]">{cat.icon}</span>
+                <div className="w-12 h-12 rounded-full bg-primary/8 text-primary flex items-center justify-center">
+                  <CategoryIcon name={cat.name} className="w-6 h-6" />
+                </div>
                 <span className="text-[15px] font-semibold">{cat.name}</span>
                 <span className="text-xs text-muted-foreground text-center leading-snug">
                   {cat.examples}
@@ -225,13 +230,13 @@ export default function SnuPage() {
       <section className="py-24 bg-muted max-sm:py-16">
         <div className="max-w-[560px] mx-auto text-center px-6">
           <h2 className="text-4xl font-extrabold tracking-[-0.04em] leading-[1.3] mb-4 max-sm:text-[28px]">
-            내 공부자료로<br />수익을 만들어 보세요
+            내 자료로<br />수익을 만들어 보세요
           </h2>
           <p className="text-base text-muted-foreground mb-9">
             노트, 자소서, 레포트 등 어떤 자료든 판매할 수 있어요
           </p>
           <Button size="xl" asChild>
-            <Link to="/upload">지금 시작하기</Link>
+            <Link to="/upload">지금 판매하기</Link>
           </Button>
         </div>
       </section>
