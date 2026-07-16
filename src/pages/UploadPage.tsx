@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { useNavigate, Navigate, useSearchParams, Link } from "react-router-dom";
 import { visibleCategories as categories, departments, regularDepartments, doubleMajorDepartments, transferDepartmentsByCollege, convergenceMajors, exchangeCountries, departmentCourses, coursesByIsuCategory, courseProfessors, courseSemesters, courseProfessorsBySemester } from "../data/mockData";
 import { useAuth } from "../contexts/AuthContext";
+import { useDialog } from "../contexts/DialogContext";
 import { apiPost } from "../api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -60,6 +61,7 @@ interface PreviewImage {
 
 export default function UploadPage() {
   const { user, loading: authLoading } = useAuth();
+  const dialog = useDialog();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -251,11 +253,12 @@ export default function UploadPage() {
     });
     // 100MB 초과 파일 alert (가장 흔한 거절 사유라 별도 안내)
     if (oversized.length > 0) {
-      alert(
+      void dialog.alert({
+        description:
         `다음 파일은 100MB를 초과하여 업로드할 수 없습니다.\n\n` +
         oversized.map((s) => `• ${s}`).join("\n") +
         `\n\n파일을 압축하거나 분할해서 다시 시도해주세요.`
-      );
+      });
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
   };

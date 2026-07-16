@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { apiGet, apiGetList, apiPost, apiPatch, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
+import { useDialog } from "../contexts/DialogContext";
 import type { Material } from "../types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +24,7 @@ const REFUND_DEADLINE_HOURS = 24;
 
 export default function MyPage() {
   const { user, userProfile, refreshProfile, loading: authLoading } = useAuth();
+  const dialog = useDialog();
   const navigate = useNavigate();
   const location = useLocation();
   const [tab, setTab] = useState<Tab>("uploaded");
@@ -166,8 +168,8 @@ export default function MyPage() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-    } catch (err) {
-      alert("다운로드에 실패했습니다. 다시 시도해주세요.");
+    } catch {
+      void dialog.alert({ description: "다운로드에 실패했습니다. 다시 시도해주세요." });
 
     } finally {
       setDownloading(null);
@@ -177,7 +179,7 @@ export default function MyPage() {
   const handleRefund = async (materialId: string) => {
     const purchase = purchases.find((p) => p.materialId === materialId && !p.refunded);
     if (!purchase) return;
-    if (!confirm("정말 환불하시겠습니까? 환불 후 자료를 다운로드할 수 없습니다.")) return;
+    if (!(await dialog.confirm({ title: "환불", description: "정말 환불하시겠습니까? 환불 후 자료를 다운로드할 수 없습니다.", confirmText: "환불", destructive: true }))) return;
 
     setRefunding(materialId);
     try {
@@ -186,23 +188,23 @@ export default function MyPage() {
         // 서버 확인 후 UI 업데이트
         setPurchasedMaterials((prev) => prev.filter((m) => m.id !== materialId));
         setPurchases((prev) => prev.map((p) => p.id === purchase.id ? { ...p, refunded: true } : p));
-        alert("환불이 완료되었습니다.");
+        void dialog.alert({ description: "환불이 완료되었습니다." });
       }
     } catch (err: unknown) {
-      alert((err as { message?: string }).message || "환불 처리에 실패했습니다.");
+      void dialog.alert({ description: (err as { message?: string }).message || "환불 처리에 실패했습니다." });
     } finally {
       setRefunding(null);
     }
   };
 
   const handleDeleteMaterial = async (materialId: string) => {
-    if (!confirm("정말 이 자료를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+    if (!(await dialog.confirm({ title: "자료 삭제", description: "정말 이 자료를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.", confirmText: "삭제", destructive: true }))) return;
     setDeletingMaterial(materialId);
     try {
       await apiDelete(`/materials/${materialId}`);
       setUploadedMaterials((prev) => prev.filter((m) => m.id !== materialId));
     } catch (err) {
-      alert((err as Error).message || "자료 삭제에 실패했습니다.");
+      void dialog.alert({ description: (err as Error).message || "자료 삭제에 실패했습니다." });
     } finally {
       setDeletingMaterial(null);
     }

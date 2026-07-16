@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { apiGet, apiGetList, apiPost, apiDelete } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
+import { useDialog } from "../contexts/DialogContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Hand, Upload, Send, Trash2 } from "lucide-react";
@@ -32,6 +33,7 @@ interface Comment {
 export default function RequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const dialog = useDialog();
   const navigate = useNavigate();
 
   const [request, setRequest] = useState<MaterialRequest | null>(null);
@@ -103,13 +105,14 @@ export default function RequestDetailPage() {
       const updated = await apiGetList<Comment>(`/material-requests/${id}/comments`);
       setComments(updated);
     } catch {
-      alert("댓글 등록에 실패했습니다.");
+      void dialog.alert({ description: "댓글 등록에 실패했습니다." });
     }
     setSubmitting(false);
   };
 
   const handleDeleteComment = async (commentId: string) => {
-    if (!id || !confirm("댓글을 삭제하시겠습니까?")) return;
+    if (!id) return;
+    if (!(await dialog.confirm({ title: "댓글 삭제", description: "댓글을 삭제하시겠습니까?", confirmText: "삭제", destructive: true }))) return;
     await apiDelete(`/material-requests/${id}/comments/${commentId}`);
     setComments((prev) => prev.filter((c) => c.id !== commentId));
   };

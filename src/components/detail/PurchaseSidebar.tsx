@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { apiPost, apiDelete } from "../../api/client";
 import { useAuth } from "../../contexts/AuthContext";
+import { useDialog } from "../../contexts/DialogContext";
 import { startCheckout } from "../../services/checkoutService";
 import { addToCart, isInCart } from "../../services/cartService";
 import type { Material } from "../../types";
@@ -67,6 +68,7 @@ function DownloadSection({
 
 export default function PurchaseSidebar({ material, owned }: { material: Material; owned: boolean }) {
   const { user, userProfile } = useAuth();
+  const dialog = useDialog();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -96,20 +98,20 @@ export default function PurchaseSidebar({ material, owned }: { material: Materia
       a.click();
       document.body.removeChild(a);
     } catch {
-      alert("다운로드에 실패했습니다. 다시 시도해주세요.");
+      void dialog.alert({ description: "다운로드에 실패했습니다. 다시 시도해주세요." });
     } finally {
       setDownloading(false);
     }
   };
 
   const handleDeleteMaterial = async () => {
-    if (!confirm("정말 이 자료를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) return;
+    if (!(await dialog.confirm({ title: "자료 삭제", description: "정말 이 자료를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.", confirmText: "삭제", destructive: true }))) return;
     setDeleting(true);
     try {
       await apiDelete(`/materials/${material.id}`);
       navigate("/mypage");
     } catch {
-      alert("자료 삭제에 실패했습니다.");
+      void dialog.alert({ description: "자료 삭제에 실패했습니다." });
       setDeleting(false);
     }
   };
@@ -150,7 +152,7 @@ export default function PurchaseSidebar({ material, owned }: { material: Materia
       });
     } catch (err) {
       const msg = (err as Error).message || "결제를 시작할 수 없습니다.";
-      alert(msg);
+      void dialog.alert({ description: msg });
     }
   };
 

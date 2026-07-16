@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { apiGetList, apiPost } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
+import { useDialog } from "../contexts/DialogContext";
 import MaterialCard from "../components/MaterialCard";
 import { Button } from "@/components/ui/button";
 // Input removed - using native selects
@@ -31,6 +32,7 @@ interface MaterialRequest {
 
 export default function KoreaUnivPage() {
   const { user } = useAuth();
+  const dialog = useDialog();
   const [popularMaterials, setPopularMaterials] = useState<Material[]>([]);
   const [recentMaterials, setRecentMaterials] = useState<Material[]>([]);
   const [reviewStats, setReviewStats] = useState<ReviewStats>({});
@@ -87,7 +89,7 @@ export default function KoreaUnivPage() {
         : null;
       if (existing) {
         if (existing.alreadyNeed) {
-          alert("이미 공감한 요청입니다.");
+          void dialog.alert({ description: "이미 공감한 요청입니다." });
         } else {
           await handleToggleNeed(existing.id);
         }
@@ -107,7 +109,7 @@ export default function KoreaUnivPage() {
       setShowRequestForm(false);
     } catch (err) {
       console.error("자료 요청 등록 실패:", err);
-      alert("요청 등록에 실패했습니다. 다시 시도해주세요.");
+      void dialog.alert({ description: "요청 등록에 실패했습니다. 다시 시도해주세요." });
     }
     setReqLoading(false);
   };

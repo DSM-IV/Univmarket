@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { apiGet, apiGetList, apiPost, apiDelete, apiPatch } from "../api/client";
 import { useAuth } from "../contexts/AuthContext";
+import { useDialog } from "../contexts/DialogContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +69,7 @@ function formatDate(dateStr: string): string {
 
 export default function AdminPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
+  const dialog = useDialog();
   const navigate = useNavigate();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,9 +114,11 @@ export default function AdminPage() {
 
     const sign = amountNum > 0 ? "지급" : "회수";
     if (
-      !confirm(
-        `사용자 ${targetId}에게 수익금 ${Math.abs(amountNum).toLocaleString()}원을 ${sign}합니다.\n계속하시겠습니까?`
-      )
+      !(await dialog.confirm({
+        title: "수익금 지급 / 회수",
+        description: `사용자 ${targetId}에게 수익금 ${Math.abs(amountNum).toLocaleString()}원을 ${sign}합니다.\n계속하시겠습니까?`,
+        confirmText: "실행",
+      }))
     ) {
       return;
     }
@@ -180,7 +184,7 @@ export default function AdminPage() {
     const msg = reason === "copyright"
       ? `"${report.materialTitle}" 자료를 저작권 침해 사유로 삭제하시겠습니까?\n구매자에게 저작권 침해 삭제 안내가 표시됩니다.`
       : `"${report.materialTitle}" 자료를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`;
-    if (!confirm(msg)) return;
+    if (!(await dialog.confirm({ title: "자료 삭제", description: msg, confirmText: "삭제", destructive: true }))) return;
 
     setActionLoading(report.id);
     try {
@@ -191,7 +195,7 @@ export default function AdminPage() {
         )
       );
     } catch {
-      const retry = confirm("자료 삭제에 실패했습니다.\n다시 시도하시겠습니까?");
+      const retry = await dialog.confirm({ title: "처리 실패", description: "자료 삭제에 실패했습니다.\n다시 시도하시겠습니까?", confirmText: "다시 시도" });
       if (retry) {
         setActionLoading(null);
         handleDeleteMaterial(report, reason);
@@ -204,12 +208,16 @@ export default function AdminPage() {
 
   const handleApproveDefect = async (report: Report) => {
     if (
-      !confirm(
-        `"${report.materialTitle}" 자료의 하자 신고를 승인합니다.\n\n` +
+      !(await dialog.confirm({
+        title: "하자 인정 & 환불",
+        description:
+          `"${report.materialTitle}" 자료의 하자 신고를 승인합니다.\n\n` +
           `- 해당 자료의 환불되지 않은 모든 구매 건에 대해 결제 금액이 환불됩니다.\n` +
           `- 판매자의 수익금에서 동일 금액이 회수됩니다.\n` +
-          `- 자료가 완전히 삭제됩니다 (복구 불가).\n\n계속하시겠습니까?`
-      )
+          `- 자료가 완전히 삭제됩니다 (복구 불가).\n\n계속하시겠습니까?`,
+        confirmText: "승인",
+        destructive: true,
+      }))
     )
       return;
 
@@ -218,23 +226,23 @@ export default function AdminPage() {
       const result = await apiPost<{ success: boolean; refundedCount: number }>(
         `/admin/reports/${report.id}/approve-defect`
       );
-      alert(`처리 완료: ${result.refundedCount}건의 구매가 환불되었습니다.`);
+      void dialog.alert({ description: `처리 완료: ${result.refundedCount}건의 구매가 환불되었습니다.` });
       setReports((prev) =>
         prev.map((r) =>
           r.id === report.id ? { ...r, status: "resolved" } : r
         )
       );
     } catch (e) {
-      alert(
-        "하자 승인 처리에 실패했습니다.\n" + ((e as Error).message || "")
-      );
+      void dialog.alert({
+        description: "하자 승인 처리에 실패했습니다.\n" + ((e as Error).message || ""),
+      });
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleDismiss = async (reportId: string) => {
-    if (!confirm("이 신고를 기각하시겠습니까?")) return;
+    if (!(await dialog.confirm({ title: "신고 기각", description: "이 신고를 기각하시겠습니까?", confirmText: "기각", destructive: true }))) return;
 
     setActionLoading(reportId);
     try {
@@ -245,7 +253,7 @@ export default function AdminPage() {
         )
       );
     } catch {
-      if (confirm("처리에 실패했습니다.\n다시 시도하시겠습니까?")) {
+      if (await dialog.confirm({ title: "처리 실패", description: "처리에 실패했습니다.\n다시 시도하시겠습니까?", confirmText: "다시 시도" })) {
         setActionLoading(null);
         handleDismiss(reportId);
         return;
@@ -257,7 +265,7 @@ export default function AdminPage() {
 
   const handleBanUser = async () => {
     if (!banModal) return;
-    if (!confirm(`"${banModal.reporterName}" 판매자를 탈퇴 처리하시겠습니까?\n계정이 비활성화되고 모든 자료가 비공개 됩니다.`)) return;
+    if (!(await dialog.confirm({ title: "판매자 탈퇴 처리", description: `"${banModal.reporterName}" 판매자를 탈퇴 처리하시겠습니까?\n계정이 비활성화되고 모든 자료가 비공개 됩니다.`, confirmText: "탈퇴 처리", destructive: true }))) return;
 
     setActionLoading("ban");
     try {
@@ -265,11 +273,11 @@ export default function AdminPage() {
         `/admin/users/${banModal.reporterId}/ban`,
         { reason: banReason }
       );
-      alert(`탈퇴 처리 완료. ${data.hiddenMaterials}개 자료가 비공개 되었습니다.`);
+      void dialog.alert({ description: `탈퇴 처리 완료. ${data.hiddenMaterials}개 자료가 비공개 되었습니다.` });
       setBanModal(null);
       setBanReason("");
     } catch {
-      if (confirm("탈퇴 처리에 실패했습니다.\n다시 시도하시겠습니까?")) {
+      if (await dialog.confirm({ title: "처리 실패", description: "탈퇴 처리에 실패했습니다.\n다시 시도하시겠습니까?", confirmText: "다시 시도" })) {
         setActionLoading(null);
         handleBanUser();
         return;
@@ -281,7 +289,7 @@ export default function AdminPage() {
 
   const handleSuspendUser = async () => {
     if (!suspendModal) return;
-    if (!confirm(`"${suspendModal.reporterName}" 판매자를 ${suspendDays}일간 정지하시겠습니까?`)) return;
+    if (!(await dialog.confirm({ title: "판매자 정지", description: `"${suspendModal.reporterName}" 판매자를 ${suspendDays}일간 정지하시겠습니까?`, confirmText: "정지", destructive: true }))) return;
 
     setActionLoading("suspend");
     try {
@@ -290,12 +298,12 @@ export default function AdminPage() {
         { reason: suspendReason, days: suspendDays }
       );
       const until = new Date(data.suspendedUntil).toLocaleDateString("ko-KR");
-      alert(`정지 처리 완료. ${until}까지 정지되며 ${data.hiddenMaterials}개 자료가 비공개 되었습니다.`);
+      void dialog.alert({ description: `정지 처리 완료. ${until}까지 정지되며 ${data.hiddenMaterials}개 자료가 비공개 되었습니다.` });
       setSuspendModal(null);
       setSuspendReason("");
       setSuspendDays(7);
     } catch {
-      if (confirm("정지 처리에 실패했습니다.\n다시 시도하시겠습니까?")) {
+      if (await dialog.confirm({ title: "처리 실패", description: "정지 처리에 실패했습니다.\n다시 시도하시겠습니까?", confirmText: "다시 시도" })) {
         setActionLoading(null);
         handleSuspendUser();
         return;
@@ -311,7 +319,7 @@ export default function AdminPage() {
       const list = await apiGetList<Withdrawal>("/admin/withdrawals");
       setWithdrawals(list);
     } catch {
-      alert("출금 목록을 불러오는 데 실패했습니다.");
+      void dialog.alert({ description: "출금 목록을 불러오는 데 실패했습니다." });
     } finally {
       setWdLoading(false);
     }
@@ -334,7 +342,7 @@ export default function AdminPage() {
       setGradeRequests(list);
     } catch (e) {
       console.error("[admin] fetchGradeRequests error", e);
-      alert("성적 인증 목록을 불러오는 데 실패했습니다.\n" + (e as Error).message);
+      void dialog.alert({ description: "성적 인증 목록을 불러오는 데 실패했습니다.\n" + (e as Error).message });
     } finally {
       setGradeLoading(false);
     }
@@ -342,7 +350,7 @@ export default function AdminPage() {
 
   const handleApproveGrade = async (req: GradeRequest, approvedGrade?: string) => {
     const grade = approvedGrade || req.gradeClaim;
-    if (!confirm(`"${req.title}" 자료에 ${grade} 성적 인증을 승인하시겠습니까?`)) return;
+    if (!(await dialog.confirm({ title: "성적 인증 승인", description: `"${req.title}" 자료에 ${grade} 성적 인증을 승인하시겠습니까?`, confirmText: "승인" }))) return;
     setActionLoading(req.id);
     try {
       await apiPatch(`/admin/materials/${req.id}/grade`, {
@@ -353,14 +361,14 @@ export default function AdminPage() {
         prev.map((r) => r.id === req.id ? { ...r, gradeStatus: "verified" } : r)
       );
     } catch {
-      alert("처리에 실패했습니다.");
+      void dialog.alert({ description: "처리에 실패했습니다." });
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleRejectGrade = async (req: GradeRequest) => {
-    if (!confirm(`"${req.title}" 자료의 성적 인증을 거절하시겠습니까?`)) return;
+    if (!(await dialog.confirm({ title: "성적 인증 거절", description: `"${req.title}" 자료의 성적 인증을 거절하시겠습니까?`, confirmText: "거절", destructive: true }))) return;
     setActionLoading(req.id);
     try {
       await apiPatch(`/admin/materials/${req.id}/grade`, {
@@ -370,7 +378,7 @@ export default function AdminPage() {
         prev.map((r) => r.id === req.id ? { ...r, gradeStatus: "rejected" } : r)
       );
     } catch {
-      alert("처리에 실패했습니다.");
+      void dialog.alert({ description: "처리에 실패했습니다." });
     } finally {
       setActionLoading(null);
     }
@@ -379,13 +387,13 @@ export default function AdminPage() {
   const filteredGradeRequests = gradeRequests.filter((r) => r.gradeStatus === gradeTab);
 
   const handleCompleteWithdrawal = async (id: string) => {
-    if (!confirm("입금 완료 처리하시겠습니까?")) return;
+    if (!(await dialog.confirm({ title: "입금 완료 처리", description: "입금 완료 처리하시겠습니까?", confirmText: "완료 처리" }))) return;
     setActionLoading(id);
     try {
       await apiPost(`/admin/withdrawals/${id}/complete`);
       setWithdrawals((prev) => prev.map((w) => w.id === id ? { ...w, status: "completed" } : w));
     } catch {
-      alert("처리에 실패했습니다.");
+      void dialog.alert({ description: "처리에 실패했습니다." });
     } finally {
       setActionLoading(null);
     }
@@ -399,7 +407,7 @@ export default function AdminPage() {
       await apiPost(`/admin/withdrawals/${id}/reject`, { reason });
       setWithdrawals((prev) => prev.map((w) => w.id === id ? { ...w, status: "rejected" } : w));
     } catch {
-      alert("처리에 실패했습니다.");
+      void dialog.alert({ description: "처리에 실패했습니다." });
     } finally {
       setActionLoading(null);
     }

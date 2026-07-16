@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { DialogProvider } from "./contexts/DialogContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -57,6 +58,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <DialogProvider>
         <div className="min-h-screen flex flex-col">
           <SuspensionBanner />
           <Navbar />
@@ -98,6 +100,7 @@ function App() {
           </ErrorBoundary>
           <Footer />
         </div>
+        </DialogProvider>
       </AuthProvider>
     </BrowserRouter>
   );

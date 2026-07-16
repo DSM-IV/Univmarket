@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { apiGetList, apiPost, apiPatch, apiDelete } from "../../api/client";
 import { useAuth } from "../../contexts/AuthContext";
+import { useDialog } from "../../contexts/DialogContext";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +18,7 @@ interface Props {
 
 export default function ReviewsSection({ materialId, owned, reviews, onReviewsChange }: Props) {
   const { user } = useAuth();
+  const dialog = useDialog();
 
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewContent, setReviewContent] = useState("");
@@ -47,7 +49,7 @@ export default function ReviewsSection({ materialId, owned, reviews, onReviewsCh
           });
         } catch (e) {
           const msg = (e as Error).message || "후기 등록에 실패했습니다.";
-          alert(msg);
+          void dialog.alert({ description: msg });
           setSubmittingReview(false);
           return;
         }
@@ -58,7 +60,7 @@ export default function ReviewsSection({ materialId, owned, reviews, onReviewsCh
       setReviewContent("");
       setEditingReview(false);
     } catch {
-      alert("후기 등록에 실패했습니다.");
+      void dialog.alert({ description: "후기 등록에 실패했습니다." });
     } finally {
       setSubmittingReview(false);
     }
@@ -66,7 +68,7 @@ export default function ReviewsSection({ materialId, owned, reviews, onReviewsCh
 
   const handleDeleteReview = async () => {
     if (!myReview) return;
-    if (!confirm("후기를 삭제하시겠습니까?")) return;
+    if (!(await dialog.confirm({ title: "후기 삭제", description: "후기를 삭제하시겠습니까?", confirmText: "삭제", destructive: true }))) return;
     try {
       await apiDelete(`/reviews/${myReview.id}`);
       onReviewsChange(reviews.filter((r) => r.id !== myReview.id));
