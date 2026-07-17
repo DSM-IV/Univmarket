@@ -34,7 +34,14 @@ export default function WithdrawalsSection({ withdrawals, setWithdrawals, loadin
   };
 
   const handleRejectWithdrawal = async (id: string) => {
-    const reason = prompt("거절 사유를 입력하세요 (수익금이 복구됩니다):");
+    const reason = await dialog.prompt({
+      title: "출금 거절",
+      description: "거절 사유를 입력하세요. 거절 시 수익금이 복구됩니다.",
+      placeholder: "거절 사유",
+      confirmText: "거절",
+      destructive: true,
+      required: true,
+    });
     if (reason === null) return;
     setActionLoading(id);
     try {
