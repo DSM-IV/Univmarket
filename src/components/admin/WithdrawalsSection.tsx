@@ -6,8 +6,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { Wallet, CheckCircle, X } from "lucide-react";
+import { Wallet, CheckCircle, X, FileDown } from "lucide-react";
 import { formatDate, type Withdrawal } from "./types";
+import { runPayoutExport } from "./payoutExport";
 
 interface Props {
   withdrawals: Withdrawal[];
@@ -19,6 +20,16 @@ export default function WithdrawalsSection({ withdrawals, setWithdrawals, loadin
   const dialog = useDialog();
   const [wdTab, setWdTab] = useState<"pending" | "completed" | "rejected">("pending");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [payoutLoading, setPayoutLoading] = useState(false);
+
+  const handlePayoutExport = async () => {
+    setPayoutLoading(true);
+    try {
+      await runPayoutExport(dialog);
+    } finally {
+      setPayoutLoading(false);
+    }
+  };
 
   const handleCompleteWithdrawal = async (id: string) => {
     if (!(await dialog.confirm({ title: "입금 완료 처리", description: "입금 완료 처리하시겠습니까?", confirmText: "완료 처리" }))) return;
@@ -76,6 +87,20 @@ export default function WithdrawalsSection({ withdrawals, setWithdrawals, loadin
           </button>
         ))}
       </div>
+
+      {wdTab === "pending" && (
+        <div className="mb-4 flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handlePayoutExport}
+            disabled={payoutLoading}
+          >
+            <FileDown className="mr-1.5 h-3.5 w-3.5" />
+            {payoutLoading ? "생성 중..." : "이니시스 지급파일"}
+          </Button>
+        </div>
+      )}
 
       {loading ? (
         <p className="py-16 text-center text-gray-500">불러오는 중...</p>
