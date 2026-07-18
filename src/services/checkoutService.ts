@@ -1,5 +1,5 @@
 import { loadTossPayments, ANONYMOUS } from "@tosspayments/tosspayments-sdk";
-import { prepareCheckout } from "./pointsService";
+import { prepareCheckout } from "./paymentService";
 
 const TOSS_CLIENT_KEY = import.meta.env.VITE_TOSS_CLIENT_KEY || "test_ck_test";
 

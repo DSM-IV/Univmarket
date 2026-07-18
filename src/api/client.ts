@@ -45,6 +45,28 @@ export async function apiGetList<T>(path: string): Promise<T[]> {
   return [];
 }
 
+/**
+ * 인증 헤더를 포함해 파일을 내려받아 브라우저 다운로드를 트리거한다.
+ * (blob 응답 — apiGet의 res.json()으로는 처리 불가한 첨부파일 다운로드용)
+ */
+export async function apiDownload(path: string, filename: string): Promise<void> {
+  const headers = await getAuthHeaders();
+  const res = await fetch(`${API_BASE}${path}`, { headers });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ error: "다운로드에 실패했습니다." }));
+    throw new Error(body.error || `HTTP ${res.status}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
   const headers = await getAuthHeaders();
   const res = await fetch(`${API_BASE}${path}`, {

@@ -31,6 +31,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// PG사 검토 계정 (Toss 위험검토용) — 임시. 검토 종료 후 빈 Set 으로 복원.
+const EMAIL_VERIFY_EXEMPT_UIDS = new Set<string>(["QJUZmrIcTmhhXpBBqCkeyVxuhF13"]);
+
+function needsEmailVerification(u: User) {
+  return !u.emailVerified && !EMAIL_VERIFY_EXEMPT_UIDS.has(u.uid);
+}
+
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
@@ -44,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
-      if (u && !u.emailVerified && u.providerData[0]?.providerId === "password") {
+      if (u && needsEmailVerification(u) && u.providerData[0]?.providerId === "password") {
         setUser(null);
         setUserProfile(null);
         setLoading(false);
@@ -118,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function logIn(email: string, password: string, rememberMe: boolean = false) {
     await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
     const cred = await signInWithEmailAndPassword(auth, email, password);
-    if (!cred.user.emailVerified) {
+    if (needsEmailVerification(cred.user)) {
       await signOut(auth);
       const error = new Error("이메일 인증이 완료되지 않았습니다.");
       (error as any).code = "auth/email-not-verified";

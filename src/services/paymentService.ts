@@ -24,7 +24,6 @@ export async function confirmCheckout(
 }
 
 export async function getTransactions(
-  _userId: string,
   count: number = 20
 ): Promise<Transaction[]> {
   return apiGetList<Transaction>(`/users/me/transactions?limit=${count}`);

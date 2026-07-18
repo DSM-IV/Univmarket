@@ -55,6 +55,8 @@ dependencies {
     // Test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    // 통합 테스트: 로컬 PostgreSQL(docker compose, univmarket_test DB) + Toss HTTP 모킹(WireMock)
+    testImplementation 'org.wiremock:wiremock-standalone:3.9.2'
 }
 
 tasks.named('test') {

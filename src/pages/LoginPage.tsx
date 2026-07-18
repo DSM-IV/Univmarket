@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { ChevronDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ export default function LoginPage() {
 
   const { logIn, signUp, resetPassword } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
 
   const startLockout = useCallback(() => {
@@ -125,7 +126,8 @@ export default function LoginPage() {
         await logIn(formData.email, formData.password, rememberMe);
       }
       failCountRef.current = 0;
-      navigate("/");
+      const from = (location.state as { from?: string } | null)?.from ?? "/";
+      navigate(from, { replace: true });
     } catch (err) {
       const code = (err as { code?: string }).code;
       if (code === "auth/email-not-verified") {
@@ -249,7 +251,7 @@ export default function LoginPage() {
                   </div>
                   <button
                     type="submit"
-                    className="w-full h-12 text-base font-bold mt-3 rounded-lg bg-gradient-to-r from-[#862633] to-[#A83344] !text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="w-full h-12 text-base font-bold mt-3 rounded-lg bg-primary !text-white hover:bg-primary-dark transition-colors disabled:opacity-50"
                     disabled={loading}
                   >
                     {loading ? "처리 중..." : "재설정 링크 보내기"}
@@ -514,7 +516,7 @@ export default function LoginPage() {
 
                   <button
                     type="submit"
-                    className="w-full h-12 text-base font-bold mt-3 rounded-lg bg-gradient-to-r from-[#862633] to-[#A83344] !text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="w-full h-12 text-base font-bold mt-3 rounded-lg bg-primary !text-white hover:bg-primary-dark transition-colors disabled:opacity-50"
                     disabled={loading || (!isSignUp && lockoutRemaining > 0)}
                   >
                     {loading

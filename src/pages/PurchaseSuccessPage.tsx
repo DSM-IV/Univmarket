@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, AlertCircle, Loader2 } from "lucide-react";
-import { confirmCheckout } from "../services/pointsService";
+import { confirmCheckout } from "../services/paymentService";
 
 type Status = "verifying" | "success" | "error";
 

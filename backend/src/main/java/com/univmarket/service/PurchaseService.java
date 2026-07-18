@@ -45,7 +45,7 @@ public class PurchaseService {
      * 결제 검증은 호출 측(PaymentService.confirmCheckout)이 이미 완료했다고 가정.
      */
     @Transactional
-    public void recordPurchase(String buyerUid, Long materialId, String tossPaymentKey, long paidAmount) {
+    public void recordPurchase(String buyerUid, Long materialId, String tossPaymentKey, long paidAmount, String pg) {
         User buyer = userRepository.findByFirebaseUid(buyerUid)
                 .orElseThrow(() -> ApiException.notFound("사용자 정보를 찾을 수 없습니다."));
         Material material = materialRepository.findById(materialId)
@@ -105,6 +105,7 @@ public class PurchaseService {
                     .settled(false)
                     .tossPaymentKey(tossPaymentKey)
                     .tossPaymentAmount(paidAmount)
+                    .pg(pg)
                     .build());
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw ApiException.conflict("이미 구매한 자료입니다.");
@@ -210,9 +211,6 @@ public class PurchaseService {
             throw ApiException.badRequest("판매자의 수익금이 부족하여 환불할 수 없습니다.");
         }
 
-        // Toss 부분환불 — 실패 시 예외로 트랜잭션 롤백 (DB 상태 변경 없음)
-        paymentService.cancelTossPayment(paymentKey, purchase.getPrice(), "구매 후 24시간 이내 환불");
-
         // 판매자 수익금 차감
         if (fromPending.compareTo(BigDecimal.ZERO) > 0) {
             seller.setPendingEarnings(seller.getPendingEarnings().subtract(fromPending));
@@ -260,6 +258,12 @@ public class PurchaseService {
                 .tossPaymentKey(paymentKey)
                 .status("completed")
                 .build());
+
+        // PG 부분환불 — 회복 가능한 DB 변경을 모두 마친 뒤 마지막(비가역)에 호출.
+        // DB 작업이 먼저 실패하면 환불 전에 트랜잭션이 롤백되고, cancel 실패 시엔 위 DB 변경도 전부 롤백된다.
+        // (cancel 성공 후 commit 실패의 잔여 창은 webhook 도입 전까지 대사 쿼리로 탐지 — 환불됐는데 미차감.)
+        // 디스패처가 purchase.pg 로 Toss/이니시스 경로를 자동 선택한다.
+        paymentService.cancelPayment(purchase, "구매 후 24시간 이내 환불");
     }
 
     /**

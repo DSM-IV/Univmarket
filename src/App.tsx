@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { DialogProvider } from "./contexts/DialogContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -19,15 +20,8 @@ import TransactionPage from "./pages/TransactionPage";
 import AdminPage from "./pages/AdminPage";
 import WithdrawPage from "./pages/WithdrawPage";
 import KoreaUnivPage from "./pages/KoreaUnivPage";
-import SnuPage from "./pages/SnuPage";
-import YonseiPage from "./pages/YonseiPage";
-import SogangPage from "./pages/SogangPage";
-import SkkuPage from "./pages/SkkuPage";
-import HanyangPage from "./pages/HanyangPage";
-import CauPage from "./pages/CauPage";
-import KhuPage from "./pages/KhuPage";
-import HufsPage from "./pages/HufsPage";
-import UosPage from "./pages/UosPage";
+import UnivLandingPage from "./pages/UnivLandingPage";
+import { UNIV_CONFIGS } from "./data/univConfig";
 import NotFoundPage from "./pages/NotFoundPage";
 import EventsPage from "./pages/EventsPage";
 import NoticesPage from "./pages/NoticesPage";
@@ -64,6 +58,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <DialogProvider>
         <div className="min-h-screen flex flex-col">
           <SuspensionBanner />
           <Navbar />
@@ -87,15 +82,15 @@ function App() {
             <Route path="/transactions" element={<TransactionPage />} />
             <Route path="/withdraw" element={<WithdrawPage />} />
             <Route path="/univ/korea" element={<KoreaUnivPage />} />
-            <Route path="/univ/snu" element={<SnuPage />} />
-            <Route path="/univ/yonsei" element={<YonseiPage />} />
-            <Route path="/univ/sogang" element={<SogangPage />} />
-            <Route path="/univ/skku" element={<SkkuPage />} />
-            <Route path="/univ/hanyang" element={<HanyangPage />} />
-            <Route path="/univ/cau" element={<CauPage />} />
-            <Route path="/univ/khu" element={<KhuPage />} />
-            <Route path="/univ/hufs" element={<HufsPage />} />
-            <Route path="/univ/uos" element={<UosPage />} />
+            <Route path="/univ/snu" element={<UnivLandingPage config={UNIV_CONFIGS.snu} />} />
+            <Route path="/univ/yonsei" element={<UnivLandingPage config={UNIV_CONFIGS.yonsei} />} />
+            <Route path="/univ/sogang" element={<UnivLandingPage config={UNIV_CONFIGS.sogang} />} />
+            <Route path="/univ/skku" element={<UnivLandingPage config={UNIV_CONFIGS.skku} />} />
+            <Route path="/univ/hanyang" element={<UnivLandingPage config={UNIV_CONFIGS.hanyang} />} />
+            <Route path="/univ/cau" element={<UnivLandingPage config={UNIV_CONFIGS.cau} />} />
+            <Route path="/univ/khu" element={<UnivLandingPage config={UNIV_CONFIGS.khu} />} />
+            <Route path="/univ/hufs" element={<UnivLandingPage config={UNIV_CONFIGS.hufs} />} />
+            <Route path="/univ/uos" element={<UnivLandingPage config={UNIV_CONFIGS.uos} />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/request/:id" element={<RequestDetailPage />} />
             <Route path="/events" element={<EventsPage />} />
@@ -105,6 +100,7 @@ function App() {
           </ErrorBoundary>
           <Footer />
         </div>
+        </DialogProvider>
       </AuthProvider>
     </BrowserRouter>
   );

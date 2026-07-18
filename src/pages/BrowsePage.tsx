@@ -251,7 +251,7 @@ export default function BrowsePage() {
                 )}
                 onClick={() => setSelectedCategory(cat.name)}
               >
-                {cat.icon} {cat.name}
+                {cat.name}
               </button>
             ))}
           </div>
@@ -445,7 +445,7 @@ export default function BrowsePage() {
             href="https://www.notion.so/KU-1f8b3a03eb5080b28009e2a9b46c5be4"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-4 p-5 mb-7 bg-gradient-to-r from-primary to-primary-light rounded-xl text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(134,38,51,0.3)]"
+            className="flex items-center gap-4 p-5 mb-7 bg-primary rounded-xl text-white transition-colors hover:bg-primary-dark"
           >
             <div className="shrink-0 w-11 h-11 bg-white/20 rounded-lg flex items-center justify-center">
               <BookOpen className="w-6 h-6 text-white" />

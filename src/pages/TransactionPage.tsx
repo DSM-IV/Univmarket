@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { getTransactions } from "../services/pointsService";
+import { getTransactions } from "../services/paymentService";
 import type { Transaction } from "../types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +61,7 @@ function isIncome(type: string, amount: number): boolean {
 export default function TransactionPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [tab, setTab] = useState<FilterTab>("all");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,14 +69,14 @@ export default function TransactionPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      navigate("/login");
+      navigate("/login", { state: { from: location.pathname } });
       return;
     }
 
     async function fetchTransactions() {
       setLoading(true);
       try {
-        const data = await getTransactions(user!.uid, 100);
+        const data = await getTransactions(100);
         setTransactions(data);
       } catch (err) {
 
