@@ -60,6 +60,10 @@ public class Purchase {
     @Column(name = "toss_payment_amount")
     private Long tossPaymentAmount;
 
+    /** 결제 PG 판별. "toss" | "inicis". 레거시(null) = toss 취급. 환불 디스패처가 이 값으로 경로를 고른다. */
+    @Column(name = "pg", length = 10)
+    private String pg;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

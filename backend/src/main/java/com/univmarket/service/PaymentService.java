@@ -2,6 +2,7 @@ package com.univmarket.service;
 
 import com.univmarket.entity.Checkout;
 import com.univmarket.entity.Material;
+import com.univmarket.entity.Purchase;
 import com.univmarket.entity.User;
 import com.univmarket.exception.ApiException;
 import com.univmarket.repository.CheckoutRepository;
@@ -10,6 +11,7 @@ import com.univmarket.repository.PurchaseRepository;
 import com.univmarket.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class PaymentService {
     private final PurchaseRepository purchaseRepository;
     private final PurchaseService purchaseService;
     private final CheckoutTxService checkoutTxService;
+    private final InicisPaymentService inicisPaymentService;
 
     private final String tossSecretKey;
     private final WebClient tossClient;
@@ -48,6 +51,7 @@ public class PaymentService {
             PurchaseRepository purchaseRepository,
             PurchaseService purchaseService,
             CheckoutTxService checkoutTxService,
+            @Lazy InicisPaymentService inicisPaymentService,
             @Value("${payment.toss.secret-key:}") String tossSecretKey,
             @Value("${payment.toss.base-url:https://api.tosspayments.com}") String tossBaseUrl) {
         this.userRepository = userRepository;
@@ -56,6 +60,7 @@ public class PaymentService {
         this.purchaseRepository = purchaseRepository;
         this.purchaseService = purchaseService;
         this.checkoutTxService = checkoutTxService;
+        this.inicisPaymentService = inicisPaymentService;
         this.tossSecretKey = tossSecretKey;
         this.tossClient = WebClient.builder()
                 .baseUrl(tossBaseUrl)
@@ -160,7 +165,7 @@ public class PaymentService {
         }
 
         String effectiveKey = ctx.paymentKey() != null ? ctx.paymentKey() : paymentKey;
-        List<Long> granted = grantMaterials(firebaseUid, ctx.materialIds(), effectiveKey, amount, orderId);
+        List<Long> granted = grantMaterials(firebaseUid, ctx.materialIds(), effectiveKey, amount, orderId, "toss");
 
         return Map.of(
                 "success", true,
@@ -214,12 +219,12 @@ public class PaymentService {
      * 이미 지급된 자료(CONFLICT)는 멱등하게 성공 처리, 그 외 실패는 수집·로깅한다.
      * 결제는 이미 확정됐으므로 일부 지급 실패는 롤백 대상이 아니라 사후 복구(재confirm/CS) 대상이다.
      */
-    public List<Long> grantMaterials(String firebaseUid, List<Long> materialIds, String paymentKey, long amount, String orderId) {
+    public List<Long> grantMaterials(String firebaseUid, List<Long> materialIds, String paymentKey, long amount, String orderId, String pg) {
         List<Long> granted = new ArrayList<>();
         List<Long> failed = new ArrayList<>();
         for (Long materialId : materialIds) {
             try {
-                purchaseService.recordPurchase(firebaseUid, materialId, paymentKey, amount);
+                purchaseService.recordPurchase(firebaseUid, materialId, paymentKey, amount, pg);
                 granted.add(materialId);
             } catch (ApiException e) {
                 if (e.getStatus() == HttpStatus.CONFLICT) {
@@ -270,5 +275,59 @@ public class PaymentService {
             log.error("Toss 환불 실패 (paymentKey={}, amount={}): {}", paymentKey, cancelAmount, e.getMessage());
             throw new ApiException(HttpStatus.BAD_GATEWAY, "환불 처리에 실패했습니다.");
         }
+    }
+
+    /**
+     * PG 판별 환불 디스패처. {@code purchase.pg == "inicis"}면 이니시스 INIAPI 환불, 그 외(레거시 null 포함)는 Toss.
+     * 취소 실패 시 예외를 그대로 던져 호출측 트랜잭션이 전체 롤백되게 한다(기존 시맨틱 유지).
+     *
+     * <p>이니시스는 tid 단위로 부분/전체 취소를 관리하므로, 같은 tid를 공유하는 구매들의 원결제 총액과
+     * 이미 환불된 금액으로 이번 취소가 전체취소인지 부분취소인지, 부분취소 후 남는 금액이 얼마인지 계산한다.
+     */
+    public void cancelPayment(Purchase purchase, String reason) {
+        if (purchase == null) {
+            throw ApiException.badRequest("환불할 구매 정보가 없습니다.");
+        }
+        String tid = purchase.getTossPaymentKey(); // 이니시스는 이 필드에 tid를 저장(PG 중립 재사용)
+        long cancelAmount = purchase.getPrice();
+
+        if (!"inicis".equalsIgnoreCase(purchase.getPg())) {
+            // Toss (레거시 null 포함) — 기존 경로 그대로
+            cancelTossPayment(tid, cancelAmount, reason);
+            return;
+        }
+
+        // 이니시스 경로
+        if (tid == null || tid.isBlank()) {
+            throw ApiException.badRequest("결제 키가 없어 환불할 수 없습니다.");
+        }
+        Long totalAmount = purchase.getTossPaymentAmount(); // recordPurchase가 저장하는 "원결제 총액"(주문 전체 금액)
+        if (totalAmount == null) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "원결제 금액 정보가 없어 환불할 수 없습니다.");
+        }
+        Long refundedSum = purchaseRepository.sumRefundedPriceByTid(tid, purchase.getId());
+        long refundedSoFar = refundedSum == null ? 0L : refundedSum;
+
+        InicisRefundPlan plan = computeInicisRefundPlan(totalAmount, refundedSoFar, cancelAmount);
+        if (plan.remainAfterCancel() < 0) {
+            log.error("[이니시스] 환불 금액 계산 이상 (tid={}, total={}, refundedSoFar={}, cancelAmount={})",
+                    tid, totalAmount, refundedSoFar, cancelAmount);
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "환불 금액 계산이 올바르지 않습니다.");
+        }
+        inicisPaymentService.refundInicisPayment(
+                tid, plan.cancelAmount(), plan.remainAfterCancel(), plan.firstCancel(), reason);
+    }
+
+    /** 이니시스 취소 금액 계산 결과. (테스트를 위해 순수 계산으로 분리) */
+    record InicisRefundPlan(long cancelAmount, long remainAfterCancel, boolean firstCancel) {}
+
+    /**
+     * 이니시스 부분/전체 취소 계산(순수 함수, 컨텍스트 불필요).
+     * remainAfterCancel = 원결제총액 - 기환불액 - 이번취소액, firstCancel = (기환불액 == 0).
+     */
+    static InicisRefundPlan computeInicisRefundPlan(long total, long refundedSoFar, long cancelAmount) {
+        long remainAfterCancel = total - refundedSoFar - cancelAmount;
+        boolean firstCancel = (refundedSoFar == 0);
+        return new InicisRefundPlan(cancelAmount, remainAfterCancel, firstCancel);
     }
 }

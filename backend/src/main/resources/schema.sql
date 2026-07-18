@@ -107,6 +107,7 @@ CREATE TABLE purchases (
     refund_reason VARCHAR(100),
     toss_payment_key    VARCHAR(200),
     toss_payment_amount BIGINT,
+    pg                  VARCHAR(10),          -- 결제 PG: 'toss' | 'inicis'. NULL(레거시) = toss 취급
     created_at    TIMESTAMP     DEFAULT NOW() NOT NULL,
     CONSTRAINT uq_buyer_material UNIQUE (buyer_id, material_id)
 );
